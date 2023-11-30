@@ -1,0 +1,211 @@
+﻿DELIMITER $$
+
+DROP PROCEDURE IF EXISTS `pr_recon_mst_trecon_new` $$
+CREATE PROCEDURE `pr_recon_mst_trecon_new`
+(
+	inout in_recon_gid int(10),
+	in in_recon_code varchar(32),
+	in in_recon_name varchar(255),
+	in in_recontype_code char(1),
+	in in_recon_automatch_partial char(1),
+	in in_period_from date,
+	in in_period_to date,
+	in in_until_active_flag char(1),
+	in in_active_status char(1),
+	in in_recon_date_flag char(1),
+	in in_recon_date_field varchar(128),
+	in in_recon_value_flag char(1),
+	in in_recon_value_field varchar(128),
+	in in_threshold_plus_value double(15,2),
+	in in_threshold_minus_value double(15,2),
+	in in_user_code varchar(32),
+	in in_role_code varchar(32),
+	in in_lang_code varchar(32),
+	in in_action varchar(16),
+	in in_action_by varchar(10),
+	out out_msg text,
+	out out_result int(10)
+)
+me:BEGIN
+	/*
+		Created By : Hema
+    Created Date :
+
+    Updated By : Vijayavel J
+    Updated Date : Nov-23-2023
+
+    Version No : 2
+  */
+
+	declare v_recon_gid int default 0;
+	declare v_msg text default '';
+
+	declare err_msg text default '';
+	declare err_flag boolean default false;
+
+	if in_action = "UPDATE"  or in_action = "INSERT" then
+		if in_recon_name = '' or in_recon_name is null then
+			set err_msg := concat(err_msg,'Recon Name cannot be empty,');
+			set err_flag := true;
+		end if;
+
+		if in_recontype_code = '' or in_recontype_code is null then
+			set err_msg := concat(err_msg,'Type Code cannot be empty,');
+			set err_flag := true;
+		end if;
+
+    if in_period_from = '' or in_period_from is null then
+			set err_msg := concat(err_msg,'Preiod from cannot be empty,');
+			set err_flag := true;
+		end if;
+
+    if in_until_active_flag <> 'Y' and in_until_active_flag <> 'N' then
+			set err_msg := concat(err_msg,'Invalid until active flag,');
+			set err_flag := true;
+		elseif in_until_active_flag = 'Y' then
+			set in_period_to = null;
+		else
+			if in_period_to is null then
+				set err_msg := concat(err_msg,'Invalid period to,');
+				set err_flag := true;
+			end if;
+		end if;
+
+    if in_active_status <> 'Y' and in_active_status <> 'N' and in_active_status <> 'D' or in_active_status is null then
+			set err_msg := concat(err_msg,'Invalid active status value,');
+			set err_flag := true;
+		end if;
+	end if;
+
+  if in_action = "UPDATE"  or in_action = "DELETE" then
+		if not exists(select recon_gid from recon_mst_trecon
+			where recon_gid = in_recon_gid
+            and delete_flag = 'N') then
+			set err_msg := concat(err_msg,'Invalid recon,');
+			set err_flag := true;
+		end if;
+  end if;
+
+  if in_action = "INSERT" then
+		if exists(select recon_gid from recon_mst_trecon
+			where recon_name = in_recon_name
+            and delete_flag = 'N') then
+			set err_msg := concat(err_msg,'Duplicate record,');
+			set err_flag := true;
+		end if;
+  end if;
+
+  if in_action = "UPDATE" then
+		if exists(select recon_gid from recon_mst_trecon
+			where recon_name = in_recon_name
+            and recon_gid <> in_recon_gid
+            and delete_flag = 'N') then
+			set err_msg := concat(err_msg,'Duplicate record,');
+			set err_flag := true;
+		end if;
+  end if;
+
+	if err_flag = true then
+		set out_result = 0;
+		set out_msg = err_msg;
+    leave me;
+  end if;
+
+  start transaction;
+
+	if(in_until_active_flag = 'Y') then
+		set in_period_to = null;
+	end if;
+
+  if (in_action = 'INSERT') then
+		set in_recon_gid = 0;
+
+    set in_recon_code = fn_get_autocode('RECON');
+
+		insert into recon_mst_trecon
+    (
+			recon_code,
+			recon_name,
+			recontype_code,
+			period_from,
+			period_to,
+			until_active_flag,
+			recon_date_flag,
+			recon_date_field,
+			recon_value_flag,
+			recon_value_field,
+			recon_automatch_partial,
+			threshold_plus_value,
+			threshold_minus_value,
+			active_status,
+			insert_date,
+			insert_by
+		)
+		value
+		(
+			in_recon_code,
+			in_recon_name,
+			in_recontype_code,
+			in_period_from,
+			in_period_to,
+			in_until_active_flag,
+			in_recon_date_flag,
+			in_recon_date_field,
+			in_recon_value_flag,
+			in_recon_value_field,
+			in_recon_automatch_partial,
+			in_threshold_plus_value,
+			in_threshold_minus_value,
+			in_active_status,
+			sysdate(),
+			in_action_by
+		);
+
+		select max(recon_gid) into v_recon_gid from recon_mst_trecon;
+
+		set in_recon_gid = v_recon_gid;
+
+	  set out_result = 1;
+	  set out_msg = 'Record saved successfully.. !';
+	elseif(in_action = 'UPDATE') then
+		update recon_mst_trecon set
+			recon_name = in_recon_name,
+			recontype_code = in_recontype_code,
+			period_from = in_period_from,
+			period_to = in_period_to,
+			until_active_flag = in_until_active_flag,
+			active_status=in_active_status,
+			recon_date_flag = in_recon_date_flag,
+			recon_date_field = in_recon_date_field,
+			recon_value_flag = in_recon_value_flag,
+			recon_value_field = in_recon_value_field,
+			recon_automatch_partial = in_recon_automatch_partial,
+			threshold_plus_value = in_threshold_plus_value,
+			threshold_minus_value = in_threshold_minus_value,
+			update_date = sysdate(),
+			update_by = in_action_by
+		where recon_gid = in_recon_gid
+		and delete_flag = 'N';
+
+	  set out_result = 1;
+	  set out_msg = 'Record Updated Successfully.. !';
+  elseif(in_action = 'DELETE') then
+		update recon_mst_trecon set
+			update_date = sysdate(),
+			update_by = in_action_by,
+			delete_flag = 'Y'
+		where recon_gid = in_recon_gid
+		and delete_flag = 'N';
+
+	  set out_result = 1;
+		set out_msg = 'Record deleted successfully.. !';
+  else
+	  set out_result = 0;
+		set out_msg = 'Failed !';
+	end if;
+
+	commit;
+
+END $$
+
+DELIMITER ;
