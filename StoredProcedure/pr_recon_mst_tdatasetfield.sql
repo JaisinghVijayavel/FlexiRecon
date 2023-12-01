@@ -57,7 +57,7 @@ me:BEGIN
 
 		if in_field_type != "NUMERIC" then
 			if in_field_length = '' or in_field_length is null then
-				set err_msg := concat(err_msg,'Field lenghth cannot be empty,');
+				set err_msg := concat(err_msg,'Field length cannot be empty,');
 				set err_flag := true;
 			end if;
 		end if;
@@ -91,7 +91,7 @@ me:BEGIN
 				set err_flag := true;
 			end if;
 
-			set in_field_length = concat(cast(in_precision_lengh+in_scale_length as nchar),',',cast(in_scale_length as nchar));
+			set in_field_length = concat(cast(in_precision_length+in_scale_length as nchar),',',cast(in_scale_length as nchar));
 		end if;
 
     -- duplicate validate
