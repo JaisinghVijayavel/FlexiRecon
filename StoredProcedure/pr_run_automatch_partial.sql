@@ -431,10 +431,34 @@ me:BEGIN
 
       set v_rule_code = ifnull(v_rule_code,'');
 
-      set v_group_flag = ifnull(v_group_flag,'N');
       set v_reversal_flag = ifnull(v_reversal_flag,'N');
       set v_group_method_flag = ifnull(v_group_method_flag,'C');
-      
+
+      set v_group_flag = ifnull(v_group_flag,'N');
+
+      if v_group_flag = 'OTO' then
+        set v_group_flag = 'N';
+        set v_manytomany_match_flag = 'N';
+      elseif v_group_flag = 'OTM' then
+        set v_group_flag = 'Y';
+        set v_manytomany_match_flag = 'N';
+      elseif v_group_flag = 'MTM' then
+        set v_group_flag = 'Y';
+        set v_manytomany_match_flag = 'Y';
+      end if;
+
+      if v_recontype_code = 'B'
+        or v_recontype_code = 'W'
+        or v_recontype_code = 'I' then
+        if v_comparison_acc_mode = 'B' then
+          set v_group_method_flag = 'B';
+        elseif v_source_acc_mode = v_comparison_acc_mode then
+          set v_group_method_flag = 'M';
+        elseif v_source_acc_mode = v_comparison_acc_mode then
+          set v_group_method_flag = 'C';
+        end if;
+      end if;
+
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
 
       if in_automatch_flag = 'Y' then
@@ -562,17 +586,14 @@ me:BEGIN
           drop temporary table if exists recon_tmp_tcomparison;
           drop temporary table if exists recon_tmp_tsourcedup;
 
-          drop table if exists recon_tmp_tsource;
-          drop table if exists recon_tmp_tcomparison;
-
-          create /*temporary*/ table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tsource add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_tsource(excp_value);
           create index idx_tran_date on recon_tmp_tsource(tran_date);
           create index idx_dataset_code on recon_tmp_tsource(recon_code,dataset_code);
           alter table recon_tmp_tsource ENGINE = MyISAM;
 
-          create /*temporary*/ table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tcomparison add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_tcomparison(excp_value);
           create index idx_tran_date on recon_tmp_tcomparison(tran_date);

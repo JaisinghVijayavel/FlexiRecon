@@ -270,6 +270,14 @@ me:BEGIN
       set v_comparison_acc_mode = ifnull(v_comparison_acc_mode,'');
       set v_tran_acc_mode = v_source_acc_mode;
 
+      if v_group_flag = 'OTO' then
+        set v_group_flag = 'N';
+      elseif v_group_flag = 'OTM' then
+        set v_group_flag = 'Y';
+      elseif v_group_flag = 'MTM' then
+        set v_group_flag = 'Y';
+      end if;
+
       set v_group_flag = ifnull(v_group_flag,'N');
       set v_group_method_flag = ifnull(v_group_method_flag,'N');
 
