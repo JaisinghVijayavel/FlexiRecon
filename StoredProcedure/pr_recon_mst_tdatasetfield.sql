@@ -23,12 +23,13 @@ me:BEGIN
 	/*
 		Created By : Hema
 		Created Date : Sep-29-2023
-		
+
 		Updated By : Vijayavel J
-		Updated Date : Dec-01-2023
-		
-		Version No : 2
+		Updated Date : Dec-02-2023
+
+		Version No : 3
 	*/
+
 	declare err_msg text default '';
 	declare err_flag boolean default false;
 	declare v_datasetfield_gid int default 0;
@@ -55,7 +56,7 @@ me:BEGIN
 			set err_flag := true;
 		end if;
 
-		if in_field_type != "NUMERIC" then
+		if in_field_type = "TEXT" then
 			if in_field_length = '' or in_field_length is null then
 				set err_msg := concat(err_msg,'Field length cannot be empty,');
 				set err_flag := true;

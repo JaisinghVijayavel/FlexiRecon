@@ -32,9 +32,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel J
-    Updated Date : Nov-23-2023
+    Updated Date : Dec-02-2023
 
-    Version No : 2
+    Version No : 3
   */
 
 	declare v_recon_gid int default 0;
@@ -164,6 +164,95 @@ me:BEGIN
 		select max(recon_gid) into v_recon_gid from recon_mst_trecon;
 
 		set in_recon_gid = v_recon_gid;
+
+    -- insert system field debit,credit,tran date
+    if in_recontype_code = 'W'
+      or in_recontype_code = 'B'
+      or in_recontype_code = 'I' then
+      -- debit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'value_debit',
+        'Debit',
+        'Y',
+        0,
+        'NUMERIC',
+        '14,2',
+        'Y',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- credit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'value_credit',
+        'Credit',
+        'Y',
+        0,
+        'NUMERIC',
+        '14,2',
+        'Y',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- tran_date
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'tran_date',
+        'Tran Date',
+        'Y',
+        0,
+        'DATE',
+        '',
+        'Y',
+        'Y',
+        sysdate(),
+        in_action_by;
+    end if;
 
 	  set out_result = 1;
 	  set out_msg = 'Record saved successfully.. !';

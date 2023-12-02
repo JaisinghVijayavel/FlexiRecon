@@ -59,6 +59,21 @@ me:BEGIN
   set v_date_format = fn_get_configvalue('web_date_format');
   set v_recon_code = SPLIT(in_recon_code,'$',1);
 
+  -- recon validation
+  if not exists(select recon_code from recon_mst_trecon
+    where recon_code = in_recon_code
+    and active_status = 'Y'
+    and period_from <= curdate()
+    and (period_to >= curdate()
+    or until_active_flag = 'Y') 
+    and delete_flag = 'N') then
+
+    set out_msg = 'Invalid recon !';
+    set out_result = 0;
+
+    leave me;
+  end if;
+
   if in_automatch_flag = 'Y' then
     if exists(select job_gid from recon_trn_tjob
       where jobtype_code = 'A'
@@ -74,10 +89,6 @@ me:BEGIN
       set out_result = 0;
 
       set v_job_gid = 0;
-
-      SIGNAL SQLSTATE '99999' SET
-      MYSQL_ERRNO = 9999,
-      MESSAGE_TEXT = out_msg;
 
       leave me;
     else
@@ -151,8 +162,8 @@ me:BEGIN
     close rule_cursor;
   end rule_block;
 
-  set v_job_input_param = concat(char(13),char(10),v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format));
-  set v_job_input_param = concat(char(13),char(10),v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format));
+  set v_job_input_param = concat(v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format),char(13),char(10));
+  set v_job_input_param = concat(v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format),char(13),char(10));
 
   call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C','Completed',@msg,@result);
 
