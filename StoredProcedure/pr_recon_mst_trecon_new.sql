@@ -291,7 +291,6 @@ me:BEGIN
         in_action_by;
 
       -- tran_date
-      /*
       insert into recon_mst_treconfield
       (
         recon_code,
@@ -318,7 +317,6 @@ me:BEGIN
         'Y',
         sysdate(),
         in_action_by;
-        */
     end if;
 
 	  set out_result = 1;

@@ -48,11 +48,13 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Field alies name cannot be empty,');
 			set err_flag := true;
 		end if;
-		
+
+    /*
 		if in_fieldtype_code = '' or in_fieldtype_code is null then
 			set err_msg := concat(err_msg,'Field typecode cannot be empty,');
 			set err_flag := true;
 		end if;
+    */
 		
 		if in_active_status <> 'Y' and in_active_status <> 'N' or in_active_status is null then
 			set err_msg := concat(err_msg,'Invalid active status value,');
@@ -145,6 +147,7 @@ me:BEGIN
 	elseif(in_action = 'DELETE') then 
 		update recon_mst_treconfield set
 			active_status = 'N',
+      delete_flag = 'Y',
 			update_date = sysdate(),
 			update_by = in_action_by,
 			delete_flag = 'Y'  

@@ -87,6 +87,7 @@ me:BEGIN
 				and b.recon_code = a.recon_code
 				and b.delete_flag = 'N'
 			left join recon_mst_tdatasetfield c on c.dataset_table_field=b.dataset_field_name
+        and c.dataset_code = b.dataset_code
 				and c.delete_flag = 'N'
 			left join recon_mst_trecon d on a.recon_code=d.recon_code
 				and d.delete_flag = 'N'
@@ -113,6 +114,7 @@ me:BEGIN
       @dataset,
       ' from recon_data_mapping as a
       inner join recon_mst_treconfield b on b.recon_field_name =a.recon_field_name
+        and b.recon_code = a.recon_code 
         and b.delete_flag = ''N''
       where a.recon_code=''',v_recon_code,'''
       GROUP BY a.recon_name, a.recon_field_name, a.display_order
@@ -138,12 +140,12 @@ me:BEGIN
 		order by a.display_order;
 	end if;
 
-	select 
+	select
 		recon_field_name,
 		recon_field_desc,
-		ifnull(recon_field_type,'') as recon_field_type  
-	from recon_mst_treconfield 
-	where recon_code=v_recon_code 
+		ifnull(recon_field_type,'') as recon_field_type
+	from recon_mst_treconfield
+	where recon_code=v_recon_code
 	and delete_flag = 'N';
 END $$
 

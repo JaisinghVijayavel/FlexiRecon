@@ -36,20 +36,22 @@ me:BEGIN
 	declare v_reconfieldmapping_gid int default 0;
 	declare v_msg text default '';
 	declare v_field_type text default '';
+  declare v_reconfield_type text default '';
 	declare v_fieldtype_id text default '';
+  declare v_result int default 0;
 
   set in_reconfield_gid = ifnull(in_reconfield_gid,0);
 
   if(in_action = 'INSERT' or in_action = 'UPDATE') then
-	if in_recon_field_name = '' or in_recon_field_name is null then
-		set err_msg := concat(err_msg,'Recon fieldname cannot be empty,');
-		set err_flag := true;
-	end if;
+	  if in_recon_field_name = '' or in_recon_field_name is null then
+		  set err_msg := concat(err_msg,'Recon fieldname cannot be empty,');
+		  set err_flag := true;
+	  end if;
 
-	if in_display_order = '' or in_display_order is null then
-		set err_msg := concat(err_msg,'Display order cannot be empty,');
-		set err_flag := true;
-	end if;
+	  if in_display_order = '' or in_display_order is null then
+		  set err_msg := concat(err_msg,'Display order cannot be empty,');
+		  set err_flag := true;
+	  end if;
 
 		if not exists(select recon_gid from recon_mst_trecon
 			where recon_code = in_recon_code 
@@ -87,15 +89,51 @@ me:BEGIN
 			end if;
 		end if;
 
-    if not exists(select * from recon_mst_tdatasetfield
+    if in_dataset_code <> '' and in_dataset_field_name <> '' then
+      if not exists(select * from recon_mst_tdatasetfield
         where dataset_code = in_dataset_code
         and dataset_table_field = in_dataset_field_name
         and active_status = 'Y'
-        and delete_flag = 'N')
-        and in_dataset_code <> ''
-        and in_dataset_field_name <> '' then
-				set err_msg := concat(err_msg,'Invalid dataset field,');
-				set err_flag := true;
+        and delete_flag = 'N') then
+
+        set err_msg := concat(err_msg,'Invalid dataset field,');
+        set err_flag := true;
+      else
+        -- get recon field type
+        select
+          recon_field_type into v_reconfield_type
+        from recon_mst_treconfield
+        where reconfield_gid = in_reconfield_gid
+        and delete_flag = 'N';
+
+        set v_reconfield_type = ifnull(v_reconfield_type,'');
+
+        -- get dataset field type
+        select
+          field_type into v_field_type
+        from recon_mst_tdatasetfield
+        where dataset_code = in_dataset_code
+        and dataset_table_field = in_dataset_field_name
+        and delete_flag = 'N';
+
+        set v_field_type = ifnull(v_field_type,'');
+
+        -- check field type
+        if v_reconfield_type <> '' then
+          if v_reconfield_type = 'DATETIME' then
+            set v_reconfield_type = 'DATE';
+          end if;
+
+          if v_field_type = 'DATETIME' then
+            set v_field_type = 'DATE';
+          end if;
+
+          if v_reconfield_type <> v_field_type then
+            set err_msg := concat(err_msg,'Data type mismatch in recon field vs dataset field,');
+            set err_flag := true;
+          end if;
+        end if;
+      end if;
     end if;
   end if;
 
@@ -104,14 +142,6 @@ me:BEGIN
 		set out_msg = err_msg;
 		leave me;
   end if;
-
-  -- get dataset field type
-  select
-    field_type into v_field_type
-  from recon_mst_tdatasetfield
-  where dataset_code = in_dataset_code
-  and dataset_table_field = in_dataset_field_name
-  and delete_flag = 'N';
 
   if not exists(select * from recon_mst_treconfield
     where recon_code = in_recon_code
@@ -133,7 +163,9 @@ me:BEGIN
     end if;
   end if;
 
-  select recon_field_name into in_recon_field_name from recon_mst_treconfield
+  select
+    recon_field_name into in_recon_field_name
+  from recon_mst_treconfield
   where recon_code = in_recon_code
   and recon_field_desc = in_recon_field_name
   and active_status = 'Y'
@@ -141,7 +173,9 @@ me:BEGIN
 
   set in_recon_field_name = ifnull(in_recon_field_name,'');
 
-	if (in_action = 'INSERT' or in_action = 'UPDATE') and in_recon_field_name <> '' then
+	if (in_action = 'INSERT' or in_action = 'UPDATE')
+    and in_dataset_code <> ''
+    and in_dataset_field_name <> '' then
 		if in_reconfieldmapping_gid = 0 then
 			if not exists(select * from recon_mst_treconfieldmapping
 				where recon_code = in_recon_code
@@ -183,6 +217,7 @@ me:BEGIN
 		end if;
 	elseif in_action = 'DELETE' then
 		update recon_mst_treconfield set
+      delete_flag = 'Y',
 			active_status = 'N',
 			update_date = sysdate(),
 			update_by = in_action_by
@@ -190,6 +225,7 @@ me:BEGIN
 		and delete_flag = 'N';
 
 		update recon_mst_treconfieldmapping set
+      delete_flag = 'Y',
 			active_status = 'N',
 			update_date = sysdate(),
 			update_by = in_action_by

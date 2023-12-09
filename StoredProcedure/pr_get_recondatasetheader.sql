@@ -76,7 +76,7 @@ begin
   inner join recon_mst_tfieldstru as e on a.dataset_table_field = e.field_name
     and e.delete_flag = 'N'
   where a.dataset_code = in_dataset_code
-  and b.recon_code = in_recon_code 
+  and b.recon_code = in_recon_code
   and a.active_status = 'Y'
   and a.delete_flag = 'N';
 
@@ -98,12 +98,14 @@ begin
     open field_cursor;
 
     field_loop: loop
-      fetch field_cursor into v_recon_field,v_recon_field_type,v_recon_field_org_type,
-                              v_recon_field_length,v_dataset_field,v_dataset_field_type,v_dataset_field_org_type;
+      fetch field_cursor into v_recon_field,v_recon_field_type,v_recon_field_org_type,v_recon_field_length,
+                              v_dataset_field,v_dataset_field_type,v_dataset_field_org_type;
 
       if field_done = 1 then leave field_loop; end if;
 
       -- dataset field
+      set v_field = v_dataset_field;
+
       if v_recon_field_org_type = v_dataset_field_org_type then
         set v_field = v_dataset_field;
       else
