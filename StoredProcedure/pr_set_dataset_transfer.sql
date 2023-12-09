@@ -14,10 +14,11 @@ me:begin
     Created Date : 06-10-2023
 
     Updated By : Vijayavel
-    Updated Date :
+    Updated Date : 07-12-2023
 
-    Version : 1
+    Version : 2
   */
+
   declare v_pipeline_code text default '';
   declare v_dataset_code text default '';
   declare v_parent_dataset_code text default '';
@@ -203,10 +204,13 @@ me:begin
 
   set v_sql = concat(v_target_sql,v_source_sql);
 
-  set @v_sql = v_sql;
-  prepare _sql from @v_sql;
-  execute _sql;
-  deallocate prepare _sql;
+  -- transfer data only for recon mapped fields
+  if @out_dataset_field_all <> '' then
+    set @v_sql = v_sql;
+    prepare _sql from @v_sql;
+    execute _sql;
+    deallocate prepare _sql;
+  end if;
 
   -- insert dummy record to retail auto_increment
   set v_sql = concat('insert into ',v_target_table,' (scheduler_gid) select ',cast(in_scheduler_gid as nchar));
@@ -217,18 +221,36 @@ me:begin
   deallocate prepare _sql;
 
 
-  -- update tran amount
-  set v_sql = concat('update ', v_target_table ,' set ');
-  set v_sql = concat(v_sql,' tran_value = if(value_debit > 0,value_debit,value_credit),');
-  set v_sql = concat(v_sql,' tran_mult= if(value_debit > 0,-1,1),');
-  set v_sql = concat(v_sql,' tran_acc_mode = if(value_debit > 0,''D'',''C'')');
-  set v_sql = concat(v_sql,' where scheduler_gid = ',cast(in_scheduler_gid as nchar));
-  set v_sql = concat(v_sql,' and delete_flag = ''N''');
+  if v_recontype_code = 'W' or v_recontype_code = 'B' or v_recontype_code = 'I' then
+    -- update tran value
+    set v_sql = concat('update ', v_target_table ,' set ');
+    set v_sql = concat(v_sql,' tran_value = value_debit + value_credit,');
+    set v_sql = concat(v_sql,' excp_value = value_debit + value_credit,');
+    set v_sql = concat(v_sql,' tran_mult= if(value_debit > 0,-1,1),');
+    set v_sql = concat(v_sql,' tran_acc_mode = if(value_debit > 0,''D'',''C'')');
+    set v_sql = concat(v_sql,' where scheduler_gid = ',cast(in_scheduler_gid as nchar));
+    set v_sql = concat(v_sql,' and recon_code = ',char(34),in_recon_code,char(34),' ');
+    set v_sql = concat(v_sql,' and delete_flag = ''N''');
+  elseif v_recontype_code = 'V' and v_recon_value_flag = 'Y' and v_recon_value_field <> '' then
+    -- update tran value
+    set v_sql = concat('update ', v_target_table ,' set ');
+    set v_sql = concat(v_sql,' tran_value = cast(',v_recon_value_field,' as decimal(15,2)),');
+    set v_sql = concat(v_sql,' excp_value = cast(',v_recon_value_field,' as decimal(15,2)),');
+    set v_sql = concat(v_sql,' tran_mult= 1,');
+    set v_sql = concat(v_sql,' tran_acc_mode = ''V'' ');
+    set v_sql = concat(v_sql,' where scheduler_gid = ',cast(in_scheduler_gid as nchar));
+    set v_sql = concat(v_sql,' and recon_code = ',char(34),in_recon_code,char(34),' ');
+    set v_sql = concat(v_sql,' and delete_flag = ''N''');
+  else
+    set v_sql = '';
+  end if;
 
-  set @v_sql = v_sql;
-  prepare _sql from @v_sql;
-  execute _sql;
-  deallocate prepare _sql;
+  if v_sql <> '' then
+    set @v_sql = v_sql;
+    prepare _sql from @v_sql;
+    execute _sql;
+    deallocate prepare _sql;
+  end if;
 
   /*
   if v_valuetype_code = 'TDRCR' then

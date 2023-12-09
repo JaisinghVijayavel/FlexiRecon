@@ -72,15 +72,16 @@ me:BEGIN
 				CONCAT(
 					'MAX(CASE WHEN dataset_name = ''',
 					dataset_name,
-					''' THEN field_name END) AS ''',
+					''' THEN field_desc END) AS ''',
 					dataset_name ,''''
 				)
 			) INTO @dataset
 		FROM
 		(
 			select distinct
-				recon_name,a.recon_field_name,field_name,
-				dataset_name,display_order,e.dataset_code
+				recon_name,a.recon_field_name,c.field_name,
+				dataset_name,display_order,e.dataset_code,
+        c.field_name as field_desc
 			from recon_mst_treconfield a
 			left join recon_mst_treconfieldmapping b on a.recon_field_name=b.recon_field_name
 				and b.recon_code = a.recon_code
@@ -103,31 +104,37 @@ me:BEGIN
     end if;
 
 		SET @sql = CONCAT('SELECT
-      reconfield_gid,dataset_code,recon_code,recon_name,
-      recon_field_name as ''Recon Field Name'',
-      display_order as ''Dispaly Order''',
+      a.reconfield_gid,
+      a.dataset_code,
+      a.recon_code,
+      a.recon_name,
+      b.recon_field_desc as ''Recon Field Name'',
+      a.display_order as ''Display Order''',
       @dataset,
-      ' from recon_data_mapping
-      where recon_code=''',v_recon_code,'''
-      GROUP BY recon_name, recon_field_name, display_order
-      order by display_order;');
+      ' from recon_data_mapping as a
+      inner join recon_mst_treconfield b on b.recon_field_name =a.recon_field_name
+        and b.delete_flag = ''N''
+      where a.recon_code=''',v_recon_code,'''
+      GROUP BY a.recon_name, a.recon_field_name, a.display_order
+      order by a.display_order;');
 		-- Execute the dynamic SQL query to pivot the data.
 
 		PREPARE dynamic_sql FROM @sql;
 		EXECUTE dynamic_sql;
 	else
 		SELECT
+      a.reconfield_gid,
 			dataset_code,
 			a.recon_code,
 			recon_name,
-			a.recon_field_name as 'Recon Field Name',
-			a.display_order as 'Dispaly Order'
+			b.recon_field_desc as 'Recon Field Name',
+			a.display_order as 'Display Order'
 		from recon_data_mapping a
-		inner join recon_mst_treconfield b on b.recon_field_name =a.recon_field_name 
-			and b.delete_flag = 'N' 
-		where a.recon_code=v_recon_code 
+		inner join recon_mst_treconfield b on b.recon_field_name =a.recon_field_name
 			and b.delete_flag = 'N'
-		GROUP BY recon_name, a.recon_field_name, a.display_order  
+		where a.recon_code=v_recon_code
+			and b.delete_flag = 'N'
+		GROUP BY recon_name, a.recon_field_name, a.display_order
 		order by a.display_order;
 	end if;
 

@@ -24,14 +24,15 @@ me:BEGIN
     Created Date : Sep-29-2023
 
     Updated By : Vijayavel J
-    Updated Date : Nov-23-2023
+    Updated Date : Dec-08-2023
 
-    Version No : 2
+    Version No : 3
   */
 
   declare v_dataset_db_name text default '';
   declare v_dataset_table_name text default '';
 	declare v_dataset_gid int default 0;
+  declare v_datasetfield_count int default 0;
 	declare v_msg text default '';
 
 	declare err_msg text default '';
@@ -79,6 +80,18 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Duplicate dataset,');
 			set err_flag := true;
 		end if;
+
+    select
+      count(*) into v_datasetfield_count
+    from recon_mst_tdatasetfield
+    where dataset_code = in_dataset_code
+    and delete_flag = 'N';
+
+    set v_datasetfield_count = ifnull(v_datasetfield_count,0);
+
+    if in_active_status = 'Y' and v_datasetfield_count = 0 then
+      set in_active_status = 'D';
+    end if;
   end if;
 
 	if err_flag = true then
@@ -109,6 +122,7 @@ me:BEGIN
 		end if;
 
 		set in_dataset_gid = 0;
+    set in_active_status = 'D';
 
 		insert into recon_mst_tdataset
     (

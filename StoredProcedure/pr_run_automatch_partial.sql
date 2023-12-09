@@ -36,7 +36,7 @@ me:BEGIN
   declare v_rule_code text default '';
 
   declare v_reversal_flag char(1) default '';
-  declare v_group_flag char(1) default '';
+  declare v_group_flag varchar(32) default '';
   declare v_group_method_flag char(1) default '';
   declare v_manytomany_match_flag char(1) default '';
   declare v_field_group_flag char(1) default '';

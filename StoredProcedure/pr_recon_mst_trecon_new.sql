@@ -22,7 +22,7 @@ CREATE PROCEDURE `pr_recon_mst_trecon_new`
 	in in_role_code varchar(32),
 	in in_lang_code varchar(32),
 	in in_action varchar(16),
-	in in_action_by varchar(10),
+	in in_action_by varchar(32),
 	out out_msg text,
 	out out_result int(10)
 )
@@ -32,16 +32,25 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel J
-    Updated Date : Dec-02-2023
+    Updated Date : Dec-08-2023
 
-    Version No : 3
+    Version No : 4
   */
 
 	declare v_recon_gid int default 0;
+  declare v_result int default 0;
 	declare v_msg text default '';
 
 	declare err_msg text default '';
 	declare err_flag boolean default false;
+
+  set in_recon_value_flag = ifnull(in_recon_value_flag,'');
+  set in_recon_value_field = ifnull(in_recon_value_field,'');
+
+  set in_recon_date_flag = ifnull(in_recon_date_flag,'');
+  set in_recon_date_field = ifnull(in_recon_date_field,'');
+
+  set in_recon_automatch_partial = ifnull(in_recon_automatch_partial,'');
 
 	if in_action = "UPDATE"  or in_action = "INSERT" then
 		if in_recon_name = '' or in_recon_name is null then
@@ -95,32 +104,88 @@ me:BEGIN
 		end if;
   end if;
 
-  if in_action = "UPDATE" then
-		if exists(select recon_gid from recon_mst_trecon
-			where recon_name = in_recon_name
-            and recon_gid <> in_recon_gid
-            and delete_flag = 'N') then
-			set err_msg := concat(err_msg,'Duplicate record,');
-			set err_flag := true;
-		end if;
-  end if;
-
 	if err_flag = true then
 		set out_result = 0;
 		set out_msg = err_msg;
     leave me;
   end if;
 
-  start transaction;
+  -- validation
+  if in_action = "INSERT"  or in_action = "UPDATE" then
+    if in_recontype_code = 'W'
+      or in_recontype_code = 'B'
+      or in_recontype_code = 'I' then
+
+      -- value field flag
+      if in_recon_value_flag = 'Y' then
+        set in_recon_value_flag = 'N';
+        set in_recon_value_field = '';
+      end if;
+
+      if in_recon_date_flag = 'N' then
+        set in_recon_date_flag = 'Y';
+      end if;
+    end if;
+
+    -- recon value based
+    if in_recontype_code = 'V' then
+      -- value field flag
+      if in_recon_value_flag = 'N' then
+        set in_recon_value_flag = 'Y';
+        set in_recon_value_field = '';
+      end if;
+    end if;
+
+    -- recon non-value based
+    if in_recontype_code = 'N' then
+      -- value field flag
+      set in_recon_value_flag = 'N';
+
+      -- partial match
+      set in_recon_automatch_partial = 'N';
+      set in_threshold_plus_value = 0;
+      set in_threshold_minus_value = 0;
+    end if;
+
+
+		if in_action = "UPDATE" then
+			if exists(select recon_gid from recon_mst_trecon
+				where recon_name = in_recon_name
+							and recon_gid <> in_recon_gid
+							and delete_flag = 'N') then
+				set err_msg := concat(err_msg,'Duplicate record,');
+				set err_flag := true;
+			end if;
+
+      -- check recon field
+			select
+				count(*) into v_result
+			from recon_mst_treconfield
+			where recon_code = in_recon_code
+			and active_status = 'Y'
+			and delete_flag = 'N';
+
+			set v_result = ifnull(v_result,0);
+
+			if (in_active_status = 'Y' and v_result = 0)
+        or (in_recon_value_flag = 'Y' and in_recon_value_field = '')
+        or (in_recon_date_flag = 'Y' and in_recon_date_field = '') then
+				set in_active_status = 'D';
+			end if;
+		end if;
+  end if;
 
 	if(in_until_active_flag = 'Y') then
 		set in_period_to = null;
 	end if;
 
+  start transaction;
+
   if (in_action = 'INSERT') then
 		set in_recon_gid = 0;
 
     set in_recon_code = fn_get_autocode('RECON');
+    set in_active_status = 'D';
 
 		insert into recon_mst_trecon
     (
@@ -189,7 +254,7 @@ me:BEGIN
         'value_debit',
         'Debit',
         'Y',
-        0,
+        1,
         'NUMERIC',
         '14,2',
         'Y',
@@ -217,7 +282,7 @@ me:BEGIN
         'value_credit',
         'Credit',
         'Y',
-        0,
+        2,
         'NUMERIC',
         '14,2',
         'Y',
@@ -226,6 +291,7 @@ me:BEGIN
         in_action_by;
 
       -- tran_date
+      /*
       insert into recon_mst_treconfield
       (
         recon_code,
@@ -245,13 +311,14 @@ me:BEGIN
         'tran_date',
         'Tran Date',
         'Y',
-        0,
+        3,
         'DATE',
         '',
         'Y',
         'Y',
         sysdate(),
         in_action_by;
+        */
     end if;
 
 	  set out_result = 1;
@@ -280,9 +347,9 @@ me:BEGIN
 	  set out_msg = 'Record Updated Successfully.. !';
   elseif(in_action = 'DELETE') then
 		update recon_mst_trecon set
+      active_status = 'N',
 			update_date = sysdate(),
-			update_by = in_action_by,
-			delete_flag = 'Y'
+			update_by = in_action_by
 		where recon_gid = in_recon_gid
 		and delete_flag = 'N';
 

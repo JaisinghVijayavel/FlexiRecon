@@ -34,14 +34,15 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel J
-    Updated Date : Nov-23-2023
+    Updated Date : Dec-08-2023
 
-    Version No : 2
+    Version No : 3
   */
 
 	declare err_msg text default '';
 	declare err_flag boolean default false;
 	declare v_rule_gid int default 0;
+  declare v_result int default 0;
 	declare v_msg text default '';
     
   if(in_action = 'INSERT' or in_action = 'UPDATE') then
@@ -155,10 +156,25 @@ me:BEGIN
     leave me;
   end if;
 
+  if in_action = 'UPDATE' then
+    select
+      count(*) into v_result
+    from recon_mst_trulecondition
+    where rule_code = in_rule_code
+    and delete_flag = 'N';
+
+    set v_result = ifnull(v_result,0);
+
+    if in_active_status = 'Y' and v_result = 0 then
+      set in_active_status = 'D';
+    end if;
+  end if;
+
   start transaction;
 
 	if (in_action = 'INSERT') then
     set in_rule_code = fn_get_autocode('RULE');
+    set in_active_status = 'D';
 
     insert into recon_mst_trule
 		(
@@ -229,6 +245,7 @@ me:BEGIN
 		set out_msg = 'Record updated successfully.. !';
 	elseif(in_action = 'DELETE') then
 		update recon_mst_trule set
+      active_status = 'N',
 			update_date = sysdate(),
 			update_by = in_action_by
 		where rule_gid = in_rule_gid
