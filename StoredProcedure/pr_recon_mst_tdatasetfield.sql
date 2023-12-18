@@ -25,9 +25,9 @@ me:BEGIN
 		Created Date : Sep-29-2023
 
 		Updated By : Vijayavel J
-		Updated Date : Dec-02-2023
+		Updated Date : Dec-13-2023
 
-		Version No : 3
+		Version No : 4
 	*/
 
 	declare err_msg text default '';
@@ -35,6 +35,8 @@ me:BEGIN
 	declare v_datasetfield_gid int default 0;
 	declare v_msg text default '';
   declare v_count int default 0;
+
+  set in_datasetfield_gid = ifnull(in_datasetfield_gid,0);
 	
 	if(in_action = 'INSERT' or in_action = 'UPDATE') then
     if (in_action = 'INSERT') then set in_datasetfield_gid = 0; end if;

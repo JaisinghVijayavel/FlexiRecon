@@ -100,7 +100,7 @@ me:BEGIN
   call pr_run_sql(v_sql,@msg,@result);
 
   -- tranbrkp table
-  set v_sql = "insert into recon_tmp_ttranbrkpgid select distinct tran_gid from recon_tmp_tmanualpost where tranbrkp_gid > 0";
+  set v_sql = "insert into recon_tmp_ttranbrkpgid select distinct tranbrkp_gid from recon_tmp_tmanualpost where tranbrkp_gid > 0";
   call pr_run_sql(v_sql,@msg,@result);
 
   set v_sql = concat("insert into recon_tmp_ttranbrkp
@@ -430,6 +430,8 @@ me:BEGIN
 		where a.delete_flag = 'N' ", in_condition,"
   ");
 
+  call pr_run_sql(v_sql,@msg,@result);
+
   -- tranbrkp
   set v_sql = concat("insert into recon_rpt_tmanualpost (
 			rptsession_gid,
@@ -746,7 +748,6 @@ me:BEGIN
     inner join recon_tmp_ttranbrkp as b on a.tranbrkp_gid = b.tranbrkp_gid
 		where a.delete_flag = 'N' ", in_condition,"
   ");
-
 
   call pr_run_sql(v_sql,@msg,@result);
 

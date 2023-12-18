@@ -61,14 +61,15 @@ me:BEGIN
     insert into recon_tmp_tfield (field_name,field_alias_name,field_type)
       SELECT
         t.COLUMN_NAME as field_name,
-        ifnull(f.field_alias_name,t.COLUMN_NAME),
-        ifnull(f.field_type,'')
+        ifnull(f.recon_field_name,t.COLUMN_NAME),
+        ifnull(f.recon_field_type,'')
       FROM information_schema.columns as t
       left join recon_mst_treconfield as f on t.COLUMN_NAME = f.recon_field_name
         and f.recon_code = in_recon_code
+        and f.display_flag = 'Y'
+        and f.recon_field_name like 'col%'
         and f.delete_flag = 'N'
       WHERE t.table_schema=database()
-      and (t.display_flag = 'Y' or (f.display_flag = 'Y' and f.recon_field_name like 'col%'))
       AND t.table_name = in_table_name;
 
     set v_table_stru_flag := false;

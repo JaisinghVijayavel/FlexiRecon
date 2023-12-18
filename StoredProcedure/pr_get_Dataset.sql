@@ -26,7 +26,7 @@ begin
     a.dataset_name,
     a.dataset_category,
     b.start_date as last_sync_date,
-    fn_get_mastername(a.active_status, 'QCD_JOB_STATUS') as last_sync_status,
+    fn_get_mastername(b.job_status, 'QCD_JOB_STATUS') as last_sync_status,
     a.active_status,
     fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
   from recon_mst_tdataset a

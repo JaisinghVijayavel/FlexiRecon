@@ -23,14 +23,16 @@ me:begin
   declare v_pipeline_code text default '';
   declare v_dataset_code text default '';
   declare v_dataset_name text default '';
+  declare v_dataset_db_name text default '';
   declare v_recon_code text default '';
   declare v_scheduled_date datetime default null;
   declare v_scheduler_param text default '';
   declare v_file_name text default '';
   declare v_job_input_param text default '';
   declare v_job_gid int default 0;
+  declare v_dataset_table_name text default '';
+  declare v_sql text default '';
 
-  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -53,7 +55,6 @@ me:begin
 
     SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = @text, MYSQL_ERRNO = @errno;
   END;
-  */
 
   -- scheduler_gid validation
   if not exists(select scheduler_gid from con_trn_tscheduler
@@ -64,6 +65,9 @@ me:begin
     leave me;
   end if;
 
+  -- get dataset table name
+  set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+
   -- get file details
   select
     a.pipeline_code,
@@ -71,14 +75,16 @@ me:begin
     a.file_name,
     b.target_dataset_code,
     c.dataset_name,
-    a.scheduler_parameters
+    a.scheduler_parameters,
+    c.dataset_table_name
   into
     v_pipeline_code,
     v_scheduled_date,
     v_file_name,
     v_dataset_code,
     v_dataset_name,
-    v_scheduler_param
+    v_scheduler_param,
+    v_dataset_table_name
   from con_trn_tscheduler as a
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code
     and b.delete_flag = 'N'
@@ -94,6 +100,7 @@ me:begin
   set v_dataset_name = ifnull(v_dataset_name,'');
   set v_file_name = ifnull(v_file_name,'');
   set v_scheduler_param = ifnull(v_scheduler_param,'');
+  set v_dataset_table_name = ifnull(v_dataset_table_name,'');
 
   call pr_ins_job('','S',in_scheduler_gid,concat('Processing Scheduler File ',v_file_name),v_scheduler_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
 
@@ -114,32 +121,32 @@ me:begin
   and delete_flag = 'N';
 
   if v_dataset_code = 'ACCBALANCE' then
-    replace into recon_trn_tacc (scheduler_gid,dataset_code,tran_date,bal_value,insert_date,insert_by)
+    set v_sql = concat("replace into recon_trn_taccbal (scheduler_gid,dataset_code,tran_date,bal_value,insert_date,insert_by)
       select
         scheduler_gid,dataset_code,tran_date,bal_debit*-1+bal_credit,sysdate(),in_user_code
-      from ACCBALANCE
-      where scheduler_gid = in_scheduler_gid
-      and delete_flag = 'N';
+      from ",v_dataset_table_name, "
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
   elseif v_dataset_code = 'KOMANUAL' then
-    insert into recon_trn_tmanualtran
-    (
-      scheduler_gid,match_gid,tran_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_reason
-    )
-    select
-      scheduler_gid,match_gid,tran_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_reason
-    from KOMANUAL
-    where scheduler_gid = in_scheduler_gid
-    and delete_flag = 'N';
+    set v_sql = concat("insert into recon_trn_tmanualtran
+      (
+        scheduler_gid,match_gid,tran_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_reason
+      )
+      select
+        scheduler_gid,match_gid,tran_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_reason
+      from ",v_dataset_table_name, "
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
   elseif v_dataset_code = 'POSTMANUAL' then
-    insert into recon_trn_tmanualtranbrkp
-    (
-      scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
-    )
-    select
-      scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
-    from POSTMANUAL
-    where scheduler_gid = in_scheduler_gid
-    and delete_flag = 'N';
+    set v_sql = concat("insert into recon_trn_tmanualtranbrkp
+      (
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
+      )
+      select
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
+      from ",v_dataset_table_name,"
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
   else
     recon_block:begin
       declare recon_done int default 0;
@@ -169,6 +176,19 @@ me:begin
       close recon_cursor;
     end recon_block;
   end if;
+
+  if v_sql <> '' then
+    set @v_sql = v_sql;
+    prepare _sql from @v_sql;
+    execute _sql;
+    deallocate prepare _sql;
+  end if;
+
+  -- set last job_gid
+  update recon_mst_tdataset set
+    last_job_gid = v_job_gid
+  where dataset_code = v_dataset_code
+  and delete_flag = 'N';
 
   -- update in scheduler table
   update recon_trn_tscheduler set

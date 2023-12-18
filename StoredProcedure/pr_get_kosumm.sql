@@ -6,7 +6,7 @@ CREATE PROCEDURE `pr_get_kosumm`(
   in in_period_from date,
   in in_period_to date,
   in in_ip_addr varchar(255),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -53,6 +53,7 @@ me:BEGIN
     recon_name text default null,
     rule_code varchar(32) default null,
     rule_name text default null,
+    rule_order decimal(9,2) not null default 0,
     tran_gid int not null default 0,
     dataset_code varchar(32) default null,
     tran_acc_mode char(1) default null,
@@ -60,7 +61,7 @@ me:BEGIN
     ko_value double(15,2) default null,
     key idx_recon_code (recon_code),
     key idx_tran_gid (tran_gid),
-    key idx_rule_code (rule_code),
+    key idx_rule_order (rule_order),
     key idx_manual_matchoff (manual_matchoff),
     PRIMARY KEY (kodtl_gid)
   ) ENGINE = MyISAM;
@@ -108,11 +109,11 @@ me:BEGIN
 
   insert into recon_tmp_tkodtl
   (
-    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,rule_name
+    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,rule_name,rule_order
   )
   select
     d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
-    r.recon_name,t.dataset_code,t.tran_acc_mode,e.rule_name
+    r.recon_name,t.dataset_code,t.tran_acc_mode,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
   inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
@@ -120,15 +121,16 @@ me:BEGIN
   left join recon_mst_trule as e on k.rule_code = e.rule_code and e.delete_flag = 'N'
   where k.ko_date >= in_period_from
   and k.ko_date <= in_period_to
-  and k.delete_flag = 'N';
+  and k.delete_flag = 'N'
+  order by e.rule_order;
 
   insert into recon_tmp_tkodtl
   (
-    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,rule_name
+    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,rule_name,rule_order
   )
   select
     d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
-    r.recon_name,t.dataset_code,t.tran_acc_mode,e.rule_name
+    r.recon_name,t.dataset_code,t.tran_acc_mode,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
   inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
@@ -136,7 +138,8 @@ me:BEGIN
   left join recon_mst_trule as e on k.rule_code = e.rule_code and e.delete_flag = 'N'
   where k.ko_date >= in_period_from
   and k.ko_date <= in_period_to
-  and k.delete_flag = 'N';
+  and k.delete_flag = 'N'
+  order by e.rule_order;
 
   -- run KO Report
   -- call pr_run_pagereport('RPT_KO',-1,v_condition,false,in_ip_addr,in_user_code,v_rec_count,@msg,v_rptsession_gid);
@@ -211,7 +214,7 @@ me:BEGIN
     sum(ko_value)
   from recon_tmp_tkodtl
   where manual_matchoff = 'N'
-  group by recon_code,dataset_code,rule_name;
+  group by recon_code,dataset_code,rule_order;
 
   -- insert manual
   insert into recon_tmp_tkosumm
@@ -291,7 +294,7 @@ me:BEGIN
   select
     @row_slno = @row_slno + 1,
     recon_code,
-    '9999999999999999',
+    'XXX9999999999999999',
     '',
     'White',
     'White'
@@ -317,7 +320,7 @@ me:BEGIN
   )
   select
     @row_slno = @row_slno + 1,
-    '9999999',
+    'ZZZ9999999',
     'Grant Total',
     count(distinct if(tran_acc_mode = 'D',tran_gid,null)) as dr_count,
     sum(if(tran_acc_mode = 'D',ko_value,0)) as dr_value,
@@ -335,11 +338,11 @@ me:BEGIN
   select
     row_desc as 'Row Labels',
     dr_count as 'Dr Count',
-    dr_value as 'Dr Value',
+    format(dr_value,2,'en_IN') as 'Dr Value',
     cr_count as 'Cr Count',
-    cr_value as 'Cr Value',
+    format(cr_value,2,'en_IN') as 'Cr Value',
     tot_count as 'Total Count',
-    tot_value as 'Total Value',
+    format(tot_value,2,'en_IN') as 'Total Value',
     ifnull(backcolor,'White') as backcolor,
     ifnull(forecolor,'Black') as forecolor
   from recon_tmp_tkosumm

@@ -56,6 +56,7 @@ me:BEGIN
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
 		  ",cast(in_job_gid as nchar)," as job_gid,
       '", in_user_code ,"' as user_code,
+      f.dataset_name,
       b.dataset_name as tranbrkp_name,
       ifnull(c.tran_value,d.tran_value) as base_value,
       ifnull(c.tran_acc_mode,d.tran_acc_mode) as base_acc_mode,
@@ -65,6 +66,8 @@ me:BEGIN
     and b.delete_flag = 'N'
     left join recon_trn_ttran as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
     left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
+    left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
+      and f.delete_flag = 'N'
 		where true ", in_condition," and a.delete_flag = 'N'
 
     union
@@ -73,6 +76,7 @@ me:BEGIN
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
 		  ",cast(in_job_gid as nchar)," as job_gid,
       '", in_user_code ,"' as user_code,
+      f.dataset_name,
       b.dataset_name as tranbrkp_name,
       ifnull(c.tran_value,d.tran_value) as base_value,
       ifnull(c.tran_acc_mode,d.tran_acc_mode) as base_acc_mode,
@@ -82,6 +86,8 @@ me:BEGIN
     and b.delete_flag = 'N'
     left join recon_trn_ttran as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
     left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
+    left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
+      and f.delete_flag = 'N'
 		where true ", in_condition," and a.delete_flag = 'N'
   ");
 

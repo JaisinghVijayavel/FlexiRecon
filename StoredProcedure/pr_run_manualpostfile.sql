@@ -17,6 +17,7 @@ me:BEGIN
   declare v_succ_count int default 0;
   declare v_txt text default '';
   declare v_job_gid int default 0;
+  declare v_file_name text default '';
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -66,6 +67,12 @@ me:BEGIN
   limit 0,1;
 
   select
+    file_name into v_file_name
+  from con_trn_tscheduler
+  where scheduler_gid = in_scheduler_gid
+  and delete_flag = 'N';
+
+  select
     count(*),
     count(distinct tran_gid)
   into
@@ -85,12 +92,12 @@ me:BEGIN
   end if;
 
 	if exists(select job_gid from recon_trn_tjob
-	  where job_type = 'M'
+	  where jobtype_code = 'M'
 	  and job_status in ('I','P')
 	  and delete_flag = 'N') then
 
 	  select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
-	  where job_type = 'M'
+	  where jobtype_code = 'M'
 	  and job_status in ('I','P')
 	  and delete_flag = 'N';
 
@@ -101,7 +108,8 @@ me:BEGIN
 
 	  leave me;
 	else
-	  call pr_ins_job('M',0,concat('Manual match - ',v_file_name),in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+	  call pr_ins_job(v_recon_code,'M',in_scheduler_gid,concat('Manual posting - ',v_file_name),v_file_name,
+      in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 	end if;
 
   set v_job_gid = @out_job_gid;
@@ -125,7 +133,7 @@ me:BEGIN
     inner join recon_trn_ttranbrkp as c
       on a.tranbrkp_gid = c.tranbrkp_gid
       and c.excp_value > 0
-      and c.excp_value = b.tranbrkp_value
+      and c.excp_value = a.tranbrkp_value
       and c.tran_gid = 0
       and c.delete_flag = 'N'
     where a.scheduler_gid = in_scheduler_gid
@@ -152,7 +160,7 @@ me:BEGIN
   inner join recon_trn_ttranbrkp as b
     on a.tranbrkp_gid = b.tranbrkp_gid
     and b.excp_value > 0
-    and b.excp_value = b.tranbrkp_value
+    and b.excp_value = a.tranbrkp_value
     and b.tran_gid = 0
     and b.delete_flag = 'N'
   set
@@ -182,7 +190,7 @@ me:BEGIN
 
   set v_succ_count = ifnull(v_succ_count,0);
 
-	insert into recon_trn_tmanualtranbrkpmatch
+	insert into recon_trn_tmanualtranbrkppost
 	  select * from recon_trn_tmanualtranbrkp
 	  where scheduler_gid = in_scheduler_gid
 	  and delete_flag = 'N';

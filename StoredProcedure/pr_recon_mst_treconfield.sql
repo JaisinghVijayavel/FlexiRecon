@@ -55,25 +55,46 @@ me:BEGIN
 			set err_flag := true;
 		end if;
     */
-		
+
 		if in_active_status <> 'Y' and in_active_status <> 'N' or in_active_status is null then
 			set err_msg := concat(err_msg,'Invalid active status value,');
 			set err_flag := true;
 		end if;
-	end if;
-	
-	if(in_action = 'INSERT' or in_action = 'UPDATE') then
-		if not exists(select recon_gid from recon_mst_trecon 
-			where recon_code = in_recon_code 
+
+		if not exists(select recon_gid from recon_mst_trecon
+			where recon_code = in_recon_code
 			and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Invalid recon code');
 			set err_flag := true;
 		end if;
-   end if;
 
+    if in_action = "INSERT" then
+		  if exists(select reconfield_gid from recon_mst_treconfield
+			  where display_order = in_display_order
+        and recon_code = in_recon_code
+        and active_status = 'Y'
+        and delete_flag = 'N') then
+			  set err_msg := concat(err_msg,'Duplicate display order,');
+			  set err_flag := true;
+		  end if;
+    elseif in_action = "UPDATE" then
+		  if exists(select reconfield_gid from recon_mst_treconfield
+			  where display_order = in_display_order
+        and recon_code = in_recon_code
+        and reconfield_gid <> in_reconfield_gid
+        and active_status = 'Y'
+        and delete_flag = 'N') then
+			  set err_msg := concat(err_msg,'Duplicate display order,');
+			  set err_flag := true;
+		  end if;
+    end if;
+	end if;
+
+  -- duplicate field name
   if in_action = "INSERT" then
 		if exists(select reconfield_gid from recon_mst_treconfield
 			where recon_field_name = in_field_name
+      and recon_code = in_recon_code
       and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Duplicate record,');
 			set err_flag := true;

@@ -554,6 +554,10 @@ me:BEGIN
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
               set v_join_condition = ifnull(v_join_condition,'');
 
+              if v_join_condition = '' then
+                set v_join_condition = 'and';
+              end if;
+
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
@@ -572,8 +576,11 @@ me:BEGIN
             close basefilter_cursor;
           end basefilter_block;
 
-          if v_sourcebase_filter = ' and ' then set v_sourcebase_filter = ''; end if;
-          if v_comparisonbase_filter = ' and ' then set v_comparisonbase_filter = ''; end if;
+          -- if v_sourcebase_filter = ' and ' then set v_sourcebase_filter = ''; end if;
+          -- if v_comparisonbase_filter = ' and ' then set v_comparisonbase_filter = ''; end if;
+
+          set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1 ');
+          set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1 ');
 
           set v_rule_condition = ' and ';
           set v_rule_notnull_condition = ' and ';
@@ -706,7 +713,11 @@ me:BEGIN
               set v_comparison_field = ifnull(concat('b.',v_comparison_field),'');
 
               -- source
-              if instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0 then
+              if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
+                and v_open_parentheses_flag <> '('
+                and v_join_condition <> 'OR'
+                and v_close_parentheses_flag <> ')' then
+
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
@@ -721,7 +732,11 @@ me:BEGIN
               end if;
 
               -- comparison
-              if instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0 then
+              if (instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0)
+                and v_open_parentheses_flag <> '('
+                and v_join_condition <> 'OR'
+                and v_close_parentheses_flag <> ')' then
+
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
 
@@ -1481,14 +1496,27 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
             set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
-            set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tran_mult,a.tranbrkp_gid',v_rule_groupby,' ');
-            set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
 
+            if v_grp_field_condition <> '' then
+              set v_match_sql = concat(v_match_sql,'and ',v_grp_field_condition);
+            end if;
+
+            set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tran_mult,a.tranbrkp_gid',v_rule_groupby);
+
+            if v_grp_field <> '' then
+              set v_match_sql = concat(v_match_sql,',',v_grp_field);
+            else
+              set v_match_sql = concat(v_match_sql,' ');
+            end if;
+
+            set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
             set v_match_sql = concat(v_match_sql,'and a.excp_value*a.tran_mult = sum(b.excp_value*b.tran_mult)*-1 ');
 
+            /*
             if v_grp_field <> '' then
               set v_match_sql = concat(v_match_sql,'and count(distinct ', v_grp_field ,') = 1 ');
             end if;
+            */
 
             call pr_run_sql(v_match_sql,@msg,@result);
 

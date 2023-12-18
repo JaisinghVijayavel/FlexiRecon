@@ -33,7 +33,6 @@ me:BEGIN
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
-  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -54,7 +53,6 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
-  */
 
   set v_date_format = fn_get_configvalue('web_date_format');
   set v_recon_code = SPLIT(in_recon_code,'$',1);
@@ -107,6 +105,18 @@ me:BEGIN
 
   set v_job_gid = @out_job_gid;
 
+  -- delete dataset job record
+  delete from recon_trn_tdatasetjob
+  where recon_code = in_recon_code
+  and dataset_code in
+  (
+    select dataset_code from recon_mst_trecondataset
+    where recon_code = in_recon_code
+    and delete_flag = 'N'
+  )
+  and automatch_flag = in_automatch_flag
+  and delete_flag = 'N';
+
   -- create temporary
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttranbrkp;
@@ -129,14 +139,157 @@ me:BEGIN
   alter table recon_tmp_ttranbrkp ENGINE = MyISAM;
 
   -- insert exception records
-  insert into recon_tmp_ttran select * from recon_trn_ttran where recon_code = in_recon_code and delete_flag = 'N';
-  insert into recon_tmp_ttranbrkp select * from recon_trn_ttranbrkp where recon_code = in_recon_code and delete_flag = 'N';
+  if in_automatch_flag = 'N' then
+    insert into recon_tmp_ttran select * from recon_trn_ttran where recon_code = in_recon_code and delete_flag = 'N';
+    insert into recon_tmp_ttranbrkp select * from recon_trn_ttranbrkp where recon_code = in_recon_code and delete_flag = 'N';
+  end if;
 
+  -- update the count
+  if in_automatch_flag = 'Y' then
+    insert into recon_trn_tdatasetjob
+    (
+      recon_code,
+      dataset_code,
+      automatch_flag,
+      job_gid,
+      before_dr_count,
+      before_dr_value,
+      before_cr_count,
+      before_cr_value,
+      before_count,
+      before_value,
+      insert_date,
+      insert_by
+    )
+    select
+      recon_code,
+      tranbrkp_dataset_code,
+      in_automatch_flag,
+      v_job_gid,
+      sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+      sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+      sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+      sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+      count(*),
+      sum(excp_value),
+      sysdate(),
+      in_user_code
+    from recon_trn_ttranbrkp
+    where recon_code = in_recon_code
+    and excp_value > 0
+    and delete_flag = 'N'
+    group by recon_code,tranbrkp_dataset_code;
+
+    insert into recon_trn_tdatasetjob
+    (
+      recon_code,
+      dataset_code,
+      automatch_flag,
+      job_gid,
+      before_dr_count,
+      before_dr_value,
+      before_cr_count,
+      before_cr_value,
+      before_count,
+      before_value,
+      insert_date,
+      insert_by
+    )
+    select
+      recon_code,
+      dataset_code,
+      in_automatch_flag,
+      v_job_gid,
+      sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+      sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+      sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+      sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+      count(*),
+      sum(excp_value),
+      sysdate(),
+      in_user_code
+    from recon_trn_ttran
+    where recon_code = in_recon_code
+    and excp_value > 0
+    and delete_flag = 'N'
+    group by recon_code,dataset_code;
+  else
+    insert into recon_trn_tdatasetjob
+    (
+      recon_code,
+      dataset_code,
+      automatch_flag,
+      job_gid,
+      before_dr_count,
+      before_dr_value,
+      before_cr_count,
+      before_cr_value,
+      before_count,
+      before_value,
+      insert_date,
+      insert_by
+    )
+    select
+      recon_code,
+      tranbrkp_dataset_code,
+      in_automatch_flag,
+      v_job_gid,
+      sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+      sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+      sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+      sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+      count(*),
+      sum(excp_value),
+      sysdate(),
+      in_user_code
+    from recon_tmp_ttranbrkp
+    where recon_code = in_recon_code
+    and excp_value > 0
+    and delete_flag = 'N'
+    group by recon_code,tranbrkp_dataset_code;
+
+    insert into recon_trn_tdatasetjob
+    (
+      recon_code,
+      dataset_code,
+      automatch_flag,
+      job_gid,
+      before_dr_count,
+      before_dr_value,
+      before_cr_count,
+      before_cr_value,
+      before_count,
+      before_value,
+      insert_date,
+      insert_by
+    )
+    select
+      recon_code,
+      dataset_code,
+      in_automatch_flag,
+      v_job_gid,
+      sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+      sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+      sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+      sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+      count(*),
+      sum(excp_value),
+      sysdate(),
+      in_user_code
+    from recon_tmp_ttran
+    where recon_code = in_recon_code
+    and excp_value > 0
+    and delete_flag = 'N'
+    group by recon_code,dataset_code;
+  end if;
+
+  -- rule
   rule_block:begin
     declare rule_done int default 0;
     declare rule_cursor cursor for
       select rule_code,rule_apply_on from recon_mst_trule
       where recon_code = in_recon_code
+      and hold_flag = 'N' 
       and delete_flag = 'N'
       order by rule_order;
     declare continue handler for not found set rule_done=1;
@@ -172,6 +325,134 @@ me:BEGIN
 
     call pr_get_tablequery(v_recon_code,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
                                  in_user_code,@msg,@result);
+  elseif in_automatch_flag = 'Y' then
+    update recon_mst_trecon set
+      last_job_gid = v_job_gid
+    where recon_code = v_recon_code
+    and delete_flag = 'N';
+  end if;
+
+  -- update the count
+  if in_automatch_flag = 'Y' then
+    update recon_trn_tdatasetjob as a
+    inner join
+    (
+      select
+        recon_code,
+        tranbrkp_dataset_code as dataset_code,
+        sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+        sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+        sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+        sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+        count(*) as rec_count,
+        sum(excp_value) as rec_value
+      from recon_trn_ttranbrkp
+      where recon_code = in_recon_code
+      and excp_value > 0
+      and delete_flag = 'N'
+      group by recon_code,tranbrkp_dataset_code
+    ) as b on a.recon_code = b.recon_code and a.dataset_code = b.dataset_code
+    set
+      a.after_dr_count = b.dr_count,
+      a.after_dr_value = b.dr_value,
+      a.after_cr_count = b.cr_count,
+      a.after_cr_value = b.cr_value,
+      a.after_count = b.rec_count,
+      a.after_value = b.rec_value,
+      a.update_date = sysdate(),
+      a.update_by = in_user_code
+    where a.job_gid = v_job_gid
+    and a.delete_flag = 'N';
+
+    update recon_trn_tdatasetjob as a
+    inner join
+    (
+      select
+        recon_code,
+        dataset_code,
+        sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+        sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+        sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+        sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+        count(*) as rec_count,
+        sum(excp_value) as rec_value
+      from recon_trn_ttran
+      where recon_code = in_recon_code
+      and excp_value > 0
+      and delete_flag = 'N'
+      group by recon_code,dataset_code
+    ) as b on a.recon_code = b.recon_code and a.dataset_code = b.dataset_code
+    set
+      a.after_dr_count = b.dr_count,
+      a.after_dr_value = b.dr_value,
+      a.after_cr_count = b.cr_count,
+      a.after_cr_value = b.cr_value,
+      a.after_count = b.rec_count,
+      a.after_value = b.rec_value,
+      a.update_date = sysdate(),
+      a.update_by = in_user_code
+    where a.job_gid = v_job_gid
+    and a.delete_flag = 'N';
+  else
+    update recon_trn_tdatasetjob as a
+    inner join
+    (
+      select
+        recon_code,
+        tranbrkp_dataset_code as dataset_code,
+        sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+        sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+        sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+        sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+        count(*) as rec_count,
+        sum(excp_value) as rec_value
+      from recon_tmp_ttranbrkp
+      where recon_code = in_recon_code
+      and excp_value > 0
+      and delete_flag = 'N'
+      group by recon_code,tranbrkp_dataset_code
+    ) as b on a.recon_code = b.recon_code and a.dataset_code = b.dataset_code
+    set
+      a.after_dr_count = b.dr_count,
+      a.after_dr_value = b.dr_value,
+      a.after_cr_count = b.cr_count,
+      a.after_cr_value = b.cr_value,
+      a.after_count = b.rec_count,
+      a.after_value = b.rec_value,
+      a.update_date = sysdate(),
+      a.update_by = in_user_code
+    where a.job_gid = v_job_gid
+    and a.delete_flag = 'N';
+
+    update recon_trn_tdatasetjob as a
+    inner join
+    (
+      select
+        recon_code,
+        dataset_code,
+        sum(if(tran_acc_mode = 'D',1,0)) as dr_count,
+        sum(if(tran_acc_mode = 'D',excp_value,0)) as dr_value,
+        sum(if(tran_acc_mode = 'C',1,0)) as cr_count,
+        sum(if(tran_acc_mode = 'C',excp_value,0)) as cr_value,
+        count(*) as rec_count,
+        sum(excp_value) as rec_value
+      from recon_tmp_ttran
+      where recon_code = in_recon_code
+      and excp_value > 0
+      and delete_flag = 'N'
+      group by recon_code,dataset_code
+    ) as b on a.recon_code = b.recon_code and a.dataset_code = b.dataset_code
+    set
+      a.after_dr_count = b.dr_count,
+      a.after_dr_value = b.dr_value,
+      a.after_cr_count = b.cr_count,
+      a.after_cr_value = b.cr_value,
+      a.after_count = b.rec_count,
+      a.after_value = b.rec_value,
+      a.update_date = sysdate(),
+      a.update_by = in_user_code
+    where a.job_gid = v_job_gid
+    and a.delete_flag = 'N';
   end if;
 
   set out_result = 1;

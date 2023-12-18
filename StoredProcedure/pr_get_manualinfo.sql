@@ -11,6 +11,9 @@ me:BEGIN
   declare v_recon_name text default '';
   declare v_recontype_code varchar(32) default '';
   declare v_dataset_code varchar(32) default '';
+  declare v_app_datetime_format text default '';
+
+  set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
 
   -- dataset_code
   select b.target_dataset_code into v_dataset_code from con_trn_tscheduler as a
@@ -54,13 +57,13 @@ me:BEGIN
   -- return scheduler
   select
     a.scheduler_gid as 'Scheduler Id',
-    a.scheduled_date as 'Scheduled Date',
+    date_format(a.scheduled_date,v_app_datetime_format) as 'Scheduled Date',
     concat(a.pipeline_code,'-',b.pipeline_name) as 'Pipeline Name',
     a.scheduler_parameters as 'Scheduler Parameters',
     concat(v_recon_code,'-',v_recon_name) as 'Recon Name',
     a.file_name as 'File Name',
-    a.scheduler_start_date as 'Start Date',
-    a.scheduler_end_date as 'Completed Date',
+    date_format(a.scheduler_start_date,v_app_datetime_format) as 'Start Date',
+    date_format(a.scheduler_end_date,v_app_datetime_format) as 'Completed Date',
     a.scheduler_remark as 'Remark'
   from con_trn_tscheduler as a
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code and b.delete_flag = 'N'
@@ -86,6 +89,7 @@ me:BEGIN
 		from recon_trn_tmanualtran as a
 		inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
 		inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code
+      and a.recon_code = c.recon_code
 			and c.delete_flag = 'N'
 		where a.scheduler_gid = in_scheduler_gid
 		and a.delete_flag = 'N';

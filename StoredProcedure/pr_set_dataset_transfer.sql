@@ -14,9 +14,9 @@ me:begin
     Created Date : 06-10-2023
 
     Updated By : Vijayavel
-    Updated Date : 07-12-2023
+    Updated Date : 11-12-2023
 
-    Version : 2
+    Version : 3
   */
 
   declare v_pipeline_code text default '';
@@ -182,15 +182,22 @@ me:begin
 
   if v_dataset_type = 'B' or v_dataset_type = 'T' then
     set v_target_table = 'recon_trn_ttran';
+
+    set v_source_sql = concat('select ',cast(in_scheduler_gid as nchar),',');
+    set v_source_sql = concat(v_source_sql,char(34),in_recon_code,char(34),',');
+    set v_source_sql = concat(v_source_sql,char(34),v_dataset_code,char(34),',');
+
+    set v_target_sql = concat('insert into ',v_target_table,' (scheduler_gid,recon_code,dataset_code,');
   elseif v_dataset_type = 'S' then
     set v_target_table = 'recon_trn_ttranbrkp';
+
+    set v_source_sql = concat('select ',cast(in_scheduler_gid as nchar),',');
+    set v_source_sql = concat(v_source_sql,char(34),in_recon_code,char(34),',');
+    set v_source_sql = concat(v_source_sql,char(34),v_parent_dataset_code,char(34),',');
+    set v_source_sql = concat(v_source_sql,char(34),v_dataset_code,char(34),',');
+
+    set v_target_sql = concat('insert into ',v_target_table,' (scheduler_gid,recon_code,dataset_code,tranbrkp_dataset_code,');
   end if;
-
-  set v_source_sql = concat('select ',cast(in_scheduler_gid as nchar),',');
-  set v_source_sql = concat(v_source_sql,char(34),in_recon_code,char(34),',');
-  set v_source_sql = concat(v_source_sql,char(34),v_dataset_code,char(34),',');
-
-  set v_target_sql = concat('insert into ',v_target_table,' (scheduler_gid,recon_code,dataset_code,');
 
   -- get dataset recon header
   call pr_get_recondatasetheader(in_recon_code,v_dataset_code,@out_dataset_field_all,@out_recon_field_all);

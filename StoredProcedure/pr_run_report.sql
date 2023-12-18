@@ -8,7 +8,7 @@ CREATE PROCEDURE `pr_run_report`(
   in in_report_condition text,
   in in_ip_addr varchar(255),
   in in_outputfile_flag boolean,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -19,13 +19,13 @@ me:BEGIN
   declare v_sp_name text default '';
   declare v_table_name text default '';
   declare v_recon_code_field text default '';
+  declare v_recon_flag text default '';
   declare v_report_default_condition text default '';
   declare v_sql text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
-  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -48,7 +48,8 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
-  */
+
+  set in_recon_code = ifnull(in_recon_code,'');
 
   if exists(select report_desc from recon_mst_treport
      where report_code = in_report_code
@@ -59,14 +60,16 @@ me:BEGIN
       sp_name,
       table_name,
       recon_code_field,
-      default_condition
+      default_condition,
+      recon_flag
     into
       v_report_desc,
       v_report_exec_type,
       v_sp_name,
       v_table_name,
       v_recon_code_field,
-      v_report_default_condition
+      v_report_default_condition,
+      v_recon_flag
     from recon_mst_treport
     where report_code = in_report_code
     and delete_flag = 'N';
@@ -106,7 +109,9 @@ me:BEGIN
 
   set in_report_condition = ifnull(in_report_condition,'');
 
-  set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(39),in_recon_code,char(39),' ', in_report_condition);
+  if in_recon_code <> '' and v_recon_flag = 'Y' then
+    set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(39),in_recon_code,char(39),' ', in_report_condition);
+  end if;
 
   set in_report_condition = concat(in_report_condition,' ',v_report_default_condition);
 

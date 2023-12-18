@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_posttranbrkprule` $$
-CREATE PROCEDURE `pr_run_posttranbrkprule`(
+DROP PROCEDURE IF EXISTS `pr_post_tranbrkpbyrule` $$
+CREATE PROCEDURE `pr_post_tranbrkpbyrule`(
   in in_recon_code text,
   in in_rule_code text,
   in in_job_gid int,
@@ -32,9 +32,9 @@ me:BEGIN
 
   declare v_rule_code text default '';
   declare v_rule_name text default '';
-  declare v_group_flag varchar(32) default '';
-  declare v_group_method_flag varchar(32) default '';
-  declare v_field_group_flag varchar(32) default '';
+  declare v_group_flag char(1) default '';
+  declare v_group_method_flag char(1) default '';
+  declare v_field_group_flag char(1) default '';
   declare v_txt varchar(255) default '';
   declare v_result int default 0;
 
@@ -94,8 +94,6 @@ me:BEGIN
   declare v_tran_fields text default '';
   declare v_tranbrkp_fields text default '';
 
-  declare v_grp_field text default '';
-
   declare v_source_field_org_type text default '';
   declare v_comparison_field_org_type text default '';
 
@@ -109,19 +107,8 @@ me:BEGIN
   declare v_index_name text default '';
   declare v_sys_index_name text default '';
 
-  declare v_preview_gid int default 0;
-
-  declare v_system_matchoff char(1) default null;
-  declare v_manual_matchoff char(1) default null;
-
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
-
-  if in_automatch_flag = 'Y' then
-    set v_system_matchoff = 'Y';
-  else
-    set v_manual_matchoff = 'Y';
-  end if;
 
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -193,7 +180,7 @@ me:BEGIN
     PRIMARY KEY (row)
   ) ENGINE = MyISAM;
 
-
+  
   insert into recon_tmp_tpseudorows select 0 union select 1;
 
   CREATE temporary TABLE recon_tmp_ttrangid(
@@ -258,8 +245,6 @@ me:BEGIN
       or a.period_to >= curdate())
       and a.rule_apply_on = 'S'
       and a.active_status = 'Y'
-      and a.system_match_flag = ifnull(v_system_matchoff,a.system_match_flag)
-      and a.manual_match_flag = ifnull(v_manual_matchoff,a.manual_match_flag)
       and a.delete_flag = 'N';
     declare continue handler for not found set applyrule_done=1;
 
@@ -283,14 +268,6 @@ me:BEGIN
       set v_comparison_acc_mode = ifnull(v_comparison_acc_mode,'');
       set v_tran_acc_mode = v_source_acc_mode;
 
-      if v_group_flag = 'OTO' then
-        set v_group_flag = 'N';
-      elseif v_group_flag = 'OTM' then
-        set v_group_flag = 'Y';
-      elseif v_group_flag = 'MTM' then
-        set v_group_flag = 'Y';
-      end if;
-
       set v_group_flag = ifnull(v_group_flag,'N');
       set v_group_method_flag = ifnull(v_group_method_flag,'N');
 
@@ -299,28 +276,15 @@ me:BEGIN
       call pr_upd_job(in_job_gid,'P',v_txt,@msg,@result);
 
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,',excp_mult_value) ');
-
-      if in_automatch_flag = 'Y' then
-        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_trn_ttran ');
-      else
-        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_tmp_ttran ');
-      end if;
-
+      set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_trn_ttran ');
       set v_source_head_sql = concat(v_source_head_sql,' where recon_code = ',char(39),in_recon_code,char(39));
-      set v_source_head_sql = concat(v_source_head_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39),' ');
+      set v_source_head_sql = concat(v_source_head_sql,' and dataset_code = ', v_source_dataset_code ,' ');
       set v_source_head_sql = concat(v_source_head_sql,' and excp_value > 0 and excp_value = tran_value and mapped_value = 0 ');
 
       set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,',excp_mult_value) ');
-
-      if in_automatch_flag = 'Y' then
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_trn_ttranbrkp ');
-      else
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_tmp_ttranbrkp ');
-      end if;
-
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_trn_ttranbrkp ');
       set v_comparison_head_sql = concat(v_comparison_head_sql,' where recon_code = ',char(39),in_recon_code,char(39));
-      set v_comparison_head_sql = concat(v_comparison_head_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39),' ');
-      set v_comparison_head_sql = concat(v_comparison_head_sql,' and tranbrkp_dataset_code = ',char(39),v_comparison_dataset_code,char(39),' ');
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' and dataset_code = ', v_source_dataset_code ,' ');
       set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value > 0 and tran_gid = 0 ');
 
           basefilter_block:begin
@@ -338,8 +302,8 @@ me:BEGIN
 
             open basefilter_cursor;
 
-            set v_sourcebase_filter = ' and ';
-            set v_comparisonbase_filter = ' and ';
+            set v_sourcebase_filter = '';
+            set v_comparisonbase_filter = '';
 
             basefilter_loop: loop
               fetch basefilter_cursor into v_filter_applied_on,v_filter_field,
@@ -352,10 +316,6 @@ me:BEGIN
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
               set v_join_condition = ifnull(v_join_condition,'');
 
-              if v_join_condition = '' then
-                set v_join_condition = 'and';
-              end if;
-
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
@@ -365,17 +325,14 @@ me:BEGIN
                                                   ' ',v_join_condition,' ');
 
               if v_filter_applied_on = 'S' then
-                set v_sourcebase_filter = concat(v_sourcebase_filter,v_basefilter_condition);
+                set v_sourcebase_filter = concat(v_sourcebase_filter,' and ',v_basefilter_condition);
               elseif v_filter_applied_on = 'C' then
-                set v_comparisonbase_filter = concat(v_comparisonbase_filter,v_basefilter_condition);
+                set v_comparisonbase_filter = concat(v_comparisonbase_filter,' and ',v_basefilter_condition);
               end if;
             end loop basefilter_loop;
 
             close basefilter_cursor;
           end basefilter_block;
-
-          set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1 ');
-          set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1 ');
 
           set v_rule_condition = ' and ';
           set v_rule_notnull_condition = ' and (1 = 1 ';
@@ -387,7 +344,10 @@ me:BEGIN
           drop temporary table if exists recon_tmp_tsource;
           drop temporary table if exists recon_tmp_tcomparison;
 
-          create temporary table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          drop table if exists recon_tmp_tsource;
+          drop table if exists recon_tmp_tcomparison;
+
+          create /*temporary*/ table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tsource add primary key(tran_gid);
           create index idx_recon_code on recon_tmp_tsource(recon_code);
           create index idx_excp_value on recon_tmp_tsource(recon_code,dataset_code,excp_value);
@@ -396,7 +356,7 @@ me:BEGIN
           create index idx_dataset_code on recon_tmp_tsource(recon_code,dataset_code,tran_acc_mode);
           alter table recon_tmp_tsource ENGINE = MyISAM;
 
-          create temporary table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tcomparison add primary key(tranbrkp_gid);
           create index idx_recon_code on recon_tmp_tcomparison(recon_code);
           create index idx_excp_value on recon_tmp_tcomparison(recon_code,dataset_code,excp_value);
@@ -463,7 +423,6 @@ me:BEGIN
               set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
               set v_join_condition = ifnull(v_join_condition,'');
-              if v_join_condition = '' then set v_join_condition = 'and'; end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
@@ -502,11 +461,7 @@ me:BEGIN
               set v_source_field = ifnull(concat('a.',v_source_field),'');
               set v_comparison_field = ifnull(concat('b.',v_comparison_field),'');
 
-              if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
-                and v_open_parentheses_flag <> '('
-                and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
-
+              if instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0 then
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
@@ -520,11 +475,7 @@ me:BEGIN
                 set v_extraction_filter = 0;
               end if;
 
-              if (instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0)
-                and v_open_parentheses_flag <> '('
-                and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
-
+              if instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0 then
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
 
@@ -569,19 +520,15 @@ me:BEGIN
           truncate recon_tmp_tsource;
           truncate recon_tmp_tcomparison;
 
-          if v_source_condition = ' and ' or v_comparison_condition = ' and ' then
+          set v_rule_notnull_condition = concat(v_rule_notnull_condition,') ');
+          set v_rule_condition = concat(v_rule_condition,v_rule_notnull_condition);
+
+          if v_source_condition = '' or v_comparison_condition = '' then
             set v_source_condition = ' and 1 = 2 ';
             set v_comparison_condition  = ' and 1 = 2 ';
             set v_rule_condition = ' and 1 = 2 ';
             set v_rule_groupby = ',tran_gid';
-          else
-            set v_source_condition = concat(v_source_condition,' 1 = 1 ');
-            set v_comparison_condition  = concat(v_comparison_condition,' 1 = 1 ');
-            set v_rule_condition = concat(v_rule_condition,' 1 = 1 ');
           end if;
-
-          set v_rule_notnull_condition = concat(v_rule_notnull_condition,') ');
-          set v_rule_condition = concat(v_rule_condition,v_rule_notnull_condition);
 
           set v_source_sql = concat(v_source_head_sql,' and tran_date >= ',char(39),in_period_from,char(39));
           set v_source_sql = concat(v_source_sql,' and tran_date <= ',char(39),in_period_to,char(39));
@@ -594,7 +541,7 @@ me:BEGIN
           set v_comparison_sql = concat(v_comparison_head_sql,' and tran_date >= ',char(39),in_period_from,char(39));
           set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
 
-          if v_comparison_acc_mode <> 'B' or v_group_flag = 'N' then
+          if v_group_method_flag <> 'B' or v_group_flag = 'N' then
             set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_tran_acc_mode,char(39));
           end if;
 
@@ -665,18 +612,6 @@ me:BEGIN
 
             call pr_run_sql(v_sql,@msg,@result);
           else
-            -- get target addtional group field
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfield
-            where rule_code = v_rule_code
-            and active_status = 'Y'
-            and delete_flag = 'N';
-
-            set v_grp_field = ifnull(v_grp_field,'');
-
-            if v_grp_field <> '' then
-              set v_rule_groupby = concat(v_rule_groupby,',',v_grp_field);
-            end if;
-
             -- match the record(s) added scheduler_gid
             set v_match_sql = 'insert into recon_tmp_tmatch (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
@@ -701,7 +636,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'and a.dataset_code = b.dataset_code ');
             set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
 
-            if v_comparison_acc_mode <> 'B' then
+            if v_group_method_flag <> 'B' then
               set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
             end if;
 
@@ -758,7 +693,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
             set v_match_sql = concat(v_match_sql,'and a.dataset_code = b.dataset_code ');
 
-            if v_comparison_acc_mode <> 'B' then
+            if v_group_method_flag <> 'B' then
               set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
             end if;
 
@@ -893,29 +828,12 @@ me:BEGIN
             and a.tran_gid = 0
             and a.delete_flag = 'N';
           else
-            -- update in temporary table
-            update recon_tmp_ttran as a
-            inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and a.excp_value= b.excp_value and b.tranbrkp_gid = 0
-            set a.mapped_value = a.excp_value
-            where a.excp_value > 0
-            and a.mapped_value = 0
-            and a.delete_flag = 'N';
-
-            update recon_tmp_ttranbrkp as a
-            inner join recon_tmp_tmatchdtl as b on a.tranbrkp_gid = b.tranbrkp_gid and a.excp_value= b.excp_value and b.tran_gid > 0
-            set a.tran_gid = b.tran_gid,
-                a.posted_job_gid = in_job_gid
-            where a.excp_value > 0
-            and a.tran_gid = 0
-            and a.delete_flag = 'N';
-
-            -- move to preview table
-            select max(preview_gid) into v_preview_gid from recon_trn_tpreview
+            select max(preview_gid) into @preview_gid from recon_trn_tpreview
             where job_gid = in_job_gid
             and delete_flag = 'N';
 
-            set v_preview_gid = ifnull(v_preview_gid,0);
-            set @preview_gid = v_preview_gid;
+            set @preview_gid = ifnull(@preview_gid,0);
+            set @previewdtl_gid = 0;
 
             insert into recon_trn_tpreview
             (
@@ -974,6 +892,7 @@ me:BEGIN
   end applyrule_block;
 
   set out_result = v_count;
+
   set out_msg = 'Supporting file posted successfully !';
 
   drop temporary table if exists recon_tmp_tsource;

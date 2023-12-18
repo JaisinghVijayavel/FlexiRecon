@@ -137,12 +137,7 @@ me:BEGIN
     end if;
   end if;
 
-  if err_flag = true then
-		set out_result = 0;
-		set out_msg = err_msg;
-		leave me;
-  end if;
-
+  -- insert validation in reconfield
   if not exists(select * from recon_mst_treconfield
     where recon_code = in_recon_code
     and (recon_field_name = in_recon_field_name
@@ -151,16 +146,33 @@ me:BEGIN
     if in_action = 'INSERT' then
       call pr_recon_mst_treconfield(in_reconfield_gid,in_recon_code,in_recon_field_name,in_recon_field_name,
                                   v_field_type,in_display_order,'Y','INSERT',in_action_by,@msg,@result);
+
+      if @result = 0 then
+        set err_msg := concat(err_msg,@msg);
+        set err_flag := true;
+      end if;
     end if;
   end if;
 
+  -- update validation in recon field
   if exists(select * from recon_mst_treconfield
     where reconfield_gid = in_reconfield_gid
     and delete_flag = 'N') then
     if in_action = 'UPDATE' then
       call pr_recon_mst_treconfield(in_reconfield_gid,in_recon_code,in_recon_field_name,in_recon_field_name,
                                   v_field_type,in_display_order,'Y','UPDATE',in_action_by,@msg,@result);
+
+      if @result = 0 then
+        set err_msg := concat(err_msg,@msg);
+        set err_flag := true;
+      end if;
     end if;
+  end if;
+
+  if err_flag = true then
+		set out_result = 0;
+		set out_msg = err_msg;
+		leave me;
   end if;
 
   select

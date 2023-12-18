@@ -40,6 +40,7 @@ me:BEGIN
 		  b.src_comp_flag,
 		  if(b.tranbrkp_gid > 0,'S','T') as rec_type,
       c.dataset_code,
+      f.dataset_name,
 		  c.tran_date,
 		  c.tran_acc_mode,
 		  c.tran_value,
@@ -179,6 +180,7 @@ me:BEGIN
 		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
+    left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
 		where true ", v_condition,"
 
     union
@@ -201,6 +203,7 @@ me:BEGIN
 		  b.src_comp_flag,
 		  if(b.tranbrkp_gid > 0,'S','T') as rec_type,
       c.dataset_code,
+      f.dataset_name,
 		  c.tran_date,
 		  c.tran_acc_mode,
 		  c.tran_value,
@@ -340,6 +343,7 @@ me:BEGIN
 		inner join recon_trn_ttranbrkp as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
+    left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
 		where true ", v_condition," and b.tranbrkp_gid > 0
   ");
 

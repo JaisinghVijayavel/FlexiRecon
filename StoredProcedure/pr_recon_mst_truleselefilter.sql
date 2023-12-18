@@ -63,37 +63,30 @@ me:BEGIN
 			set err_flag := true;
 		end if;
 
-    -- recon code
-    if not exists(select recon_code from recon_mst_trecon
-      where recon_code = in_recon_code
-      and active_status = 'Y'
-      and period_from <= curdate()
-      and (period_to >= curdate()
-      or until_active_flag = 'Y')
-      and delete_flag = 'N') then
-			set err_msg := concat(err_msg,'Invalid recon,');
-			set err_flag := true;
-    end if;
-
     -- rule code
 		if not exists(select rule_gid from recon_mst_trule
 			where rule_code = in_rule_code
-      and active_status = 'Y'
+      and active_status <> 'N'
 			and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Invalid rule code');
 			set err_flag := true;
+    else
+      select recon_code into v_recon_code from recon_mst_trule
+			where rule_code = in_rule_code
+      and active_status = 'Y'
+			and delete_flag = 'N';
 		end if;
 
     -- recon field
     if not exists(select recon_field_name from recon_mst_treconfield
-      where recon_code = in_recon_code
+      where recon_code = v_recon_code
       and recon_field_name = in_filter_field
       and active_status = 'Y'
       and delete_flag = 'N') then
       select
         recon_field_name into in_filter_field
       from recon_mst_treconfield
-      where recon_code = in_recon_code
+      where recon_code = v_recon_code
       and recon_field_desc = in_filter_field
       and active_status = 'Y'
       and delete_flag = 'N';

@@ -100,7 +100,10 @@ me:begin
       if dataset_done = 1 then leave dataset_loop; end if;
 
       insert into tb_balance(dataset_code,dataset_type,tran_date,bal_value)
-        select a.dataset_code,b.dataset_type,a.tran_date,a.bal_value from recon_trn_taccbal as a
+        select
+          a.dataset_code,b.dataset_type,a.tran_date,
+          a.bal_value
+        from recon_trn_taccbal as a
         inner join recon_mst_trecondataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
         where b.recon_code = in_recon_code
         and a.dataset_code = v_dataset_code
@@ -153,6 +156,7 @@ me:begin
   where a.dataset_type = 'B';
 
   set v_bal_value1 = ifnull(v_bal_value1,0);
+  set v_bal_tran_date1 = ifnull(v_bal_tran_date1,in_tran_date);
 
   if v_bal_value1 >= 0 then
     set v_tran_acc_mode = 'CR';
@@ -172,7 +176,7 @@ me:begin
       concat('Balance as per ',v_source_dataset_name,' (',date_format(v_bal_tran_date1,v_web_date_format),')'),
       '',
       v_tran_acc_mode,
-      replace(format(v_bal_value1,2),',','')
+      format(v_bal_value1,2,'en_IN')
   );
 
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
@@ -213,7 +217,7 @@ me:begin
   values
   (
     v_txt,
-    replace(format(v_value,2),',',''),
+    format(v_value,2,'en_IN'),
     '',
     ''
   );
@@ -247,7 +251,7 @@ me:begin
   values
   (
     v_txt,
-    replace(format(v_value,2),',',''),
+    format(v_value,2,'en_IN'),
     '',
     ''
   );
@@ -255,7 +259,7 @@ me:begin
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
 
-  insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Subtotal','','',replace(format(v_cr_total,2),',',''));
+  insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Subtotal','','',format(v_cr_total,2,'en_IN'));
 
 
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
@@ -293,7 +297,7 @@ me:begin
   values
   (
     v_txt,
-    replace(format(v_value,2),',',''),
+    format(v_value,2,'en_IN'),
     '',
     ''
   );
@@ -328,7 +332,7 @@ me:begin
   values
   (
     v_txt,
-    replace(format(v_value,2),',',''),
+    format(v_value,2,'en_IN'),
     '',
     ''
   );
@@ -337,7 +341,7 @@ me:begin
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
 
-  insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Subtotal','','',v_dr_total);
+  insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Subtotal','','',format(v_dr_total,2,'en_IN'));
 
 
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
@@ -351,6 +355,7 @@ me:begin
   where a.dataset_type = 'T';
 
   set v_bal_value2 = ifnull(v_bal_value2,0);
+  set v_bal_tran_date2 = ifnull(v_bal_tran_date2,in_tran_date);
 
   if v_bal_value2 >= 0 then
     set v_tran_acc_mode = 'CR';
@@ -370,7 +375,7 @@ me:begin
     concat('Balance as per ',v_comparison_dataset_name,' (',date_format(v_bal_tran_date2,v_web_date_format),')'),
     '',
     v_tran_acc_mode,
-    replace(format(v_bal_value2,2),',','')
+    format(v_bal_value2,2,'en_IN')
   );
 
   set v_value = v_cr_total - v_dr_total + (v_bal_value1 * -1);
@@ -379,13 +384,13 @@ me:begin
 
   set v_diff_value = round(v_value-v_bal_value2,2);
 
-  insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Arrived Balance','','',replace(format(v_value,2),',',''));
+  insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Arrived Balance','','',format(v_value,2,'en_IN'));
 
 
   if v_diff_value = 0 then
     insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
   else
-    insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference in recon','','',replace(format(v_diff_value,2),',',''));
+    insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference in recon','','',format(v_diff_value,2,'en_IN'));
   end if;
 
   set out_msg = 'Success';

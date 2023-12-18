@@ -85,12 +85,12 @@ me:BEGIN
   end if;
 
 	if exists(select job_gid from recon_trn_tjob
-	  where job_type = 'M'
+	  where jobtype_code = 'M'
 	  and job_status in ('I','P')
 	  and delete_flag = 'N') then
 
 	  select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
-	  where job_type = 'M'
+	  where jobtype_code = 'M'
 	  and job_status in ('I','P')
 	  and delete_flag = 'N';
 
@@ -101,7 +101,8 @@ me:BEGIN
 
 	  leave me;
 	else
-	  call pr_ins_job('M',0,concat('Manual match - ',v_file_name),in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+	  call pr_ins_job(v_recon_code,'M',in_scheduler_gid,concat('Manual posting - ',v_file_name),v_file_name,
+      in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 	end if;
 
   set v_job_gid = @out_job_gid;

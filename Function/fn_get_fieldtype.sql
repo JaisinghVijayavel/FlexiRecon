@@ -7,7 +7,7 @@ begin
 
   if instr(in_field_name,'.') = 0 then
     select
-      field_type
+      recon_field_type
     into
       v_field_type
     from recon_mst_treconfield
@@ -16,7 +16,7 @@ begin
     and delete_flag = 'N';
   else
     select
-      field_type
+      recon_field_type
     into
       v_field_type
     from recon_mst_treconfield

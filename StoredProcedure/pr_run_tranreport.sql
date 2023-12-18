@@ -54,8 +54,10 @@ me:BEGIN
 		  ",cast(in_job_gid as nchar)," as job_gid,
 		  @rec_slno:=@rec_slno+1,
       '", in_user_code ,"',
+      b.dataset_name,
       a.*
 		from recon_trn_ttran as a
+    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
 		where a.delete_flag = 'N' ", in_condition,"
 
     union all
@@ -65,8 +67,10 @@ me:BEGIN
 		  ",cast(in_job_gid as nchar)," as job_gid,
 		  @rec_slno:=@rec_slno+1,
       '", in_user_code ,"',
+      b.dataset_name,
       a.*
 		from recon_trn_ttranko as a
+    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
 		where a.delete_flag = 'N' ", in_condition,"
   ");
 

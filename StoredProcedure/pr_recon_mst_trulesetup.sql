@@ -124,9 +124,11 @@ me:BEGIN
 		end if;
 	end if;
 
+  -- check duplicate rule name
 	if in_action ='INSERT' then
 		if exists(select rule_gid from recon_mst_trule
 			where rule_name = in_rule_name
+      and recon_code = in_recon_code
 			and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Duplicate record,');
 			set err_flag := true;
@@ -134,9 +136,32 @@ me:BEGIN
   elseif in_action ='UPDATE' then
 		if exists(select rule_gid from recon_mst_trule
 			where rule_name = in_rule_name
+      and recon_code = in_recon_code
       and rule_gid <> in_rule_gid
 			and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Duplicate record,');
+			set err_flag := true;
+		end if;
+	end if;
+
+  -- duplicate rule order
+	if in_action ='INSERT' then
+		if exists(select rule_gid from recon_mst_trule
+			where recon_code = in_recon_code
+      and rule_order = in_rule_order
+      and active_status <> 'N'
+			and delete_flag = 'N') then
+			set err_msg := concat(err_msg,'Duplicate rule order no.,');
+			set err_flag := true;
+		end if;
+  elseif in_action ='UPDATE' then
+		if exists(select rule_gid from recon_mst_trule
+			where recon_code = in_recon_code
+      and rule_order = in_rule_order
+      and active_status <> 'N'
+      and rule_gid <> in_rule_gid
+			and delete_flag = 'N') then
+			set err_msg := concat(err_msg,'Duplicate rule order no.,');
 			set err_flag := true;
 		end if;
 	end if;

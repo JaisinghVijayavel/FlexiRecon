@@ -138,6 +138,7 @@ me:begin
 
     set v_bal_value = ifnull(v_bal_value,0);
     set v_bal_value = round(v_bal_value,2);
+    set v_bal_tran_date = ifnull(v_bal_tran_date,in_tran_date);
 
     if v_bal_value >= 0 then
       set v_tran_acc_mode = 'CR';
@@ -157,7 +158,7 @@ me:begin
       concat('Balance on ',date_format(v_bal_tran_date,v_web_date_format)),
       '',
       v_tran_acc_mode,
-      replace(format(v_bal_value,2),',','')
+      format(v_bal_value,2,'en_IN')
     );
   else
     insert into tb_proof
@@ -207,7 +208,7 @@ me:begin
   values
   (
     v_txt,
-    replace(format(v_value,2),',',''),
+    format(v_value,2,'en_IN'),
     '',
     ''
   );
@@ -239,7 +240,7 @@ me:begin
   values
   (
     v_txt,
-    replace(format(v_value,2),',',''),
+    format(v_value,2,'en_IN'),
     '',
     ''
   );
@@ -255,7 +256,7 @@ me:begin
     set v_tran_acc_mode = 'DR';
   end if;
 
-  insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Net Exception','',v_tran_acc_mode,replace(format(v_value,2),',',''));
+  insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Net Exception','',v_tran_acc_mode,format(v_value,2,'en_IN'));
 
   insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
@@ -264,7 +265,7 @@ me:begin
   if v_diff_value = 0 then
     insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference','','','0.00');
   else
-    insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference','','',replace(format(v_diff_value,2),',',''));
+    insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference','','',format(v_diff_value,2,'en_IN'));
   end if;
 
   set out_msg = 'Success';

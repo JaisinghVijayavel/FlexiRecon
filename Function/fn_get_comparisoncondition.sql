@@ -59,8 +59,12 @@ begin
     end if;
 
     if v_field_type = 'DATE' then
-      
-      set v_txt = concat(' ',in_comparison_field,' >= adddate(',in_source_field,',',v_from,') and ',in_comparison_field,' <= adddate(',in_source_field,',',v_to,') ');
+      -- set v_txt = concat(' ',in_comparison_field,' >= adddate(',in_source_field,',',v_from,') and ',in_comparison_field,' <= adddate(',in_source_field,',',v_to,') ');
+      if v_field_org_type = 'DATE' then
+        set v_txt = concat(' ',in_comparison_field,' >= adddate(',in_source_field,',',v_from,') and ',in_comparison_field,' <= adddate(',in_source_field,',',v_to,') ');
+      else
+        set v_txt = concat(' cast(',in_comparison_field,' as date) >= adddate(cast(',in_source_field,' as date),',v_from,') and cast(',in_comparison_field,' as date) <= adddate(cast(',in_source_field,' as date),',v_to,') ');
+      end if;
     elseif v_field_type = 'NUMBER' then
       set v_txt = concat(' ',in_comparison_field,' between (',in_source_field,'+',v_from,') and (',in_source_field,'+',v_to,') ');
     else
