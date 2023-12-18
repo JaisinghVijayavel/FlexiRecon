@@ -8,6 +8,10 @@ CREATE PROCEDURE `pr_get_datasettomanual`
   in in_lang_code varchar(32)
  )
 BEGIN
+  declare v_app_datetime_format text default '';
+
+  set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
+
   drop temporary table if exists recon_tmp_tscheduler;
 
   CREATE temporary TABLE recon_tmp_tscheduler
@@ -28,14 +32,18 @@ BEGIN
     group by scheduler_gid;
 
 	select
-		a.scheduler_gid,b.scheduled_date,
-		b.scheduler_start_date,b.scheduler_end_date,
+		a.scheduler_gid,
+    b.scheduled_date,
+		date_format(b.scheduler_start_date,v_app_datetime_format) as scheduler_start_date,
+    date_format(b.scheduler_end_date,v_app_datetime_format) as scheduler_end_date,
 		b.scheduler_initiated_by,
 		b.pipeline_code,c.pipeline_name,
 		b.file_name,
 		d.dataset_code,d.dataset_name,
-    j.start_date as last_sync_date,
-    j.job_status as last_sync_status
+    if(d.dataset_code = 'KOMANUAL','Knockoff','Posting') as dataset_type,
+    s.recon_code,r.recon_name,
+    date_format(j.start_date,v_app_datetime_format) as last_sync_date,
+    fn_get_mastername(j.job_status,'QCD_JOB_STATUS') as last_sync_status
 	from recon_tmp_tscheduler as s
   inner join recon_trn_tscheduler as a on s.scheduler_gid = a.scheduler_gid
 	  and a.scheduler_status = 'C'
@@ -45,6 +53,7 @@ BEGIN
 	inner join recon_mst_tdataset as d on c.target_dataset_code = d.dataset_code
     and d.dataset_code in ('KOMANUAL','POSTMANUAL')
     and d.delete_flag = 'N'
+  inner join recon_mst_trecon as r on s.recon_code = r.recon_code and r.delete_flag = 'N'
   left join recon_trn_tjob as j on j.job_gid = d.last_job_gid and j.delete_flag = 'N'
   order by 1 asc;
 

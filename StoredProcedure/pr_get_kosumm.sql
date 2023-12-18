@@ -53,7 +53,7 @@ me:BEGIN
     recon_name text default null,
     rule_code varchar(32) default null,
     rule_name text default null,
-    rule_order decimal(9,2) not null default 0,
+    rule_order decimal(9,2),
     tran_gid int not null default 0,
     dataset_code varchar(32) default null,
     tran_acc_mode char(1) default null,

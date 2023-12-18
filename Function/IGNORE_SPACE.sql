@@ -1,0 +1,11 @@
+﻿DELIMITER $$
+
+DROP FUNCTION IF EXISTS `IGNORE_SPACE`$$
+CREATE FUNCTION `IGNORE_SPACE`( str text ) RETURNS text CHARSET latin1
+BEGIN
+  RETURN replace(str,' ','');
+END;
+
+ $$
+
+DELIMITER ;

@@ -59,7 +59,7 @@ me:BEGIN
     a.scheduler_gid as 'Scheduler Id',
     date_format(a.scheduled_date,v_app_datetime_format) as 'Scheduled Date',
     concat(a.pipeline_code,'-',b.pipeline_name) as 'Pipeline Name',
-    a.scheduler_parameters as 'Scheduler Parameters',
+    -- a.scheduler_parameters as 'Scheduler Parameters',
     concat(v_recon_code,'-',v_recon_name) as 'Recon Name',
     a.file_name as 'File Name',
     date_format(a.scheduler_start_date,v_app_datetime_format) as 'Start Date',
@@ -99,10 +99,10 @@ me:BEGIN
 			select
 				count(distinct match_gid) as 'Match Count',
 				sum(if(b.tran_acc_mode = 'D',1,0)) as 'DR Count',
-				sum(if(b.tran_acc_mode = 'D',b.excp_value,0)) as 'DR Total',
+				format(sum(if(b.tran_acc_mode = 'D',b.excp_value,0)),2,'en_IN') as 'DR Total',
 				sum(if(b.tran_acc_mode = 'C',1,0)) as 'CR Count',
-				sum(if(b.tran_acc_mode = 'C',b.excp_value,0)) as 'CR Total',
-				sum(b.excp_value*b.tran_mult) as 'Difference'
+				format(sum(if(b.tran_acc_mode = 'C',b.excp_value,0)),2,'en_IN') as 'CR Total',
+				format(sum(b.excp_value*b.tran_mult),2,'en_IN') as 'Difference'
 			from recon_trn_tmanualtran as a
 			inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
 				and b.recon_code = v_recon_code
@@ -115,9 +115,9 @@ me:BEGIN
 			select
 				count(distinct match_gid) as 'Match Count',
 				sum(if(c.dataset_type = 'B',1,0)) as 'Base Count',
-				sum(if(c.dataset_type = 'B',b.excp_value,0)) as 'Base Total',
+				format(sum(if(c.dataset_type = 'B',b.excp_value,0)),2,'en_IN') as 'Base Total',
 				sum(if(c.dataset_type = 'T',1,0)) as 'Target Count',
-				sum(if(c.dataset_type = 'T',b.excp_value,0)) as 'Target Total',
+				format(sum(if(c.dataset_type = 'T',b.excp_value,0)),2,'en_IN') as 'Target Total',
 				sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult,0)) - sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult,0)) as 'Difference'
 			from recon_trn_tmanualtran as a
 			inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
@@ -178,7 +178,7 @@ me:BEGIN
     select
       count(distinct a.tran_gid) as 'Match Count',
       count(*) as 'Tranbrkp Count',
-      abs(sum(b.excp_value*b.tran_mult)) as 'Tranbrkp Total'
+      format(abs(sum(b.excp_value*b.tran_mult)),2,'en_IN') as 'Tranbrkp Total'
     from recon_trn_tmanualtranbrkp as a
     inner join recon_trn_ttranbrkp as b on a.tranbrkp_gid = b.tranbrkp_gid
       and b.recon_code = v_recon_code
