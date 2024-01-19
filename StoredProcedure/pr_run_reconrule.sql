@@ -21,6 +21,7 @@ me:BEGIN
 
   declare v_txt_recon_code text default '';
   declare v_recon_code text default '';
+  declare v_recon_rule_version text default '';
   declare v_recon_gid int default 0;
 
   declare v_txt text default '';
@@ -70,6 +71,14 @@ me:BEGIN
     set out_result = 0;
 
     leave me;
+  else
+    select
+      recon_rule_version into v_recon_rule_version
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_recon_rule_version = ifnull(v_recon_rule_version,'');
   end if;
 
   if in_automatch_flag = 'Y' then
@@ -318,7 +327,11 @@ me:BEGIN
   set v_job_input_param = concat(v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format),char(13),char(10));
   set v_job_input_param = concat(v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format),char(13),char(10));
 
-  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C','Completed',@msg,@result);
+
+  -- job remark
+  set v_txt = concat('Rule version applied : ',v_recon_rule_version);
+
+  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
 
   if in_automatch_flag = 'N' then
     call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);

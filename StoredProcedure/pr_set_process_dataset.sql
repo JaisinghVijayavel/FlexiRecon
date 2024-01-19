@@ -16,9 +16,9 @@ me:begin
     Created Date : 19-11-2023
 
     Updated By : Vijayavel
-    Updated Date :
+    Updated Date : 20-12-2023
 
-    Version : 1
+    Version : 2
   */
   declare v_pipeline_code text default '';
   declare v_dataset_code text default '';
@@ -32,6 +32,7 @@ me:begin
   declare v_job_gid int default 0;
   declare v_dataset_table_name text default '';
   declare v_sql text default '';
+  declare v_result int default 0;
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -102,7 +103,14 @@ me:begin
   set v_scheduler_param = ifnull(v_scheduler_param,'');
   set v_dataset_table_name = ifnull(v_dataset_table_name,'');
 
-  call pr_ins_job('','S',in_scheduler_gid,concat('Processing Scheduler File ',v_file_name),v_scheduler_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
+  select job_gid into v_job_gid from recon_trn_tjob
+  where jobtype_code = 'S'
+  and job_ref_gid = in_scheduler_gid
+  and delete_flag = 'N';
+
+  set v_job_gid = ifnull(v_job_gid,0);
+
+  -- call pr_ins_job('','S',in_scheduler_gid,concat('Processing Scheduler File ',v_file_name),v_scheduler_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
 
   if v_job_gid = 0 then
     set out_msg = concat(out_msg,@msg);
@@ -123,7 +131,7 @@ me:begin
   if v_dataset_code = 'ACCBALANCE' then
     set v_sql = concat("replace into recon_trn_taccbal (scheduler_gid,dataset_code,tran_date,bal_value,insert_date,insert_by)
       select
-        scheduler_gid,dataset_code,tran_date,bal_debit*-1+bal_credit,sysdate(),in_user_code
+        scheduler_gid,dataset_code,tran_date,bal_debit*-1+bal_credit,sysdate(),'",in_user_code,"'
       from ",v_dataset_table_name, "
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
@@ -190,6 +198,17 @@ me:begin
   where dataset_code = v_dataset_code
   and delete_flag = 'N';
 
+  -- get processed record count
+  set v_sql = concat("select count(*) into @v_result from ",v_dataset_table_name,
+         " where scheduler_gid = ",cast(in_scheduler_gid as nchar));
+
+  set @v_sql = v_sql;
+  prepare _sql from @v_sql;
+  execute _sql;
+  deallocate prepare _sql;
+
+  set v_result = ifnull(@v_result,0);
+
   -- update in scheduler table
   update recon_trn_tscheduler set
     scheduler_status = 'C',
@@ -199,7 +218,7 @@ me:begin
   and delete_flag = 'N';
 
   -- update job status
-  call pr_upd_job(v_job_gid,'C','Completed',@msg,@result);
+  call pr_upd_job(v_job_gid,'C',concat('Imported ',cast(v_result as nchar),' record(s)'),@msg,@result);
 
   set out_msg = 'Success';
   set out_result = 1;

@@ -699,7 +699,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
             set v_match_sql = concat(v_match_sql,'and a.dataset_code = b.dataset_code ');
-            set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
+            -- set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
 
             if v_comparison_acc_mode <> 'B' then
               set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');

@@ -276,13 +276,25 @@ me:BEGIN
       call pr_upd_job(in_job_gid,'P',v_txt,@msg,@result);
 
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,',excp_mult_value) ');
-      set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_trn_ttran ');
+
+      if in_automatch_flag = 'Y' then
+        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_trn_ttran ');
+      else
+        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_tmp_ttran ');
+      end if;
+
       set v_source_head_sql = concat(v_source_head_sql,' where recon_code = ',char(39),in_recon_code,char(39));
       set v_source_head_sql = concat(v_source_head_sql,' and dataset_code = ', v_source_dataset_code ,' ');
       set v_source_head_sql = concat(v_source_head_sql,' and excp_value > 0 and excp_value = tran_value and mapped_value = 0 ');
 
       set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,',excp_mult_value) ');
-      set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_trn_ttranbrkp ');
+
+      if in_automatch_flag = 'Y' then
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_trn_ttranbrkp ');
+      else
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_tmp_ttranbrkp ');
+      end if;
+
       set v_comparison_head_sql = concat(v_comparison_head_sql,' where recon_code = ',char(39),in_recon_code,char(39));
       set v_comparison_head_sql = concat(v_comparison_head_sql,' and dataset_code = ', v_source_dataset_code ,' ');
       set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value > 0 and tran_gid = 0 ');
@@ -823,11 +835,30 @@ me:BEGIN
             update recon_trn_ttranbrkp as a
             inner join recon_tmp_tmatchdtl as b on a.tranbrkp_gid = b.tranbrkp_gid and a.excp_value= b.excp_value and b.tran_gid > 0
             set a.tran_gid = b.tran_gid,
+                a.posted_rule_code = in_rule_code,
                 a.posted_job_gid = in_job_gid
             where a.excp_value > 0
             and a.tran_gid = 0
             and a.delete_flag = 'N';
           else
+            -- update in temporary table
+            update recon_tmp_ttran as a
+            inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and a.excp_value= b.excp_value and b.tranbrkp_gid = 0
+            set a.mapped_value = a.excp_value
+            where a.excp_value > 0
+            and a.mapped_value = 0
+            and a.delete_flag = 'N';
+
+            update recon_tmp_ttranbrkp as a
+            inner join recon_tmp_tmatchdtl as b on a.tranbrkp_gid = b.tranbrkp_gid and a.excp_value= b.excp_value and b.tran_gid > 0
+            set a.tran_gid = b.tran_gid,
+                a.posted_rule_code = in_rule_code,
+                a.posted_job_gid = in_job_gid
+            where a.excp_value > 0
+            and a.tran_gid = 0
+            and a.delete_flag = 'N';
+
+            -- insert into preview table
             select max(preview_gid) into @preview_gid from recon_trn_tpreview
             where job_gid = in_job_gid
             and delete_flag = 'N';

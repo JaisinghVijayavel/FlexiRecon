@@ -9,6 +9,10 @@ CREATE PROCEDURE `pr_get_Dataset`(
   in in_lang_code varchar(32)
 )
 begin
+  declare v_app_datetime_format text default '';
+
+  set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
+
   if in_user_gid < 1 then
     set in_user_gid = null;
   end if;
@@ -25,7 +29,9 @@ begin
     a.dataset_code,
     a.dataset_name,
     a.dataset_category,
-    b.start_date as last_sync_date,
+    date_format(b.start_date,v_app_datetime_format) as last_sync_date,
+    date_format(b.end_date,v_app_datetime_format) as completed_date,
+    b.job_remark,
     fn_get_mastername(b.job_status, 'QCD_JOB_STATUS') as last_sync_status,
     a.active_status,
     fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc

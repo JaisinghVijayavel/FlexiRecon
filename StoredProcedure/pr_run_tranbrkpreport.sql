@@ -59,6 +59,7 @@ me:BEGIN
       f.dataset_name,
       b.dataset_name as tranbrkp_name,
       ifnull(c.tran_value,d.tran_value) as base_value,
+      ifnull(c.excp_value,d.excp_value) as base_excp_value,
       ifnull(c.tran_acc_mode,d.tran_acc_mode) as base_acc_mode,
       a.*
 		from recon_trn_ttranbrkp as a
@@ -79,6 +80,7 @@ me:BEGIN
       f.dataset_name,
       b.dataset_name as tranbrkp_name,
       ifnull(c.tran_value,d.tran_value) as base_value,
+      ifnull(c.excp_value,d.excp_value) as base_excp_value,
       ifnull(c.tran_acc_mode,d.tran_acc_mode) as base_acc_mode,
       a.*
 		from recon_trn_ttranbrkpko as a

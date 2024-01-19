@@ -27,16 +27,16 @@ me:BEGIN
     select
       before_dr_count as 'Dr Count Before',
       after_dr_count as 'Dr Count After',
-      before_dr_value as 'Dr Value Before',
-      after_dr_value as 'Dr Value After',
+      format(before_dr_value,2,'en_IN') as 'Dr Value Before',
+      format(after_dr_value,2,'en_IN') as 'Dr Value After',
       before_cr_count as 'Cr Count Before',
-      after_cr_value as 'Cr Value After',
       after_cr_count as 'Cr Count After',
-      before_cr_value as 'Cr Value Before',
+      format(before_cr_value,2,'en_IN') as 'Cr Value Before',
+      format(after_cr_value,2,'en_IN') as 'Cr Value After',
       before_count as 'Count Before',
       after_count as 'Count After',
-      before_value as 'Value Before',
-      after_value as 'Value After'
+      format(before_value,2,'en_IN') as 'Value Before',
+      format(after_value,2,'en_IN') as 'Value After'
     from recon_trn_tdatasetjob
     where recon_code = in_recon_code
     and dataset_code = in_dataset_code

@@ -452,6 +452,12 @@ me:BEGIN
         or v_recontype_code = 'I' then
         if v_comparison_acc_mode = 'B' then
           set v_group_method_flag = 'B';
+
+          if v_source_acc_mode = 'C' then
+            set v_comparison_acc_mode = 'D';
+          else
+            set v_comparison_acc_mode = 'C';
+          end if;
         elseif v_source_acc_mode = v_comparison_acc_mode then
           set v_group_method_flag = 'M';
         elseif v_source_acc_mode = v_comparison_acc_mode then

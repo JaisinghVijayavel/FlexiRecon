@@ -1,11 +1,12 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_get_tablequery` $$
-CREATE PROCEDURE `pr_get_tablequery`
+DROP PROCEDURE IF EXISTS `pr_get_tablequerysort` $$
+CREATE PROCEDURE `pr_get_tablequerysort`
 (
   in_recon_code varchar(32),
   in_table_name varchar(128),
   in_condition text,
+  in_sort_order text,
   in_job_gid int,
   in_user_code varchar(50),
   out out_msg text,
@@ -54,8 +55,7 @@ me:BEGIN
       where t.table_name = in_table_name
       and (t.display_flag = 'Y' or (f.display_flag = 'Y' and f.recon_field_name like 'col%'))
       and t.delete_flag = 'N'
-      order by if(ifnull(f.display_order,999)>t.display_order,t.display_order,f.display_order);
-      -- order by if(t.field_name like 'col%',ifnull(f.display_order,128),t.display_order);
+      order by if(t.field_name like 'col%',ifnull(f.display_order,128),t.display_order);
 
     set v_table_stru_flag := true;
   else
@@ -119,7 +119,13 @@ me:BEGIN
       end if;
     end if;
 
-    set v_sql = concat(v_static_fields,'select ',v_sql_field,' from ',in_table_name,' where 1=1 ',in_condition);
+    set in_sort_order = ifnull(in_sort_order,'');
+
+    if in_sort_order <> '' then
+      set in_sort_order = concat(' order by ',in_sort_order);
+    end if;
+
+    set v_sql = concat(v_static_fields,'select a.* from (select ',v_sql_field,' from ',in_table_name,' where 1=1 ',in_condition,in_sort_order,') as a ');
 
     if in_job_gid > 0 then
       set v_rpt_path = fn_get_configvalue('mysql_rpt_path');

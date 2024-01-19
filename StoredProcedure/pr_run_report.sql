@@ -21,6 +21,7 @@ me:BEGIN
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
   declare v_report_default_condition text default '';
+  declare v_sort_order text default '';
   declare v_sql text default '';
 
   declare err_msg text default '';
@@ -61,6 +62,7 @@ me:BEGIN
       table_name,
       recon_code_field,
       default_condition,
+      sort_order,
       recon_flag
     into
       v_report_desc,
@@ -69,6 +71,7 @@ me:BEGIN
       v_table_name,
       v_recon_code_field,
       v_report_default_condition,
+      v_sort_order,
       v_recon_flag
     from recon_mst_treport
     where report_code = in_report_code
@@ -82,14 +85,16 @@ me:BEGIN
       sp_name,
       table_name,
       recon_code_field,
-      default_condition
+      default_condition,
+      sort_order
     into
       v_report_desc,
       v_report_exec_type,
       v_sp_name,
       v_table_name,
       v_recon_code_field,
-      v_report_default_condition
+      v_report_default_condition,
+      v_sort_order
     from recon_mst_treport
     where report_gid = cast(in_report_code as unsigned)
     and delete_flag = 'N';
@@ -106,6 +111,7 @@ me:BEGIN
   set v_table_name = ifnull(v_table_name,'');
   set v_recon_code_field = ifnull(v_recon_code_field,'recon_code');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
+  set v_sort_order = ifnull(v_sort_order,'');
 
   set in_report_condition = ifnull(in_report_condition,'');
 

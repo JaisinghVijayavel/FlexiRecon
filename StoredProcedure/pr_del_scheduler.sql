@@ -33,13 +33,13 @@ me:begin
       (
         select a.tran_gid from recon_trn_tmanualtran as a
         where a.scheduler_gid = in_scheduler_gid
-        and a.ko_status <> 'S'
+        and a.ko_status <> 'P'
         and a.delete_flag = 'N'
       ) or exists
       (
         select a.tran_gid from recon_trn_tmanualtranmatch as a
         where a.scheduler_gid = in_scheduler_gid
-        and a.ko_status <> 'S'
+        and a.ko_status <> 'P'
         and a.delete_flag = 'N'
       ) then
       set err_flag = true;
@@ -50,13 +50,13 @@ me:begin
       (
         select a.tran_gid from recon_trn_tmanualtranbrkp as a
         where a.scheduler_gid = in_scheduler_gid
-        and a.tranbrkp_status <> 'S'
+        and a.tranbrkp_status <> 'P'
         and a.delete_flag = 'N'
       ) or exists
       (
         select a.tran_gid from recon_trn_tmanualtranbrkppost as a
         where a.scheduler_gid = in_scheduler_gid
-        and a.tranbrkp_status <> 'S'
+        and a.tranbrkp_status <> 'P'
         and a.delete_flag = 'N'
       ) then
       set err_flag = true;

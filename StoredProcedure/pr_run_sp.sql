@@ -16,6 +16,8 @@ begin
     call pr_run_koreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_koheadreport' then
     call pr_run_koheadreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_kobrkpreport' then
+    call pr_run_kobrkpreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranbrkpreport' then
     call pr_run_tranbrkpreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_amountmatchedmultiple' then

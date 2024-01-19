@@ -15,7 +15,7 @@ BEGIN
     set v_app_datetime_format = '%d-%m-%Y %H:%i:%s';
   end if;
 
-	select 
+	select
 		a.rule_gid,
 		a.rule_code,
 		a.rule_name,
@@ -24,23 +24,26 @@ BEGIN
 		fn_get_mastername(a.rule_apply_on, 'QCD_RS_RULE_APPLLIED') as rule_apply_on_desc,
 		a.rule_order,
 		a.group_flag,
-		case group_flag when 'Y' then 'Yes' else 'No' end as group_flag_desc,
+    fn_get_mastername(group_flag,'QCD_RULE_GRP') as group_flag_desc,
+		-- case group_flag when 'Y' then 'Yes' else 'No' end as group_flag_desc,
 		a.rule_order as ruleorder,
 		a.source_dataset_code,
 		a.comparison_dataset_code,
 		a.parent_acc_mode,
 		fn_get_mastername(a.parent_acc_mode, 'QCD_RS_ACC_MODE') as parent_acc_mode_desc,
 		a.active_status,
-		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
+		concat(fn_get_mastername(a.active_status, 'QCD_STATUS'),
+      if(a.hold_flag = 'Y',' (HOLD)',''))as active_status_desc,
 		b.dataset_name as source_dataset_desc,
 		c.dataset_name as comparison_dataset_desc,
-		b.dataset_name as dataset_name
+		b.dataset_name as dataset_name,
+    a.recon_rule_version
 	from recon_mst_trule a
 	inner join recon_mst_tdataset b on a.source_dataset_code = b.dataset_code
-		and b.delete_flag = 'N' 
-	inner join recon_mst_tdataset c on a.comparison_dataset_code = c.dataset_code 
-		and c.delete_flag = 'N' 
-	where a.recon_code = in_recon_code 
+		and b.delete_flag = 'N'
+	inner join recon_mst_tdataset c on a.comparison_dataset_code = c.dataset_code
+		and c.delete_flag = 'N'
+	where a.recon_code = in_recon_code
 	-- and a.rule_apply_on = in_rule_apply_on
 	and a.delete_flag = 'N'
 	ORDER BY a.rule_order;

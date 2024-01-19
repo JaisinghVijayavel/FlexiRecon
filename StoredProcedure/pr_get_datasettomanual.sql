@@ -33,7 +33,7 @@ BEGIN
 
 	select
 		a.scheduler_gid,
-    b.scheduled_date,
+    date_format(b.scheduled_date,v_app_datetime_format) as scheduled_date,
 		date_format(b.scheduler_start_date,v_app_datetime_format) as scheduler_start_date,
     date_format(b.scheduler_end_date,v_app_datetime_format) as scheduler_end_date,
 		b.scheduler_initiated_by,

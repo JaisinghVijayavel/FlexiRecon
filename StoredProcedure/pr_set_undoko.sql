@@ -71,6 +71,10 @@ me:begin
       select distinct tranbrkp_gid from recon_trn_tkodtl
       where ko_gid = in_ko_gid and tranbrkp_gid > 0 and delete_flag = 'N';
 
+    insert ignore into recon_tmp_ttranbrkpgid
+      select tranbrkp_gid from recon_trn_ttranbrkpko
+      where ko_gid = in_ko_gid and excp_value = 0 and delete_flag = 'N';
+
     insert into recon_trn_ttran
       select b.* from recon_tmp_ttrangid as a
       inner join recon_trn_ttranko as b on a.tran_gid = b.tran_gid and b.delete_flag = 'N';
@@ -104,6 +108,14 @@ me:begin
       c.ko_date = null
     where a.ko_gid = in_ko_gid
     and a.delete_flag = 'N';
+
+    update recon_trn_ttranbrkp
+    set
+      excp_value = tran_value,
+      ko_gid = 0,
+      ko_date = null
+    where ko_gid = in_ko_gid
+    and delete_flag = 'N';
 
     update recon_trn_tko set
       undo_ko_reason = in_undo_ko_reason,

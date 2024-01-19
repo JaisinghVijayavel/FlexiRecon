@@ -140,6 +140,7 @@ me:BEGIN
 			field_mandatory,
 			dataset_field_sno,
 			dataset_table_field,
+      active_status,
 			insert_date,
 			insert_by
 		)
@@ -154,6 +155,7 @@ me:BEGIN
 			in_field_mandatory,
 			v_count,
 			concat('col',v_count),
+      'Y',
 			sysdate(),
 			in_action_by
 		);

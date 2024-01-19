@@ -8,8 +8,20 @@ begin
 		insert ignore into recon_trn_tscheduler
 		(
 			scheduler_gid,scheduler_status,insert_by,insert_date
-		) 
+		)
 		select New.scheduler_gid,'S',New.scheduler_initiated_by,sysdate();
+
+    -- call pr_set_process_dataset(New.scheduler_gid,'',New.scheduler_initiated_by,'','',@msg,@result);
+  elseif New.scheduler_status = 'Scheduled' then
+    call pr_ins_job('','S',New.scheduler_gid,concat('Processing Scheduler ',ifnull(New.file_name,'')),'',
+      New.scheduler_initiated_by,'','I','Initiated',@job_gid,@msg,@result);
+  elseif New.scheduler_status = 'Failed' then
+    select job_gid into @job_gid from recon_trn_tjob
+    where jobtype_code = 'S'
+    and job_ref_gid = New.scheduler_gid
+    and delete_flag = 'N';
+
+    call pr_upd_job(@job_gid,'F','Failed in connector',@msg1,@result1);
   else
     if exists (select scheduler_gid from recon_trn_tscheduler
       where scheduler_gid = New.scheduler_gid

@@ -44,7 +44,21 @@ me:BEGIN
 	declare v_rule_gid int default 0;
   declare v_result int default 0;
 	declare v_msg text default '';
-    
+
+  set in_comparison_dataset_code = ifnull(in_comparison_dataset_code,'');
+  set in_comparison_acc_mode = ifnull(in_comparison_acc_mode,'');
+
+  set in_parent_dataset_code = ifnull(in_parent_dataset_code,'');
+  set in_parent_acc_mode = ifnull(in_parent_acc_mode,'');
+
+  -- temporary fix
+  if in_applyrule_on = 'S'
+    and in_comparison_dataset_code = ''
+    and in_parent_dataset_code <> '' then
+    set in_comparison_dataset_code = in_parent_dataset_code;
+    set in_comparison_acc_mode = in_parent_acc_mode;
+  end if;
+
   if(in_action = 'INSERT' or in_action = 'UPDATE') then
     if in_rule_name = '' or in_rule_name is null then
 			set err_msg := concat(err_msg,'Rule name cannot be empty,');
