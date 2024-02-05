@@ -10,11 +10,20 @@ begin
   declare txt text;
   declare n int;
 
-  if pos <> -1 then
+  if pos > -1 then
     set txt = REPLACE(SUBSTRING(SUBSTRING_INDEX(x, delim, pos),
        LENGTH(SUBSTRING_INDEX(x, delim, pos -1)) + 1),
        delim, '');
   else
+    set x = REVERSE(x);
+    set pos = abs(pos);
+
+    set txt = REPLACE(SUBSTRING(SUBSTRING_INDEX(x, delim, pos),
+       LENGTH(SUBSTRING_INDEX(x, delim, pos -1)) + 1),
+       delim, '');
+
+    set txt = REVERSE(txt);
+    /*
     set txt = REVERSE(x);
     set n = INSTR(txt,delim);
 
@@ -23,6 +32,7 @@ begin
     else
       set txt = x;
     end if;
+    */
   end if;
 
   if txt = '' then

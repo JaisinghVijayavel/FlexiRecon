@@ -57,6 +57,7 @@ me:BEGIN
     tran_gid int not null default 0,
     dataset_code varchar(32) default null,
     tran_acc_mode char(1) default null,
+    tran_mult tinyint not null default 0,
     manual_matchoff char(1) default null,
     ko_value double(15,2) default null,
     key idx_recon_code (recon_code),
@@ -109,11 +110,11 @@ me:BEGIN
 
   insert into recon_tmp_tkodtl
   (
-    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,rule_name,rule_order
+    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,tran_mult,rule_name,rule_order
   )
   select
     d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
-    r.recon_name,t.dataset_code,t.tran_acc_mode,e.rule_name,e.rule_order
+    r.recon_name,t.dataset_code,t.tran_acc_mode,t.tran_mult,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
   inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
@@ -126,11 +127,11 @@ me:BEGIN
 
   insert into recon_tmp_tkodtl
   (
-    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,rule_name,rule_order
+    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,tran_mult,rule_name,rule_order
   )
   select
     d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
-    r.recon_name,t.dataset_code,t.tran_acc_mode,e.rule_name,e.rule_order
+    r.recon_name,t.dataset_code,t.tran_acc_mode,t.tran_mult,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
   inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
@@ -211,7 +212,8 @@ me:BEGIN
     count(distinct if(tran_acc_mode = 'C',tran_gid,null)) as cr_count,
     sum(if(tran_acc_mode = 'C',ko_value,0)) as cr_value,
     count(distinct tran_gid),
-    sum(ko_value)
+    abs(sum(ko_value*tran_mult))
+    -- sum(ko_value)
   from recon_tmp_tkodtl
   where manual_matchoff = 'N'
   group by recon_code,dataset_code,rule_order;
@@ -240,7 +242,8 @@ me:BEGIN
     count(distinct if(tran_acc_mode = 'C',tran_gid,null)) as cr_count,
     sum(if(tran_acc_mode = 'C',ko_value,0)) as cr_value,
     count(distinct tran_gid),
-    sum(ko_value)
+    abs(sum(ko_value*tran_mult))
+    -- sum(ko_value)
   from recon_tmp_tkodtl
   where manual_matchoff = 'Y'
   group by recon_code,dataset_code,matchoff_type;
@@ -273,7 +276,8 @@ me:BEGIN
     count(distinct if(tran_acc_mode = 'C',tran_gid,null)) as cr_count,
     sum(if(tran_acc_mode = 'C',ko_value,0)) as cr_value,
     count(distinct tran_gid),
-    sum(ko_value),
+    abs(sum(ko_value*tran_mult)),
+    -- sum(ko_value),
     'Y',
     'Y',
     'Red',
@@ -327,7 +331,8 @@ me:BEGIN
     count(distinct if(tran_acc_mode = 'C',tran_gid,null)) as cr_count,
     sum(if(tran_acc_mode = 'C',ko_value,0)) as cr_value,
     count(distinct tran_gid),
-    sum(ko_value),
+    abs(sum(ko_value*tran_mult)),
+    -- sum(ko_value),
     'Y',
     'Y',
     'White',

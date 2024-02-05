@@ -625,8 +625,6 @@ me:BEGIN
           delete from recon_tmp_tindex where index_name <> 'idx_tran_date';
           truncate recon_tmp_tsql;
 
-          select 1;
-
           rule_block:begin
             declare rule_done int default 0;
             declare rule_cursor cursor for
@@ -1013,11 +1011,6 @@ me:BEGIN
           set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');
           set v_match_sql = concat(v_match_sql,'having count(*) = 1 ');
 
-          /*
-          select v_match_sql;
-          leave me;
-          */
-
           call pr_run_sql(v_match_sql,@msg,@result);
 
           insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value)
@@ -1031,6 +1024,8 @@ me:BEGIN
             JOIN recon_tmp_tpseudorows
             where group_flag = 'N'
             HAVING tran_gid IS NOT NULL;
+
+          select 1;
 
           if v_group_flag = 'Y' then
             -- get target addtional group field

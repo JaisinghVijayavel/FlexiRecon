@@ -253,6 +253,7 @@ me:BEGIN
         a.group_method_flag
       from recon_mst_trule as a
       where a.recon_code = in_recon_code
+      and a.rule_code = in_rule_code 
       and a.period_from <= curdate()
       and (a.until_active_flag = 'Y'
       or a.period_to >= curdate())
@@ -386,6 +387,11 @@ me:BEGIN
 
           drop temporary table if exists recon_tmp_tsource;
           drop temporary table if exists recon_tmp_tcomparison;
+
+          /*
+          drop table if exists recon_tmp_tsource;
+          drop table if exists recon_tmp_tcomparison;
+          */
 
           create temporary table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tsource add primary key(tran_gid);
@@ -603,6 +609,9 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
+          -- select v_source_sql,v_comparison_sql;
+
+
           sql_block:begin
             declare sql_done int default 0;
             declare sql_cursor cursor for
@@ -712,6 +721,9 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'and a.excp_mult_value = sum(b.excp_mult_value)) as m');
 
             call pr_run_sql(v_match_sql,@msg,@result);
+
+            -- select v_match_sql;
+            -- leave me;
 
             -- remove the matched tran_gid from the source
             truncate recon_tmp_ttrangid;

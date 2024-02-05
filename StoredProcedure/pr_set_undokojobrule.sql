@@ -186,7 +186,7 @@ me:begin
       and k.delete_flag = 'N';
 
       update recon_trn_tko as k
-      inner join recon_trn_ttranbrkp as c on a.ko_gid = c.ko_gid
+      inner join recon_trn_ttranbrkp as c on k.ko_gid = c.ko_gid
         and c.delete_flag = 'N'
       set
         c.excp_value = c.tran_value,

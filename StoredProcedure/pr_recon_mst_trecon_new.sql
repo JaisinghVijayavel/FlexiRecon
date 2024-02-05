@@ -32,9 +32,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel J
-    Updated Date : Dec-08-2023
+    Updated Date : Jan-30-2024
 
-    Version No : 4
+    Version No : 5
   */
 
 	declare v_recon_gid int default 0;
@@ -314,6 +314,62 @@ me:BEGIN
         'DATE',
         '',
         'Y',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- balance value debit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'bal_value_debit',
+        'Balance Debit',
+        'Y',
+        4,
+        'NUMERIC',
+        '14,2',
+        'N',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- balance value credit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'bal_value_credit',
+        'Balance Credit',
+        'Y',
+        5,
+        'NUMERIC',
+        '14,2',
+        'N',
         'Y',
         sysdate(),
         in_action_by;

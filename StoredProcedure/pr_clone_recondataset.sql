@@ -115,6 +115,8 @@ me:begin
     dataset_code,
     dataset_type,
     parent_dataset_code,
+    clone_recon_code,
+    clone_dataset_code,
     active_status,
     insert_date,
     insert_by
@@ -124,6 +126,8 @@ me:begin
     in_dataset_code,
     dataset_type,
     in_parent_dataset_code,
+    recon_code,
+    dataset_code,
     'Y',
     sysdate(),
     in_user_code

@@ -32,7 +32,11 @@ me:BEGIN
 	declare v_reconfield_gid int default 0;
   declare v_result int default 0;
 	declare v_msg text default '';
-  
+
+  if in_active_status = 'N' then
+    set in_action = 'DELETE';
+  end if;
+
 	if in_action = "UPDATE"  or in_action = "INSERT" then
 		if in_recon_code = '' or in_recon_code is null then
 			set err_msg := concat(err_msg,'Recon code cannot be empty,');
@@ -107,6 +111,8 @@ me:BEGIN
     leave me;
 	end if;
 
+	set out_result = 1;
+
   start transaction;
 
   if (in_action = 'INSERT') then
@@ -162,26 +168,33 @@ me:BEGIN
 			update_by = in_action_by
 		where reconfield_gid = in_reconfield_gid
 			and delete_flag = 'N';
-        
+
 		set v_reconfield_gid = in_reconfield_gid;
 		set v_msg = 'Record Updated Successfully.. !';
-	elseif(in_action = 'DELETE') then 
-		update recon_mst_treconfield set
-			active_status = 'N',
-      delete_flag = 'Y',
-			update_date = sysdate(),
-			update_by = in_action_by,
-			delete_flag = 'Y'  
-		where reconfield_gid = in_reconfield_gid
-    and delete_flag = 'N';
-        
-		set v_reconfield_gid = in_reconfield_gid;
-		set v_msg = 'Record deleted successfully.. !';
+	elseif(in_action = 'DELETE') then
+    if exists(select reconfield_gid from recon_mst_treconfield
+      where reconfield_gid = in_reconfield_gid
+      and system_field_flag = 'N'
+      and delete_flag = 'N') then
+		  update recon_mst_treconfield set
+			  active_status = 'N',
+			  update_date = sysdate(),
+			  update_by = in_action_by,
+			  delete_flag = 'Y'
+		  where reconfield_gid = in_reconfield_gid
+      and system_field_flag = 'N'
+      and delete_flag = 'N';
+
+		  set v_reconfield_gid = in_reconfield_gid;
+		  set v_msg = 'Record deleted successfully.. !';
+    else
+      set out_result = 0;
+		  set v_msg = 'Access denied.. !';
+    end if;
   end if;
-    
+
   commit;
-    
-	set out_result = 1;
+
 	set out_msg = v_msg;
 END $$
 

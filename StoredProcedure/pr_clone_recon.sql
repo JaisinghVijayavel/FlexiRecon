@@ -35,6 +35,7 @@ me:begin
     and delete_flag = 'N') then
 
     set v_recon_code = fn_get_autocode('RECON');
+    set out_recon_code = v_recon_code;
 
     -- insert in recon table
     insert into recon_mst_trecon
@@ -53,6 +54,7 @@ me:begin
       period_from,
       period_to,
       until_active_flag,
+      clone_recon_code,
       active_status,
       insert_date,
       insert_by
@@ -72,6 +74,7 @@ me:begin
       curdate(),
       period_to,
       until_active_flag,
+      recon_code,
       'D',
       sysdate(),
       in_user_code

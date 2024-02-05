@@ -188,6 +188,7 @@ me:begin
     period_from,
     period_to,
     until_active_flag,
+    clone_rule_code,
     active_status,
     insert_date,
     insert_by
@@ -208,6 +209,7 @@ me:begin
     curdate(),
     period_to,
     until_active_flag,
+    rule_code,
     'D',
     sysdate(),
     in_user_code
