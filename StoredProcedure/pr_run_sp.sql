@@ -30,6 +30,8 @@ begin
     call pr_run_manualpostreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_kotranreport' then
     call pr_run_kotranreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_tranwithbrkpreport' then
+    call pr_run_tranwithbrkpreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   end if;
 
   set out_msg = @msg;

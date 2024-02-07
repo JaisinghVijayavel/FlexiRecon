@@ -32,7 +32,7 @@ begin
   elseif in_comparison_criteria = 'ENDS WITH'  then
     set v_txt = concat(v_txt,' LIKE ',char(39),'%',in_ident_value,char(39),' ');
   elseif in_comparison_criteria = 'NOT CONTAINS'  then
-    set v_txt = concat(v_txt,' NOT LIKE ',char(39),'%',in_ident_value,'%',char(39),' ');
+    set v_txt = concat('ifnull(',v_txt,','''') NOT LIKE ',char(39),'%',in_ident_value,'%',char(39),' ');
   elseif instr(in_comparison_criteria,'$FIELD$') > 0 then
     set v_txt = replace(in_comparison_criteria,'$FIELD$',v_txt);
     set v_txt = concat(v_txt,' = ',char(39),in_ident_value,char(39),' ');

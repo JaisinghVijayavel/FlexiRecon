@@ -35,7 +35,7 @@ begin
   elseif in_comparison_criteria = 'ENDS WITH'  then
     set v_txt = concat(' ',in_comparison_field,' LIKE concat(''%'',',in_source_field,' collate ',v_collation,') ');
   elseif in_comparison_criteria = 'NOT CONTAINS'  then
-    set v_txt = concat(' ',in_comparison_field,' NOT LIKE concat(''%'',',in_source_field,' collate ',v_collation,',''%'') ');
+    set v_txt = concat(' ifnull(',in_comparison_field,','''') NOT LIKE concat(''%'',',in_source_field,' collate ',v_collation,',''%'') ');
   elseif in_comparison_criteria = 'NOT CONTAINS IN BASE'  then
     set v_txt = concat(' ',in_source_field,' NOT LIKE concat(''%'',',in_comparison_field,' collate ',v_collation,',''%'') ');
   elseif substr(in_comparison_criteria,1,7) = 'BETWEEN' then

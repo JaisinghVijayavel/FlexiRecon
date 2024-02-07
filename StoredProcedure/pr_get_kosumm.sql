@@ -142,6 +142,23 @@ me:BEGIN
   and k.delete_flag = 'N'
   order by e.rule_order;
 
+  insert into recon_tmp_tkodtl
+  (
+    kodtl_gid,recon_code,tran_gid,ko_value,manual_matchoff,recon_name,dataset_code,tran_acc_mode,tran_mult,rule_name,rule_order
+  )
+  select
+    d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
+    r.recon_name,t.dataset_code,t.tran_acc_mode,t.tran_mult,e.rule_name,e.rule_order
+  from recon_tmp_treconcode as r
+  inner join recon_trn_tko as k on r.recon_code = k.recon_code
+  inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.tranbrkp_gid > 0 and d.delete_flag = 'N'
+  inner join recon_trn_ttranbrkpko as t on d.tran_gid = t.tran_gid and d.tranbrkp_gid = t.tranbrkp_gid and t.delete_flag = 'N'
+  left join recon_mst_trule as e on k.rule_code = e.rule_code and e.delete_flag = 'N'
+  where k.ko_date >= in_period_from
+  and k.ko_date <= in_period_to
+  and k.delete_flag = 'N'
+  order by e.rule_order;
+
   -- run KO Report
   -- call pr_run_pagereport('RPT_KO',-1,v_condition,false,in_ip_addr,in_user_code,v_rec_count,@msg,v_rptsession_gid);
 
