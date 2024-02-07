@@ -117,7 +117,7 @@ me:BEGIN
     r.recon_name,t.dataset_code,t.tran_acc_mode,t.tran_mult,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
-  inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
+  inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.tranbrkp_gid = 0 and d.delete_flag = 'N'
   inner join recon_trn_ttran as t on d.tran_gid = t.tran_gid and t.delete_flag = 'N'
   left join recon_mst_trule as e on k.rule_code = e.rule_code and e.delete_flag = 'N'
   where k.ko_date >= in_period_from
@@ -134,7 +134,7 @@ me:BEGIN
     r.recon_name,t.dataset_code,t.tran_acc_mode,t.tran_mult,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
-  inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
+  inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.tranbrkp_gid = 0 and d.delete_flag = 'N'
   inner join recon_trn_ttranko as t on d.tran_gid = t.tran_gid and t.delete_flag = 'N'
   left join recon_mst_trule as e on k.rule_code = e.rule_code and e.delete_flag = 'N'
   where k.ko_date >= in_period_from
