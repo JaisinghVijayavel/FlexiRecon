@@ -52,7 +52,8 @@ me:BEGIN
         and f.delete_flag = 'N'
       left join recon_mst_tfieldstru as s on t.field_name = s.field_name and t.delete_flag = 'N'
       where t.table_name = in_table_name
-      and (t.display_flag = 'Y' or (f.display_flag = 'Y' and f.recon_field_name like 'col%'))
+      and (t.display_flag = 'Y' or f.display_flag = 'Y')
+      -- and (t.display_flag = 'Y' or (f.display_flag = 'Y' and f.recon_field_name like 'col%'))
       and t.delete_flag = 'N'
       order by if(ifnull(f.display_order,999)>t.display_order,t.display_order,f.display_order);
       -- order by if(t.field_name like 'col%',ifnull(f.display_order,128),t.display_order);

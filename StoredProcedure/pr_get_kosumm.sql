@@ -45,6 +45,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_tkodtl;
   drop temporary table if exists recon_tmp_treconcode;
   drop temporary table if exists recon_tmp_tkosumm;
+  drop temporary table if exists recon_tmp_tkosumm1;
 
   create temporary table recon_tmp_tkodtl
   (
@@ -77,6 +78,26 @@ me:BEGIN
   create temporary table recon_tmp_tkosumm
   (
     kosumm_gid int not null AUTO_INCREMENT,
+    recon_code varchar(32) default null,
+    dataset_code varchar(32) default null,
+    rec_slno int(10) NOT NULL default 0,
+    row_desc text default null,
+    dr_count int default null,
+    dr_value double(15,2) default null,
+    cr_count int default null,
+    cr_value double(15,2) default null,
+    tot_count int default null,
+    tot_value double(15,2) default null,
+    fontbold_flag char(1) not null default 'N',
+    backcolor_flag char(1) default 'N',
+    forecolor varchar(32) default null,
+    backcolor varchar(32) default null,
+    PRIMARY KEY (kosumm_gid)
+  ) ENGINE = MyISAM;
+
+  create temporary table recon_tmp_tkosumm1
+  (
+    kosumm_gid int not null,
     recon_code varchar(32) default null,
     dataset_code varchar(32) default null,
     rec_slno int(10) NOT NULL default 0,
@@ -265,7 +286,45 @@ me:BEGIN
   where manual_matchoff = 'Y'
   group by recon_code,dataset_code,matchoff_type;
 
+  insert into recon_tmp_tkosumm1 select * from recon_tmp_tkosumm where dr_count is not null;
+
   -- reconaccwise total
+  insert into recon_tmp_tkosumm
+  (
+    rec_slno,
+    recon_code,
+    dataset_code,
+    row_desc,
+    dr_count,
+    dr_value,
+    cr_count,
+    cr_value,
+    tot_count,
+    tot_value,
+    fontbold_flag,
+    backcolor_flag,
+    forecolor,
+    backcolor
+  )
+  select
+    @row_slno = @row_slno + 1,
+    recon_code,
+    dataset_code,
+    'Sub Total',
+    sum(dr_count) as dr_count,
+    sum(dr_value) as dr_value,
+    sum(cr_count) as cr_count,
+    sum(cr_value) as cr_value,
+    sum(dr_count)+sum(cr_count),
+    abs(sum(dr_value)-sum(cr_value)),
+    'Y',
+    'Y',
+    'Red',
+    'Yellow'
+  from recon_tmp_tkosumm1
+  group by recon_code,dataset_code;
+
+  /*
   insert into recon_tmp_tkosumm
   (
     rec_slno,
@@ -301,6 +360,7 @@ me:BEGIN
     'Yellow'
   from recon_tmp_tkodtl
   group by recon_code,dataset_code;
+  */
 
   -- insert blank line
   insert into recon_tmp_tkosumm
@@ -319,7 +379,7 @@ me:BEGIN
     '',
     'White',
     'White'
-  from recon_tmp_tkodtl
+  from recon_tmp_tkosumm1
   group by recon_code;
 
   -- grant total
@@ -343,6 +403,25 @@ me:BEGIN
     @row_slno = @row_slno + 1,
     'ZZZ9999999',
     'Grant Total',
+    sum(dr_count) as dr_count,
+    sum(dr_value) as dr_value,
+    sum(cr_count) as cr_count,
+    sum(cr_value) as cr_value,
+    sum(dr_count)+sum(cr_count),
+    abs(sum(dr_value)-sum(cr_value)),
+    -- sum(ko_value),
+    'Y',
+    'Y',
+    'White',
+    'Black'
+  from recon_tmp_tkosumm1
+  group by recon_code,dataset_code;
+
+  /*
+  select
+    @row_slno = @row_slno + 1,
+    'ZZZ9999999',
+    'Grant Total',
     count(distinct if(tran_acc_mode = 'D',tran_gid,null)) as dr_count,
     sum(if(tran_acc_mode = 'D',ko_value,0)) as dr_value,
     count(distinct if(tran_acc_mode = 'C',tran_gid,null)) as cr_count,
@@ -355,6 +434,7 @@ me:BEGIN
     'White',
     'Black'
   from recon_tmp_tkodtl;
+  */
 
   -- return result
   select
@@ -372,6 +452,7 @@ me:BEGIN
 
   drop temporary table if exists recon_tmp_treconcode;
   drop temporary table if exists recon_tmp_tkosumm;
+  drop temporary table if exists recon_tmp_tkosumm1;
   drop temporary table if exists recon_tmp_tko;
 end $$
 

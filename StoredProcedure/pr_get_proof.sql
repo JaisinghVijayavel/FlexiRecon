@@ -155,7 +155,7 @@ me:begin
     )
     values
     (
-      concat('Balance on ',date_format(v_bal_tran_date,v_web_date_format)),
+      concat('Closing Balance as on ',date_format(v_bal_tran_date,v_web_date_format)),
       '',
       v_tran_acc_mode,
       format(v_bal_value,2,'en_IN')
@@ -170,7 +170,7 @@ me:begin
     )
     values
     (
-      concat('Balance as per ',v_dataset_name),
+      concat('Closing Balance as per ',v_dataset_name),
       '',
       'CR',
       '0.00'
@@ -179,7 +179,7 @@ me:begin
 
   insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
-  insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Exception','','','');
+  -- insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Exception','','','');
 
   select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
@@ -192,10 +192,10 @@ me:begin
   set v_count = ifnull(v_count,0);
   set v_dr_total = v_dr_total + v_value;
 
-  set v_txt = concat('Debit Total');
+  set v_txt = concat('Debit Exceptions');
 
   if v_count > 0 then
-    set v_txt = concat(v_txt,' ',cast(v_count as nchar));
+    set v_txt = concat(v_txt,' (',cast(v_count as nchar),')');
   end if;
 
   insert into tb_proof
@@ -224,10 +224,10 @@ me:begin
   set v_count = ifnull(v_count,0);
   set v_cr_total = v_cr_total + v_value;
 
-  set v_txt = concat('Credit Total');
+  set v_txt = concat('Credit Exceptions');
 
   if v_count > 0 then
-    set v_txt = concat(v_txt,' ',cast(v_count as nchar));
+    set v_txt = concat(v_txt,' (',cast(v_count as nchar),')');
   end if;
 
   insert into tb_proof
@@ -256,15 +256,13 @@ me:begin
     set v_tran_acc_mode = 'DR';
   end if;
 
-  insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Net Exception','',v_tran_acc_mode,format(v_value,2,'en_IN'));
+  insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Net Exceptions','',v_tran_acc_mode,format(v_value,2,'en_IN'));
 
   insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
   set v_diff_value = round(v_value-v_bal_value,2);
 
-  if v_diff_value = 0 then
-    insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference','','','0.00');
-  else
+  if v_diff_value <> 0 then
     insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Difference','','',format(v_diff_value,2,'en_IN'));
   end if;
 

@@ -45,6 +45,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+		  c.value_debit,
+		  c.value_credit,
 			c.col1,
 			c.col2,
 			c.col3,
@@ -202,12 +204,14 @@ me:BEGIN
 		  a.reversal_flag,
 		  b.src_comp_flag,
 		  if(b.tranbrkp_gid > 0,'S','T') as rec_type,
-      c.dataset_code,
+      c.tranbrkp_dataset_code,
       f.dataset_name,
 		  c.tran_date,
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+		  c.value_debit,
+		  c.value_credit,
 			c.col1,
 			c.col2,
 			c.col3,
@@ -343,7 +347,7 @@ me:BEGIN
 		inner join recon_trn_ttranbrkp as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
-    left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
+    left join recon_mst_tdataset as f on c.tranbrkp_dataset_code = f.dataset_code and f.delete_flag = 'N'
 		where true ", v_condition," and b.tranbrkp_gid > 0
   ");
 

@@ -84,6 +84,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+		  if(ifnull(cc.tran_mult,c.tran_mult) = -1,b.ko_value,0),
+		  if(ifnull(cc.tran_mult,c.tran_mult) = 1,b.ko_value,0),
 			c.col1,
 			c.col2,
 			c.col3,
@@ -218,6 +220,7 @@ me:BEGIN
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
 		inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+		left join recon_trn_ttranbrkpko as cc on b.tranbrkp_gid = cc.tranbrkp_gid and cc.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
@@ -257,6 +260,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+		  if(ifnull(cc.tran_mult,c.tran_mult) = -1,b.ko_value,0),
+		  if(ifnull(cc.tran_mult,c.tran_mult) = 1,b.ko_value,0),
 			c.col1,
 			c.col2,
 			c.col3,
@@ -391,6 +396,7 @@ me:BEGIN
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
 		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+		left join recon_trn_ttranbrkpko as cc on b.tranbrkp_gid = cc.tranbrkp_gid and cc.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
