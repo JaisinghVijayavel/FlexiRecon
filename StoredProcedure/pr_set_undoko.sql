@@ -59,7 +59,7 @@ me:begin
     end if;
 
     insert into recon_tmp_ttranko (tran_gid,ko_value)
-      select tran_gid,sum(ko_value) as ko_value from recon_trn_tkodtl
+      select tran_gid,sum(ko_value*ko_mult) as ko_value from recon_trn_tkodtl
       where ko_gid = in_ko_gid
       and delete_flag = 'N'
       group by tran_gid;
@@ -95,7 +95,7 @@ me:begin
     inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
     and b.delete_flag = 'N'
     set
-      b.excp_value = b.excp_value + a.ko_value,
+      b.excp_value = b.excp_value + a.ko_value*b.tran_mult,
       b.ko_gid = 0,
       b.ko_date = null;
 

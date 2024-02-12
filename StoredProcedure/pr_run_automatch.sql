@@ -1347,8 +1347,8 @@ me:BEGIN
             HAVING tran_gid IS NOT NULL
             order by ko_gid;
 
-            insert into recon_trn_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value)
-              select ko_gid,tran_gid,tranbrkp_gid,ko_value from recon_tmp_tkodtl;
+            insert into recon_trn_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
+              select ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_tkodtl;
 
             insert into recon_tmp_tkodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
               select max(ko_gid) as max_ko_gid,tran_gid,sum(ko_value*tran_mult) as ko_value,count(*) as rec_count from recon_tmp_tkodtl

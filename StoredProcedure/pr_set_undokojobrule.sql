@@ -113,7 +113,7 @@ me:begin
       set v_undo_job_gid = @out_job_gid;
 
       insert into recon_tmp_ttranko (tran_gid,ko_value)
-        select b.tran_gid,sum(b.ko_value) as ko_value from recon_trn_tko as a
+        select b.tran_gid,sum(b.ko_value*.b.ko_mult) as ko_value from recon_trn_tko as a
         inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
         where a.job_gid = in_job_gid
         and a.rule_code = in_rule_code
@@ -158,7 +158,7 @@ me:begin
       inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
       and b.delete_flag = 'N'
       set
-        b.excp_value = b.excp_value + a.ko_value,
+        b.excp_value = b.excp_value + a.ko_value*b.tran_mult,
         b.ko_gid = 0,
         b.ko_date = null;
 

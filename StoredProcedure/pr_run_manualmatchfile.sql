@@ -72,6 +72,7 @@ me:BEGIN
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     ko_value decimal(15,2) not null default 0,
+    tran_mult tinyint not null default 0,
     PRIMARY KEY (kodtl_gid),
     key idx_ko_gid(ko_gid),
     key idx_tran_gid(tran_gid),
@@ -266,11 +267,12 @@ me:BEGIN
 
       if v_ko_gid > 0 then
         if v_recontype_code <> 'N' then
-          insert into recon_tmp_tkodtl (ko_gid,tran_gid,ko_value)
+          insert into recon_tmp_tkodtl (ko_gid,tran_gid,ko_value,tran_mult)
             select
               v_ko_gid,
               a.tran_gid,
-              a.ko_value
+              a.ko_value,
+              b.tran_mult
             from recon_trn_tmanualtran as a
             inner join recon_trn_ttran as b
               on a.tran_gid = b.tran_gid
@@ -288,8 +290,8 @@ me:BEGIN
             and b.delete_flag = 'N';
 
           if (v_value > 0 and v_recontype_code = 'I') or v_value = 0 then
-            insert into recon_trn_tkodtl (ko_gid,tran_gid,ko_value)
-              select a.ko_gid,a.tran_gid,a.ko_value from recon_tmp_tkodtl as a
+            insert into recon_trn_tkodtl (ko_gid,tran_gid,ko_value,ko_mult)
+              select a.ko_gid,a.tran_gid,a.ko_value,a.tran_mult from recon_tmp_tkodtl as a
               inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
                 and b.excp_value > 0
                 and b.delete_flag = 'N';
