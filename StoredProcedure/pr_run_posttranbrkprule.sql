@@ -66,6 +66,7 @@ me:BEGIN
   declare v_rule_comparison_groupby text default '';
 
   declare v_tran_gid int default 0;
+  declare v_tran_mult tinyint default 0;
   declare v_excp_value double(15,2) default 0;
 
   declare v_txt_tran_gid text default '';
@@ -283,6 +284,12 @@ me:BEGIN
       set v_source_acc_mode = ifnull(v_source_acc_mode,'');
       set v_comparison_acc_mode = ifnull(v_comparison_acc_mode,'');
       set v_tran_acc_mode = v_source_acc_mode;
+
+      if v_tran_acc_mode = 'D' then
+        set v_tran_mult = -1;
+      else
+        set v_tran_mult = 1;
+      end if;
 
       if v_group_flag = 'OTO' then
         set v_group_flag = 'N';
@@ -661,12 +668,14 @@ me:BEGIN
             set v_sql = concat(v_sql,'{');
             set v_sql = concat(v_sql,'"tran_gid":',char(39),',cast(tran_gid as nchar),',char(39),',');
             set v_sql = concat(v_sql,'"tranbrkp_gid":0,');
+            set v_sql = concat(v_sql,'"tran_mult":',cast(v_tran_mult as nchar),',');
             set v_sql = concat(v_sql,'"src_comp_flag":"S",');
             set v_sql = concat(v_sql,'"excp_value":', char(39),',cast(matched_value as nchar),',char(39));
             set v_sql = concat(v_sql,'},');
             set v_sql = concat(v_sql,'{');
             set v_sql = concat(v_sql,'"tran_gid":',char(39),',cast(tran_gid as nchar),',char(39),',');
             set v_sql = concat(v_sql,'"tranbrkp_gid":',char(39),',cast(tranbrkp_gid as nchar),',char(39),',');
+            set v_sql = concat(v_sql,'"tran_mult":',cast(v_tran_mult as nchar),',');
             set v_sql = concat(v_sql,'"src_comp_flag":"C",');
             set v_sql = concat(v_sql,'"excp_value":',char(39),',cast(matched_value as nchar),',char(39));
             set v_sql = concat(v_sql,'}');
@@ -695,11 +704,13 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'{');
             set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":0,');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":', char(39),',cast(a.tran_mult as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"excp_value":', char(39),',cast(a.excp_value as nchar),',char(39));
             set v_match_sql = concat(v_match_sql,'},',char(39),',');
             set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
             set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":', char(39),',cast(b.tran_mult as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"excp_value":',char(39),',cast(b.excp_value as nchar),',char(39));
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
@@ -756,11 +767,13 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'{');
             set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":0,');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":', char(39),',cast(a.tran_mult as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"excp_value":', char(39),',cast(a.excp_value as nchar),',char(39));
             set v_match_sql = concat(v_match_sql,'},',char(39),',');
             set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
             set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":', char(39),',cast(b.tran_mult as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"excp_value":',char(39),',cast(b.excp_value as nchar),',char(39));
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
@@ -817,11 +830,13 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'{');
             set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":0,');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":', char(39),',cast(a.tran_mult as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"excp_value":', char(39),',cast(a.excp_value as nchar),',char(39));
             set v_match_sql = concat(v_match_sql,'},',char(39),',');
             set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
             set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":', char(39),',cast(b.tran_mult as nchar),',char(39),',');
             set v_match_sql = concat(v_match_sql,'"excp_value":',char(39),',cast(b.excp_value as nchar),',char(39));
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
@@ -858,7 +873,7 @@ me:BEGIN
 
           truncate recon_tmp_ttrangid;
 
-          
+
           insert into recon_tmp_tmatchdtl
           ( tran_gid,tranbrkp_gid,excp_value)
           select
@@ -940,7 +955,7 @@ me:BEGIN
             from recon_tmp_tmatch;
 
             insert into recon_trn_tpreviewdtl
-            ( previewdtl_gid,preview_gid,job_gid,tran_gid,tranbrkp_gid,excp_value,src_comp_flag)
+            ( previewdtl_gid,preview_gid,job_gid,tran_gid,tranbrkp_gid,excp_value,tran_mult,src_comp_flag)
             select
               recon_tmp_tpseudorows.row+1,
               preview_gid,
@@ -948,6 +963,7 @@ me:BEGIN
               JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
               JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
               JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].excp_value'))) AS excp_value,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
               'C'
             FROM recon_trn_tpreview
             JOIN recon_tmp_tpseudorows

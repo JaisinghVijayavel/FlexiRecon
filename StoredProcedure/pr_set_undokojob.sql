@@ -184,31 +184,22 @@ me:begin
       where k.job_gid = in_job_gid
       and k.delete_flag = 'N';
 
-    elseif v_jobtype_code = 'S' then
-      if exists(select tranbrkp_gid from recon_trn_ttranbrkpko
+      if not exists(select tranbrkp_gid from recon_trn_ttranbrkpko
                          where posted_job_gid = in_job_gid
                          and delete_flag = 'N') then
-        set out_msg = 'Access denied ! Few line(s) seems to be knocked off ! Please refer report';
-        leave me;
-      end if;
-
-      -- update job status
-      call pr_ins_job(in_recon_code,'U',in_job_gid,concat('Undo supporting file posting ',ifnull(in_undo_job_reason,'')),'',in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
-
-      set v_undo_job_gid = @out_job_gid;
-
-      update recon_trn_ttran
-      set mapped_value = 0
-      where tran_gid in (select distinct tran_gid from recon_trn_ttranbrkp
+        update recon_trn_ttran
+        set mapped_value = 0
+        where tran_gid in (select distinct tran_gid from recon_trn_ttranbrkp
                          where posted_job_gid = in_job_gid
                          and delete_flag = 'N')
-      and mapped_value = tran_value
-      and delete_flag = 'N';
+        and mapped_value = tran_value
+        and delete_flag = 'N';
 
-      update recon_trn_ttranbrkp
-      set tran_gid = 0
-      where posted_job_gid = in_job_gid
-      and delete_flag = 'N';
+        update recon_trn_ttranbrkp
+        set tran_gid = 0
+        where posted_job_gid = in_job_gid
+        and delete_flag = 'N';
+      end if;
     end if;
 
     call pr_upd_job(in_job_gid,'U','Undo completed...',@msg,@result);

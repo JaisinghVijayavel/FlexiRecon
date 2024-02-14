@@ -415,7 +415,7 @@ me:BEGIN
     'White',
     'Black'
   from recon_tmp_tkosumm1
-  group by recon_code,dataset_code;
+  group by recon_code;
 
   /*
   select
