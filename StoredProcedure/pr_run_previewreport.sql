@@ -45,6 +45,9 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+      0,
+      0,
+      '',
 		  if(b.tran_mult = -1,b.excp_value,0) as value_debit,
 		  if(b.tran_mult = 1,b.excp_value,0) as value_credit,
 			c.col1,
@@ -210,6 +213,9 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+      g.tran_value,
+      g.excp_value,
+      g.tran_acc_mode,
 		  if(b.tran_mult = -1,b.excp_value,0) as value_debit,
 		  if(b.tran_mult = 1,b.excp_value,0) as value_credit,
 			c.col1,
@@ -348,6 +354,7 @@ me:BEGIN
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.tranbrkp_dataset_code = f.dataset_code and f.delete_flag = 'N'
+    left join recon_trn_ttran as g on c.tran_gid = g.tran_gid and c.delete_flag = 'N'
 		where true ", v_condition," and b.tranbrkp_gid > 0
   ");
 

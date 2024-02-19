@@ -469,10 +469,10 @@ me:BEGIN
           else
             set v_comparison_acc_mode = 'C';
           end if;
-        elseif v_source_acc_mode = v_comparison_acc_mode then
-          set v_group_method_flag = 'M';
-        elseif v_source_acc_mode = v_comparison_acc_mode then
-          set v_group_method_flag = 'C';
+        -- elseif v_source_acc_mode = v_comparison_acc_mode then
+        --  set v_group_method_flag = 'M';
+        -- elseif v_source_acc_mode = v_comparison_acc_mode then
+        --  set v_group_method_flag = 'C';
         end if;
       end if;
 
@@ -1447,7 +1447,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'tran_mult,source_value,comparison_value,matched_txt_json) ');
 						set v_match_sql = concat(v_match_sql,'select ');
 						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,a.tran_mult,');
-						set v_match_sql = concat(v_match_sql,'a.excp_value as source_value,sum(b.excp_value*b.tran_mult)*-1 as comparison_value,');
+						set v_match_sql = concat(v_match_sql,'a.excp_value as source_value,sum(b.excp_value*b.tran_mult) as comparison_value,');
 
 						set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
 						set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
@@ -1491,7 +1491,13 @@ me:BEGIN
 
 						if v_recontype_code <> 'N' then
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
-							set v_match_sql = concat(v_match_sql,'having sum(source_value*tran_mult) = comparison_value');
+              if v_recontype_code <> 'I' then
+                -- contra
+							  set v_match_sql = concat(v_match_sql,'having sum(source_value*tran_mult) = comparison_value*-1 ');
+              else
+                -- mirror
+							  set v_match_sql = concat(v_match_sql,'having sum(source_value*tran_mult) = comparison_value ');
+              end if;
 						else
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json ');
 						end if;
@@ -1604,7 +1610,13 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
 
             if v_recontype_code <> 'N' then
-              set v_match_sql = concat(v_match_sql,'and a.excp_value*a.tran_mult = sum(b.excp_value*b.tran_mult)*-1 ');
+              if v_recontype_code <> 'I' then
+                -- contra
+                set v_match_sql = concat(v_match_sql,'and a.excp_value*a.tran_mult = sum(b.excp_value*b.tran_mult)*-1 ');
+              else
+                -- mirror
+                set v_match_sql = concat(v_match_sql,'and a.excp_value*a.tran_mult = sum(b.excp_value*b.tran_mult) ');
+              end if;
             end if;
 
             call pr_run_sql(v_match_sql,@msg,@result);

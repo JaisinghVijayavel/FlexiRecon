@@ -45,6 +45,7 @@ me:begin
 
   declare v_sql text default '';
   declare v_recon_field text default '';
+  declare v_recon_field_desc text default '';
 
   declare v_tran_date text default '';
   declare v_condition text default '';
@@ -294,9 +295,11 @@ me:begin
 
   -- get recon field
   select
-    group_concat('a.',recon_field_name," as '",recon_field_desc,"'")
+    group_concat('a.',recon_field_name),
+    group_concat("null as '",ifnull(recon_field_desc,recon_field_name),"'")
   into
-    v_recon_field
+    v_recon_field,
+    v_recon_field_desc
   from recon_mst_treconfield
   where recon_code = in_recon_code
   and recon_field_name like 'col%'
@@ -306,16 +309,19 @@ me:begin
   order by recon_field_sno;
 
   set v_recon_field = ifnull(v_recon_field,'');
+  set v_recon_field_desc = ifnull(v_recon_field_desc,'');
 
   if v_recon_field <> '' then
     set v_recon_field = concat(v_recon_field,',');
+    set v_recon_field_desc = concat(v_recon_field_desc,',');
   end if;
 
   set v_tran_date = date_format(in_tran_date,'%Y-%m-%d');
 
   -- target debit
+
   set v_sql = concat("
-   select
+  select
     a.tran_gid as 'Tran ID',
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
@@ -343,13 +349,9 @@ me:begin
   select
     null as 'Tran ID',
     null as 'Transaction Date',
-    null as 'Particulars',
-    null as 'Loan Number',
-    null as 'Vendor Name',
-    null as 'Cheque Date',
-    null as 'Cheque Number',
-    null as 'Amount',
-    null as 'Exception Amount',
+    null as 'Tran Value',
+    null as 'Exception Value',",
+    v_recon_field_desc,"
     null as '',
     null as 'Pending Days',
     null as '0>=3',
@@ -393,13 +395,9 @@ me:begin
   select
     null as 'Tran ID',
     null as 'Transaction Date',
-    null as 'Particulars',
-    null as 'Loan Number',
-    null as 'Vendor Name',
-    null as 'Cheque Date',
-    null as 'Cheque Number',
-    null as 'Amount',
-    null as 'Exception Amount',
+    null as 'Tran Value',
+    null as 'Exception Value',",
+    v_recon_field_desc,"
     null as '',
     null as 'Pending Days',
     null as '0>=3',
@@ -443,13 +441,9 @@ me:begin
   select
     null as 'Tran ID',
     null as 'Transaction Date',
-    null as 'Particulars',
-    null as 'Loan Number',
-    null as 'Vendor Name',
-    null as 'Cheque Date',
-    null as 'Cheque Number',
-    null as 'Amount',
-    null as 'Exception Amount',
+    null as 'Tran Value',
+    null as 'Exception Value',",
+    v_recon_field_desc,"
     null as '',
     null as 'Pending Days',
     null as '0>=3',
@@ -493,13 +487,9 @@ me:begin
   select
     null as 'Tran ID',
     null as 'Transaction Date',
-    null as 'Particulars',
-    null as 'Loan Number',
-    null as 'Vendor Name',
-    null as 'Cheque Date',
-    null as 'Cheque Number',
-    null as 'Amount',
-    null as 'Exception Amount',
+    null as 'Tran Value',
+    null as 'Exception Value',",
+    v_recon_field_desc,"
     null as '',
     null as 'Pending Days',
     null as '0>=3',
@@ -543,7 +533,7 @@ me:begin
                              " and excp_value > 0 ",
                              " and delete_flag = 'N' ");
   else
-    set v_condition = concat(" and file_gid = 0 ");
+    set v_condition = concat(" and 1 = 2 ");
   end if;
 
 
@@ -569,7 +559,7 @@ me:begin
                            " and delete_flag = 'N' ");
 
   else
-    set v_condition = concat(" and scheduler_gid = 0 ");
+    set v_condition = concat(" and 1 = 2 ");
   end if;
 
   call pr_get_tablequery(in_recon_code,'recon_trn_ttranbrkp',v_condition,0,in_user_code,@msg,@result);

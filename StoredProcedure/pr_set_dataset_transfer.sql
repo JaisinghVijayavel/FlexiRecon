@@ -48,35 +48,29 @@ me:begin
   declare v_bcpfield_all text default '';
   declare v_tranfield_all text default '';
 
-  /*
-  declare v_rec_count int default 0;
-  declare v_rej_count int default 0;
+  declare v_user_code text default '';
+  declare v_count int default 0;
 
-  declare v_transfer_field text default '';
+  drop temporary table if exists recon_tmp_ttrangid;
+  drop temporary table if exists recon_tmp_tbalance;
 
-  declare v_field_name text default '';
-  declare v_field_type text default '';
-  declare v_field_alias_name text default '';
-  declare v_reject_reason text default '';
-  */
 
-  /*
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION
-  BEGIN
-    GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
-    @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+  CREATE temporary TABLE recon_tmp_ttrangid
+  (
+    tran_gid int unsigned NOT NULL,
+    tran_date date not null,
+    PRIMARY KEY (tran_gid)
+  ) ENGINE = MyISAM;
 
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+  CREATE temporary TABLE recon_tmp_tbalance
+  (
+    tran_date date not null,
+    dataset_code varchar(32) not null,
+    bal_value_debit double(15,2) not null default 0,
+    bal_value_credit double(15,2) not null default 0,
+    PRIMARY KEY (tran_date)
+  ) ENGINE = MyISAM;
 
-    call pr_upd_job(v_job_gid,'F',@full_error,@msg1,@result1);
-
-    set out_msg = @full_error;
-    set out_result = 0;
-
-    SIGNAL SQLSTATE '99999';
-    -- SET MESSAGE_TEXT = @text, MYSQL_ERRNO = @errno;
-  END;
-  */
 
   set v_job_gid = in_job_gid;
 
@@ -93,12 +87,14 @@ me:begin
     a.pipeline_code,
     b.target_dataset_code,
     c.source_db_type,
-    d.dataset_table_name
+    d.dataset_table_name,
+    a.scheduler_initiated_by
   into
     v_pipeline_code,
     v_dataset_code,
     v_source_db_type,
-    v_dataset_table_name
+    v_dataset_table_name,
+    v_user_code
   from con_trn_tscheduler as a
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code
     and b.delete_flag = 'N'
@@ -115,6 +111,7 @@ me:begin
   set v_dataset_code = ifnull(v_dataset_code,'');
   set v_source_db_type = ifnull(v_source_db_type,'');
   set v_dataset_table_name = ifnull(v_dataset_table_name,'');
+  set v_user_code = ifnull(v_user_code,'');
 
   -- recon validation
   if not exists(select recon_code from recon_mst_trecon
@@ -228,7 +225,8 @@ me:begin
   deallocate prepare _sql;
 
 
-  if v_recontype_code = 'W' or v_recontype_code = 'B' or v_recontype_code = 'I' then
+  if (v_recontype_code = 'W' or v_recontype_code = 'B' or v_recontype_code = 'I')
+    and (v_dataset_type = 'B' or v_dataset_type = 'T' or v_dataset_type = 'S') then
     -- update tran value
     set v_sql = concat('update ', v_target_table ,' set ');
     set v_sql = concat(v_sql,' tran_value = value_debit + value_credit,');
@@ -238,6 +236,74 @@ me:begin
     set v_sql = concat(v_sql,' where scheduler_gid = ',cast(in_scheduler_gid as nchar));
     set v_sql = concat(v_sql,' and recon_code = ',char(34),in_recon_code,char(34),' ');
     set v_sql = concat(v_sql,' and delete_flag = ''N''');
+
+    -- check balance field
+    select
+      count(*) into v_count
+    from recon_mst_treconfield
+    where recon_code = in_recon_code
+    and recon_field_name in ('bal_value_debit','bal_value_credit')
+    and active_status = 'Y'
+    and delete_flag = 'N';
+
+    set v_count = ifnull(v_count,0);
+
+    if v_count = 2 and (v_dataset_type = 'B' or v_dataset_type = 'T') then
+      -- find the last row for the day to find balance
+      insert into recon_tmp_ttrangid
+      (
+        tran_gid,
+        tran_date
+      )
+      select max(tran_gid),tran_date from recon_trn_ttran
+      where scheduler_gid = in_scheduler_gid
+      and dataset_code = v_dataset_code
+      and tran_date is not null
+      group by tran_date;
+
+      insert into recon_tmp_tbalance
+      (
+        tran_date,
+        dataset_code,
+        bal_value_debit,
+        bal_value_credit
+      )
+      select
+        a.tran_date,
+        a.dataset_code,
+        ifnull(a.bal_value_debit,0),
+        ifnull(a.bal_value_credit,0)
+      from recon_trn_ttran as a
+      inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
+      where a.scheduler_gid = in_scheduler_gid
+      and a.dataset_code = v_dataset_code
+      and a.delete_flag = 'N';
+
+      if not exists(select * from recon_trn_taccbal
+        where scheduler_gid = in_scheduler_gid
+        and dataset_code = v_dataset_code
+        and delete_flag = 'N') then
+
+        -- update balance
+        replace into recon_trn_taccbal
+        (
+          scheduler_gid,
+          dataset_code,
+          tran_date,
+          bal_value,
+          insert_date,
+          insert_by
+        )
+        select
+          in_scheduler_gid,
+          dataset_code,
+          tran_date,
+          (bal_value_debit*-1+bal_value_credit),
+          sysdate(),
+          v_user_code
+        from recon_tmp_tbalance;
+      end if;
+    end if;
   elseif v_recontype_code = 'V' and v_recon_value_flag = 'Y' and v_recon_value_field <> '' then
     -- update tran value
     set v_sql = concat('update ', v_target_table ,' set ');
@@ -396,8 +462,7 @@ me:begin
   -- call pr_run_rptsql(v_job_gid,v_sql,@msg,@result);
 
   drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_tmatchgid;
-  drop temporary table if exists recon_tmp_tbcptrangid;
+  drop temporary table if exists recon_tmp_tbalance;
 
   set out_msg = 'Success';
   set out_result = 1;
