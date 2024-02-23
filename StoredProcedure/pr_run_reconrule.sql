@@ -7,7 +7,7 @@ CREATE PROCEDURE `pr_run_reconrule`(
   in in_period_to date,
   in in_automatch_flag char(1),
   in in_ip_addr varchar(255),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )

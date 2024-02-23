@@ -454,6 +454,37 @@ me:BEGIN
   group by recon_code;
 
   /*
+  insert into recon_tmp_tkosumm
+  (
+    rec_slno,
+    recon_code,
+    row_desc,
+    dr_count,
+    dr_value,
+    cr_count,
+    cr_value,
+    tot_count,
+    tot_value,
+    fontbold_flag,
+    backcolor_flag,
+    forecolor,
+    backcolor
+  )
+  select
+    @row_slno = @row_slno + 1,
+    '',
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null;
+
   select
     @row_slno = @row_slno + 1,
     'ZZZ9999999',

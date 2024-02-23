@@ -3,12 +3,12 @@
 DROP PROCEDURE IF EXISTS `pr_get_Datasetdetail` $$
 CREATE PROCEDURE `pr_get_Datasetdetail`
 (
-  in in_dataset_code Int(25),
+  in in_dataset_gid Int,
   in in_user_code varchar(32),
   in in_role_code varchar(32),
   in in_lang_code varchar(32)
 )
-begin 
+begin
   declare v_dataset_code text default '';
 	
 	select
@@ -20,13 +20,13 @@ begin
     fn_get_mastername(active_status, 'QCD_STATUS') as active_status_desc
   from
     recon_mst_tdataset
-  where dataset_gid=in_dataset_code
+  where dataset_gid=in_dataset_gid
 	and delete_flag = 'N';
 
   select
     dataset_code into v_dataset_code
   from recon_mst_tdataset
-  where dataset_gid=in_dataset_code
+  where dataset_gid=in_dataset_gid
 	and delete_flag = 'N';
 
   select

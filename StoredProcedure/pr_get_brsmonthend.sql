@@ -295,7 +295,7 @@ me:begin
 
   -- get recon field
   select
-    group_concat('a.',recon_field_name),
+    group_concat('a.',recon_field_name,' as ',char(39),ifnull(recon_field_desc,recon_field_name),char(39)),
     group_concat("null as '",ifnull(recon_field_desc,recon_field_name),"'")
   into
     v_recon_field,
@@ -319,14 +319,13 @@ me:begin
   set v_tran_date = date_format(in_tran_date,'%Y-%m-%d');
 
   -- target debit
-
   set v_sql = concat("
   select
     a.tran_gid as 'Tran ID',
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as '',",
+    '' as ' ',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -338,6 +337,7 @@ me:begin
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
   from recon_trn_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
+    and b.dataset_code = a.dataset_code
     and b.dataset_type = 'T'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
@@ -352,7 +352,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as '',
+    null as ' ',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -372,7 +372,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as '',",
+    '' as ' ',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -384,6 +384,7 @@ me:begin
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
   from recon_trn_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
+    and b.dataset_code = a.dataset_code
     and b.dataset_type = 'T'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
@@ -398,7 +399,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as '',
+    null as ' ',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -418,7 +419,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as '',",
+    '' as ' ',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -430,6 +431,7 @@ me:begin
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
   from recon_trn_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
+    and b.dataset_code = a.dataset_code
     and b.dataset_type = 'B'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
@@ -444,7 +446,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as '',
+    null as ' ',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -464,7 +466,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as '',",
+    '' as ' ',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -476,6 +478,7 @@ me:begin
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
   from recon_trn_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
+    and b.dataset_code = a.dataset_code
     and b.dataset_type = 'B'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
@@ -490,7 +493,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as '',
+    null as ' ',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',

@@ -75,9 +75,9 @@ me:BEGIN
 				set err_msg := concat(err_msg,'Dataset code cannot be empty,');
 				set err_flag := true;
 			end if;
-			
-			if not exists(select dataset_gid from recon_mst_tdataset 
-				where dataset_code = in_dataset_code 
+
+			if not exists(select dataset_gid from recon_mst_tdataset
+				where dataset_code = in_dataset_code
 				and delete_flag = 'N') then
 				set err_msg := concat(err_msg,'Invalid dataset code,');
 				set err_flag := true;
@@ -169,6 +169,18 @@ me:BEGIN
     end if;
   end if;
 
+  if(in_action = 'DELETE') then
+    if in_recon_code = '' or in_recon_code is null then
+      set err_msg := concat(err_msg,'Recon Code is missing,');
+      set err_flag := true;
+    end if;
+
+    if in_recon_field_name = '' or in_recon_field_name is null then
+      set err_msg := concat(err_msg,'Recon field name is missing,');
+      set err_flag := true;
+    end if;
+  end if;
+
   if err_flag = true then
 		set out_result = 0;
 		set out_msg = err_msg;
@@ -228,21 +240,31 @@ me:BEGIN
 			end if;
 		end if;
 	elseif in_action = 'DELETE' then
-		update recon_mst_treconfield set
-      delete_flag = 'Y',
-			active_status = 'N',
-			update_date = sysdate(),
-			update_by = in_action_by
-		where reconfield_gid = in_reconfield_gid
-		and delete_flag = 'N';
 
-		update recon_mst_treconfieldmapping set
-      delete_flag = 'Y',
-			active_status = 'N',
-			update_date = sysdate(),
-			update_by = in_action_by
-		where reconfieldmapping_gid = in_reconfieldmapping_gid
-		and delete_flag = 'N';
+    if exists(select reconfieldmapping_gid from recon_mst_treconfieldmapping
+      where recon_code = in_recon_code
+      and recon_field_name = in_recon_field_name
+      and delete_flag = 'N') then
+
+      set out_result = 0;
+      set out_msg = 'Access Denied !';
+    else
+		  update recon_mst_treconfield set
+        delete_flag = 'Y',
+			  active_status = 'N',
+			  update_date = sysdate(),
+			  update_by = in_action_by
+		  where reconfield_gid = in_reconfield_gid
+		  and delete_flag = 'N';
+
+		  update recon_mst_treconfieldmapping set
+        delete_flag = 'Y',
+			  active_status = 'N',
+			  update_date = sysdate(),
+			  update_by = in_action_by
+		  where reconfieldmapping_gid = in_reconfieldmapping_gid
+		  and delete_flag = 'N';
+    end if;
 	end if;
 
 	set out_result = 1;
@@ -275,7 +297,7 @@ me:BEGIN
 		
 		insert into recon_mst_treconfieldmapping
     ( 
-			recon_code, 
+			recon_code,
 			recon_field_name, 
 			dataset_code, 
 			dataset_field_name,

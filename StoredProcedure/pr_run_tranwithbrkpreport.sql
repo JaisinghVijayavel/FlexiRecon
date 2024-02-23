@@ -5,7 +5,7 @@ CREATE PROCEDURE `pr_run_tranwithbrkpreport`(
   in in_job_gid int,
   in in_rptsession_gid int,
   in in_condition text,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )

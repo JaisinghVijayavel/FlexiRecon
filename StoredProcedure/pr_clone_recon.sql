@@ -1,7 +1,8 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_clone_recon` $$
-CREATE PROCEDURE `pr_clone_recon`(
+CREATE PROCEDURE `pr_clone_recon`
+(
   in in_recon_name varchar(255),
   in in_clone_recon_code varchar(32),
   in in_user_code varchar(32),
@@ -14,6 +15,7 @@ me:begin
   declare v_txt text default '';
   declare v_recon_code text default '';
 
+  set out_recon_code='';
   set in_recon_name = ifnull(in_recon_name,'');
 
   if in_recon_name = '' then

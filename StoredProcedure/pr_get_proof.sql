@@ -124,8 +124,10 @@ me:begin
       v_dataset_code,
       v_dataset_name
     from recon_mst_trecondataset as a
-    inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+    inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
+      and b.delete_flag = 'N'
     where a.recon_code = in_recon_code
+    and a.dataset_type in ('B','T')
     and a.delete_flag = 'N';
   end if;
 

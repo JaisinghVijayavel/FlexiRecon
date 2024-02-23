@@ -64,6 +64,17 @@ me:BEGIN
 		end if;
 	end if;
 
+  if in_action = "DELETE" then
+    if exists (select dataset_gid from recon_mst_tdataset
+      where dataset_gid = in_dataset_gid
+      and system_flag = 'Y'
+      and delete_flag = 'N') then
+
+      set err_msg := concat(err_msg,'Access Denied,');
+      set err_flag := true;
+    end if;
+  end if;
+
   -- Duplicate validation
   if in_action = 'INSERT' then
 		if exists (select dataset_gid from recon_mst_tdataset
@@ -145,6 +156,9 @@ me:BEGIN
 
     -- create dataset table
     call pr_create_datasettable(v_dataset_db_name,in_dataset_code,@msg,@result);
+
+    -- set dataset context at L1 level
+    call pr_recon_mst_tdatasetcontext (in_dataset_code,in_user_code,in_role_code,in_lang_code);
 
 		set out_result = 1;
 		set out_msg = 'Record saved successfully.. !';

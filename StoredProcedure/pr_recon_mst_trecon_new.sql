@@ -4,7 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_recon_mst_trecon_new` $$
 CREATE PROCEDURE `pr_recon_mst_trecon_new`
 (
 	inout in_recon_gid int(10),
-	in in_recon_code varchar(32),
+	inout in_recon_code varchar(32),
 	in in_recon_name varchar(255),
 	in in_recontype_code char(1),
 	in in_recon_automatch_partial char(1),
@@ -21,7 +21,7 @@ CREATE PROCEDURE `pr_recon_mst_trecon_new`
 	in in_user_code varchar(32),
 	in in_role_code varchar(32),
 	in in_lang_code varchar(32),
-	in in_action varchar(16),
+	in in_action varchar(32),
 	in in_action_by varchar(32),
 	out out_msg text,
 	out out_result int(10)
@@ -230,66 +230,14 @@ me:BEGIN
 
 		set in_recon_gid = v_recon_gid;
 
+    -- insert in reconcontext
+    call pr_recon_mst_treconcontext (in_recon_code,in_user_code,in_role_code,in_lang_code);
+    set in_recon_code=in_recon_code;
+
     -- insert system field debit,credit,tran date
     if in_recontype_code = 'W'
       or in_recontype_code = 'B'
       or in_recontype_code = 'I' then
-      -- debit
-      insert into recon_mst_treconfield
-      (
-        recon_code,
-        recon_field_name,
-        recon_field_desc,
-        display_flag,
-        display_order,
-        recon_field_type,
-        recon_field_length,
-        system_field_flag,
-        active_status,
-        insert_date,
-        insert_by
-      )
-      select
-        in_recon_code,
-        'value_debit',
-        'Debit',
-        'Y',
-        2,
-        'NUMERIC',
-        '14,2',
-        'Y',
-        'Y',
-        sysdate(),
-        in_action_by;
-
-      -- credit
-      insert into recon_mst_treconfield
-      (
-        recon_code,
-        recon_field_name,
-        recon_field_desc,
-        display_flag,
-        display_order,
-        recon_field_type,
-        recon_field_length,
-        system_field_flag,
-        active_status,
-        insert_date,
-        insert_by
-      )
-      select
-        in_recon_code,
-        'value_credit',
-        'Credit',
-        'Y',
-        3,
-        'NUMERIC',
-        '14,2',
-        'Y',
-        'Y',
-        sysdate(),
-        in_action_by;
-
       -- tran_date
       insert into recon_mst_treconfield
       (
@@ -335,10 +283,94 @@ me:BEGIN
       )
       select
         in_recon_code,
+        'col1',
+        'Particulars',
+        'Y',
+        2,
+        'TEXT',
+        '255',
+        'N',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- debit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'value_debit',
+        'Debit',
+        'Y',
+        3,
+        'NUMERIC',
+        '14,2',
+        'Y',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- credit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
+        'value_credit',
+        'Credit',
+        'Y',
+        4,
+        'NUMERIC',
+        '14,2',
+        'Y',
+        'Y',
+        sysdate(),
+        in_action_by;
+
+      -- balance value debit
+      insert into recon_mst_treconfield
+      (
+        recon_code,
+        recon_field_name,
+        recon_field_desc,
+        display_flag,
+        display_order,
+        recon_field_type,
+        recon_field_length,
+        system_field_flag,
+        active_status,
+        insert_date,
+        insert_by
+      )
+      select
+        in_recon_code,
         'bal_value_debit',
         'Balance Debit',
         'Y',
-        4,
+        5,
         'NUMERIC',
         '14,2',
         'N',
@@ -366,7 +398,7 @@ me:BEGIN
         'bal_value_credit',
         'Balance Credit',
         'Y',
-        5,
+        6,
         'NUMERIC',
         '14,2',
         'N',
