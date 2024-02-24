@@ -138,7 +138,7 @@ me:BEGIN
   select t.tran_gid,t.tran_date,t.tran_value,t.excp_value from recon_tmp_trecon as r
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
-    and t.excp_value > 0
+    and t.excp_value <> 0
     and t.delete_flag = 'N';
 
   insert into recon_tmp_ttrangid
@@ -148,7 +148,7 @@ me:BEGIN
   select t.tran_gid,t.tran_date,t.tran_value,t.excp_value from recon_tmp_trecon as r
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
-    and t.excp_value > 0
+    and t.excp_value <> 0
     and t.delete_flag = 'N';
 
   -- insert in kodtlgid table
@@ -177,13 +177,13 @@ me:BEGIN
 
   -- get exception count
   select count(*) into v_excp_count from recon_tmp_ttrangid
-  where excp_value > 0;
+  where excp_value <> 0;
 
   set v_excp_count = ifnull(v_excp_count,0);
 
   -- get opening exception count
   select count(*) into v_openingexcp_count from recon_tmp_ttrangid
-  where excp_value > 0
+  where excp_value <> 0
   and tran_date < in_period_from;
 
   set v_openingexcp_count = ifnull(v_openingexcp_count,0);
@@ -216,7 +216,7 @@ me:BEGIN
 
   -- get knockoff partial excp count
   select count(distinct tran_gid) into v_ko_partialexcp_count from recon_tmp_ttrangid
-  where excp_value > 0
+  where excp_value <> 0
   and tran_value <> excp_value
   and tran_date >= in_period_from;
 
@@ -260,7 +260,7 @@ me:BEGIN
     from recon_tmp_ttrangid as t
     right join recon_mst_taging as c on datediff(curdate(),t.tran_date) between c.aging_from and c.aging_to
       and c.delete_flag = 'N'
-    where t.excp_value > 0
+    where t.excp_value <> 0
     group by c.aging_gid,c.aging_desc
   ) as ex on ag.aging_gid = ex.aging_gid;
 

@@ -18,6 +18,7 @@ me:BEGIN
   declare v_rule_code text default '';
   declare v_rule_name text default '';
   declare v_rule_apply_on text default '';
+  declare v_group_flag text default '';
 
   declare v_txt_recon_code text default '';
   declare v_recon_code text default '';
@@ -296,7 +297,7 @@ me:BEGIN
   rule_block:begin
     declare rule_done int default 0;
     declare rule_cursor cursor for
-      select rule_code,rule_apply_on from recon_mst_trule
+      select rule_code,rule_apply_on,group_flag from recon_mst_trule
       where recon_code = in_recon_code
       and hold_flag = 'N' 
       and delete_flag = 'N'
@@ -306,7 +307,7 @@ me:BEGIN
     open rule_cursor;
 
     rule_loop: loop
-      fetch rule_cursor into v_rule_code,v_rule_apply_on;
+      fetch rule_cursor into v_rule_code,v_rule_apply_on,v_group_flag;
 
       if rule_done = 1 then leave rule_loop; end if;
 
@@ -314,8 +315,15 @@ me:BEGIN
       set v_rule_apply_on = ifnull(v_rule_apply_on,'');
 
       if v_rule_apply_on = 'T' then
-        call pr_run_automatch(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
-        call pr_run_automatch_partial(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+         call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+         call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+
+        if v_group_flag = 'MTM' then
+          set v_group_flag = 'OTM';
+
+          call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+          call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+        end if;
       elseif v_rule_apply_on = 'S' then
         call pr_run_posttranbrkprule(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       end if;

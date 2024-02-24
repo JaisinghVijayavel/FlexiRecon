@@ -185,7 +185,7 @@ me:begin
 
   select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
-  and excp_value > 0
+  and excp_value <> 0
   and tran_acc_mode = 'D'
   and tran_date <= in_tran_date
   and delete_flag = 'N';
@@ -217,7 +217,7 @@ me:begin
 
   select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
-  and excp_value > 0
+  and excp_value <> 0
   and tran_acc_mode = 'C'
   and tran_date <= in_tran_date
   and delete_flag = 'N';

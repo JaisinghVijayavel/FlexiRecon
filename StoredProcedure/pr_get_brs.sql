@@ -27,6 +27,8 @@ me:begin
   declare v_comparison_dataset_name varchar(255) default '';
   declare v_txt text default '';
   declare v_web_date_format text default '';
+  declare v_threshold_value double(15,2) default 0;
+  declare v_threshold_total double(15,2) default 0;
 
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
@@ -80,6 +82,50 @@ me:begin
     PRIMARY KEY (bal_gid)
   );
 
+  if not exists(select recon_code from recon_mst_trecon
+    where recon_code = in_recon_code
+    and recontype_code = 'B'
+    and active_status = 'Y'
+    and delete_flag = 'N') then
+
+    set out_msg = 'Selected Recon is not BRS';
+    set out_result = 0;
+
+    select * from tb_brs;
+    leave me;
+  else
+    select
+      threshold_plus_value
+    into
+      v_threshold_value
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_threshold_value = ifnull(v_threshold_value,0);
+
+    -- get dataset
+    select
+      group_concat(dataset_code),
+      group_concat(dataset_name)
+    into
+      v_source_dataset,
+      v_source_dataset_name
+    from tb_dataset
+    where recon_code = in_recon_code
+    and dataset_type = 'B';
+
+    select
+      group_concat(dataset_code),
+      group_concat(dataset_name)
+    into
+      v_comparison_dataset,
+      v_comparison_dataset_name
+    from tb_dataset
+    where recon_code = in_recon_code
+    and dataset_type = 'T';
+  end if;
+
   dataset_block:begin
     declare dataset_done int default 0;
     declare dataset_cursor cursor for
@@ -113,39 +159,6 @@ me:begin
 
     close dataset_cursor;
   end dataset_block;
-
-  if not exists(select recon_code from recon_mst_trecon
-    where recon_code = in_recon_code
-    and recontype_code = 'B'
-    and active_status = 'Y'
-    and delete_flag = 'N') then
-
-    set out_msg = 'Selected Recon is not BRS';
-    set out_result = 0;
-
-    select * from tb_brs;
-    leave me;
-  else
-    select
-      group_concat(dataset_code),
-      group_concat(dataset_name)
-    into
-      v_source_dataset,
-      v_source_dataset_name
-    from tb_dataset
-    where recon_code = in_recon_code
-    and dataset_type = 'B';
-
-    select
-      group_concat(dataset_code),
-      group_concat(dataset_name)
-    into
-      v_comparison_dataset,
-      v_comparison_dataset_name
-    from tb_dataset
-    where recon_code = in_recon_code
-    and dataset_type = 'T';
-  end if;
 
   -- Base dqtaset balance
   select
@@ -193,7 +206,10 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -227,7 +243,10 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -273,7 +292,10 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -307,7 +329,10 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -337,7 +362,6 @@ me:begin
     ''
   );
 
-
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
 
@@ -345,6 +369,46 @@ me:begin
 
 
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
+
+  -- rounding off
+  if v_threshold_value > 0 then
+		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_trn_ttran as a
+		where a.recon_code = in_recon_code
+		and a.excp_value <> 0
+		and a.tran_value <> a.excp_value
+		and a.excp_value <= v_threshold_value
+		and a.delete_flag = 'N';
+
+    set v_value = ifnull(v_value,0);
+    set v_count = ifnull(v_count,0);
+
+    set v_threshold_total = v_value;
+
+		set v_txt = 'Rounding off ';
+
+		if v_count > 0 then
+			set v_txt = concat(v_txt,' (',cast(v_count as char),')');
+		end if;
+
+    if v_count > 0 then
+			insert into tb_brs
+			(
+				particulars,
+				tran_value,
+				tran_acc_mode,
+				bal_value
+			)
+			values
+			(
+				v_txt,
+				format(v_value,2,'en_IN'),
+				'',
+				''
+			);
+
+			insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
+    end if;
+  end if;
 
   -- target dataset balance
   select
@@ -378,7 +442,7 @@ me:begin
     format(v_bal_value2,2,'en_IN')
   );
 
-  set v_value = v_cr_total - v_dr_total + (v_bal_value1 * -1);
+  set v_value = v_cr_total - v_dr_total + (v_bal_value1 * -1) + v_threshold_total;
   set v_value = round(v_value,2);
   set v_bal_value2 = round(v_bal_value2,2);
 

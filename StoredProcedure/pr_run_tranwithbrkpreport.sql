@@ -58,9 +58,9 @@ me:BEGIN
   set v_sql = concat(v_sql,'where true ');
   set v_sql = concat(v_sql,in_condition,' ');
 
-  if v_recontype_code <> 'N' then
-    set v_sql = concat(v_sql,'and a.excp_value > 0 ');
-  else
+  if v_recontype_code = 'N' then
+    -- set v_sql = concat(v_sql,'and a.excp_value <> 0 ');
+  -- else
     set v_sql = concat(v_sql,'and a.ko_gid = 0 ');
   end if;
 
