@@ -57,10 +57,21 @@ me:begin
     SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = @text, MYSQL_ERRNO = @errno;
   END;
 
-  -- scheduler_gid validation
+  -- scheduler_gid validation in connector
   if not exists(select scheduler_gid from con_trn_tscheduler
      where scheduler_gid = in_scheduler_gid and delete_flag = 'N') then
-    set out_msg = concat(out_msg,'Invalid scheduler !,');
+    set out_msg = concat(out_msg,'Invalid connector scheduler !,');
+    set out_result = 0;
+
+    leave me;
+  end if;
+
+  -- scheduler_gid validation in recon_trn_tscheduler
+  if not exists(select scheduler_gid from recon_trn_tscheduler
+     where scheduler_gid = in_scheduler_gid
+     and scheduler_status = 'S'
+     and delete_flag = 'N') then
+    set out_msg = concat(out_msg,'Invalid recon scheduler !,');
     set out_result = 0;
 
     leave me;

@@ -30,10 +30,7 @@ me:BEGIN
 
   declare v_filter_field text default '';
   declare v_filter_criteria text default '';
-  declare v_add_filter int default '';
-
-  declare v_ident_criteria text default '';
-  declare v_ident_value text default '';
+  declare v_filter_value text default '';
 
   declare v_extraction_criteria text default '';
   declare v_extraction_filter int default '';
@@ -105,10 +102,10 @@ me:BEGIN
 
   if in_automatch_flag = 'Y' then
     set v_tran_table = 'recon_trn_ttran';
-    set v_tranbrkp_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
   else
     set v_tran_table = 'recon_tmp_ttran';
-    set v_tranbrkp_table = 'recon_tmp_ttran';
+    set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
   end if;
 
   -- process
@@ -125,10 +122,9 @@ me:BEGIN
         lookup_return_field
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
-      and rule_code = in_rule_code
       and active_status = 'Y'
       and delete_flag = 'N'
-      order by process_order;
+      order by preprocess_order;
     declare continue handler for not found set process_done=1;
 
     open process_cursor;
@@ -169,9 +165,7 @@ me:BEGIN
 					  select
               filter_field,
               filter_criteria,
-              add_filter,
-              ident_criteria,
-              ident_value,
+              filter_value,
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
@@ -189,9 +183,7 @@ me:BEGIN
 						fetch filter_cursor into
               v_filter_field,
               v_filter_criteria,
-              v_add_filter,
-              v_ident_criteria,
-              v_ident_value,
+              v_filter_value,
               v_open_parentheses_flag,
               v_close_parentheses_flag,
               v_join_condition;
@@ -215,7 +207,7 @@ me:BEGIN
 
             set v_preprocess_filter = concat(v_preprocess_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,v_filter_criteria,v_add_filter,v_ident_criteria,v_ident_value),
+                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
 
@@ -227,6 +219,8 @@ me:BEGIN
 
         if v_preprocess_filter = ' and ' then
           set v_preprocess_filter = '';
+        else
+          set v_preprocess_filter = concat(v_preprocess_filter,' 1 = 1 ');
         end if;
       end if;
 
@@ -304,14 +298,16 @@ me:BEGIN
 				end condition_block;
 
         if v_lookup_condition = ' and ' then
-          set v_lookup_condition = '';
+          set v_lookup_condition = 'and 1 = 2 ';
+        else
+          set v_lookup_condition = concat(v_lookup_condition,' 1 = 1 ');
         end if;
       end if;
 
       if v_process_method = 'F' then
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_update_recon_field,' = ifnull(');
-        set v_sql = concat(v_sql,replace(v_process_function,'$FIELD$',v_lookup_recon_field),',',v_update_recon_field,') ');
+        set v_sql = concat(v_sql,replace(v_process_function,'$FIELD$',v_lookup_return_field),',',v_update_recon_field,') ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
@@ -327,6 +323,7 @@ me:BEGIN
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'L' then
         if v_recon_date_flag = 'Y' then
+          set v_recon_date_condition = '';
           set v_recon_date_condition = concat(v_recon_date_condition,' and a.',v_recon_date_field,' >= ');
           set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
           set v_recon_date_condition = concat(v_recon_date_condition,' and a.',v_recon_date_field,' <= ');
@@ -337,7 +334,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'inner join ',v_lookup_dataset_code,' as b ');
         set v_sql = concat(v_sql,'on 1 = 1 ');
         set v_sql = concat(v_sql,v_lookup_condition);
-        set v_sql = concat(v_sql,'set a.',v_update_recon_field,'=b.',v_lookup_return_field);
+        set v_sql = concat(v_sql,'set a.',v_update_recon_field,'=b.',v_lookup_return_field,' ');
         set v_sql = concat(v_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
