@@ -32,9 +32,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel J
-    Updated Date : Jan-30-2024
+    Updated Date : Mar-04-2024
 
-    Version No : 5
+    Version No : 6
   */
 
 	declare v_recon_gid int default 0;
@@ -369,11 +369,11 @@ me:BEGIN
         in_recon_code,
         'bal_value_debit',
         'Balance Debit',
-        'Y',
+        'N',
         5,
         'NUMERIC',
         '14,2',
-        'N',
+        'Y',
         'Y',
         sysdate(),
         in_action_by;
@@ -397,11 +397,11 @@ me:BEGIN
         in_recon_code,
         'bal_value_credit',
         'Balance Credit',
-        'Y',
+        'N',
         6,
         'NUMERIC',
         '14,2',
-        'N',
+        'Y',
         'Y',
         sysdate(),
         in_action_by;

@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_tranwithbrkpreport` $$
-CREATE PROCEDURE `pr_run_tranwithbrkpreport`(
+DROP PROCEDURE IF EXISTS `pr_run_tranwithbrkpthemereport` $$
+CREATE PROCEDURE `pr_run_tranwithbrkpthemereport`(
   in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
@@ -16,9 +16,9 @@ me:BEGIN
     Created Date : 08-02-2024
 
     Updated By : Vijayavel
-    updated Date : 28-02-2024
+    updated Date :
 
-    Version : 2
+    Version : 1
   */
 
   declare v_tran_field text default '';
@@ -72,7 +72,6 @@ me:BEGIN
     key idx_tranbrkp_gid(tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  -- get table column
   SELECT
 	  group_concat(t.COLUMN_NAME) into v_tran_field
   FROM information_schema.columns as t
@@ -198,7 +197,6 @@ me:BEGIN
     group by tranbrkp_gid;
   end if;
 
-  -- transfer tran records to report table
   set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,dataset_name,',v_tran_field,') ');
   set v_sql = concat(v_sql,'select ');
   set v_sql = concat(v_sql,cast(in_rptsession_gid as nchar),' as rptsession_gid,');
@@ -219,7 +217,6 @@ me:BEGIN
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
 
-  -- transfer tranbrkp records to report table
   set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,dataset_name,tranbrkp_dataset_name,');
   set v_sql = concat(v_sql,'base_tran_value,base_excp_value,base_acc_mode,');
   set v_sql = concat(v_sql,v_tranbrkp_field,') ');

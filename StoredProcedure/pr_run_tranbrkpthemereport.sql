@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_tranbrkpreport` $$
-CREATE PROCEDURE `pr_run_tranbrkpreport`
+DROP PROCEDURE IF EXISTS `pr_run_tranbrkpthemereport` $$
+CREATE PROCEDURE `pr_run_tranbrkpthemereport`
 (
   in in_recon_code varchar(32),
   in in_job_gid int,
@@ -14,12 +14,12 @@ CREATE PROCEDURE `pr_run_tranbrkpreport`
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 28-07-2023
+    Created Date : 27-02-2024
 
     Updated By : Vijayavel
-    updated Date : 28-02-2024
+    updated Date :
 
-    Version : 2
+    Version : 1
   */
 
   declare v_count int default 0;
@@ -27,10 +27,6 @@ me:BEGIN
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
-
-  set in_job_gid = ifnull(in_job_gid,0);
-  set in_rptsession_gid = ifnull(in_rptsession_gid,0);
-  set in_user_code = ifnull(in_user_code,'');
 
   drop temporary table if exists recon_tmp_tpseudorows;
   drop temporary table if exists recon_tmp_ttranbrkp;
@@ -121,7 +117,6 @@ me:BEGIN
     group by tranbrkp_gid;
   end if;
 
-  -- transfer records to report table
   set v_sql = concat(v_sql,"insert into recon_rpt_ttranbrkp
 		select
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
@@ -140,28 +135,7 @@ me:BEGIN
     left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
     left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
       and f.delete_flag = 'N'
-		where true ", in_condition," and a.delete_flag = 'N'
-
-    union
-
-		select
-		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
-		  ",cast(in_job_gid as nchar)," as job_gid,
-      '", in_user_code ,"' as user_code,
-      f.dataset_name,
-      b.dataset_name as tranbrkp_name,
-      ifnull(c.tran_value,d.tran_value) as base_value,
-      ifnull(c.excp_value,d.excp_value) as base_excp_value,
-      ifnull(c.tran_acc_mode,d.tran_acc_mode) as base_acc_mode,
-      a.*
-		from recon_trn_ttranbrkpko as a
-    left join recon_mst_tdataset as b on a.tranbrkp_dataset_code = b.dataset_code
-    and b.delete_flag = 'N'
-    left join recon_trn_ttran as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
-    left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
-    left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
-      and f.delete_flag = 'N'
-		where true ", in_condition," and a.delete_flag = 'N'
+		where true ", in_condition," and a.tran_gid > 0 and a.delete_flag = 'N'
   ");
 
   call pr_run_sql(v_sql,@msg,@result);

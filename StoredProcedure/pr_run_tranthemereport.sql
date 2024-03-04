@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_tranreport` $$
-CREATE PROCEDURE `pr_run_tranreport`(
+DROP PROCEDURE IF EXISTS `pr_run_tranthemereport` $$
+CREATE PROCEDURE `pr_run_tranthemereport`(
   in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
@@ -13,12 +13,12 @@ CREATE PROCEDURE `pr_run_tranreport`(
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 28-07-2023
+    Created Date : 27-02-2024
 
     Updated By : Vijayavel
-    updated Date : 28-02-2024
+    updated Date :
 
-    Version : 2
+    Version : 1
   */
 
   declare v_count int default 0;
@@ -112,7 +112,6 @@ me:BEGIN
     group by tran_gid;
   end if;
 
-  -- transfer records to report table
   set @rec_slno := 0;
 
   set v_sql = concat(v_sql,"insert into recon_rpt_ttran

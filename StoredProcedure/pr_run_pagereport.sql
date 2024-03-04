@@ -25,6 +25,7 @@ me:BEGIN
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
+  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -43,6 +44,7 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
+  */
 
   if exists(select report_desc from recon_mst_treport
      where report_code = in_report_code
@@ -132,7 +134,7 @@ me:BEGIN
     call pr_run_sql(v_sql,@msg,@result);
   end if;
 
-  call pr_run_sp(v_sp_name,0,v_rptsession_gid,in_report_condition,in_user_code,@msg,@result);
+  call pr_run_sp(in_recon_code,v_sp_name,0,v_rptsession_gid,in_report_condition,in_user_code,@msg,@result);
 
   set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
   set v_sql = concat(v_sql,'where rptsession_gid = ',cast(v_rptsession_gid as nchar),' ');

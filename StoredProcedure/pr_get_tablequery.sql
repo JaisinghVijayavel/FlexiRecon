@@ -7,7 +7,7 @@ CREATE PROCEDURE `pr_get_tablequery`
   in_table_name varchar(128),
   in_condition text,
   in_job_gid int,
-  in_user_code varchar(50),
+  in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )

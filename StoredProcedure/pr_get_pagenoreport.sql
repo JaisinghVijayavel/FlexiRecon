@@ -2,6 +2,7 @@
 
 DROP PROCEDURE IF EXISTS `pr_get_pagenoreport` $$
 CREATE PROCEDURE `pr_get_pagenoreport`(
+  in in_recon_code varchar(32),
   in in_rptsession_gid int,
   in in_page_no int,
   in in_page_size int,
@@ -23,13 +24,11 @@ me:BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
     @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
 
-    set @text = concat(@text,' ',err_msg);
-
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text,' ',err_msg);
 
     ROLLBACK;
 
-    set out_msg = @full_error;
+    set out_msg = @text;
     set out_result = 0;
 
     SIGNAL SQLSTATE '99999' SET
@@ -70,7 +69,7 @@ me:BEGIN
   set v_condition = concat(v_condition,' limit ',cast(v_start_rec_no as nchar),',',cast(in_page_size as nchar),' ');
 
 
-  call pr_get_tablequery(v_table_name,v_condition,0,'',@msg,@result);
+  call pr_get_tablequery(in_recon_code,v_table_name,v_condition,0,'',@msg,@result);
 
   set out_msg = @msg;
   set out_result = @result;

@@ -10,7 +10,8 @@ CREATE PROCEDURE `pr_run_preprocess`(
   out out_result int
 )
 me:BEGIN
-  declare v_update_recon_field text default '';
+  declare v_get_recon_field text default '';
+  declare v_set_recon_field text default '';
   declare v_preprocess_code text default '';
   declare v_process_method text default '';
   declare v_process_query text default '';
@@ -114,7 +115,8 @@ me:BEGIN
     declare process_cursor cursor for
       select
         preprocess_code,
-        update_recon_field,
+        get_recon_field,
+        set_recon_field,
         process_method,
         process_query,
         process_function,
@@ -132,7 +134,8 @@ me:BEGIN
     process_loop: loop
       fetch process_cursor into
         v_preprocess_code,
-        v_update_recon_field,
+        v_get_recon_field,
+        v_set_recon_field,
         v_process_method,
         v_process_query,
         v_process_function,
@@ -142,7 +145,8 @@ me:BEGIN
       if process_done = 1 then leave process_loop; end if;
 
       set v_preprocess_code = ifnull(v_preprocess_code,'');
-      set v_update_recon_field = ifnull(v_update_recon_field,'');
+      set v_get_recon_field = ifnull(v_get_recon_field,'');
+      set v_set_recon_field = ifnull(v_set_recon_field,'');
       set v_process_method = ifnull(v_process_method,'');
       set v_process_query = ifnull(v_process_query,'');
       set v_process_function = ifnull(v_process_function,'');
@@ -236,10 +240,8 @@ me:BEGIN
 					  select
               recon_field,
               extraction_criteria,
-              extraction_filter,
               lookup_field,
               comparison_criteria,
-              comparison_filter,
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
@@ -257,10 +259,8 @@ me:BEGIN
 						fetch condition_cursor into
               v_recon_field,
               v_extraction_criteria,
-              v_extraction_filter,
               v_lookup_field,
               v_comparison_criteria,
-              v_comparison_filter,
               v_open_parentheses_flag,
               v_close_parentheses_flag,
               v_join_condition;
@@ -269,10 +269,8 @@ me:BEGIN
 
             set v_recon_field = concat('a.',ifnull(v_recon_field,''));
             set v_extraction_criteria = ifnull(v_extraction_criteria,'');
-            set v_extraction_filter = ifnull(v_extraction_filter,0);
             set v_lookup_field = concat('b.',ifnull(v_lookup_field,''));
             set v_comparison_criteria = ifnull(v_comparison_criteria,'');
-            set v_comparison_filter = ifnull(v_comparison_filter,0);
             set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
             set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
             set v_join_condition = ifnull(v_join_condition,'');
@@ -284,10 +282,10 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-            set v_recon_field_format = fn_get_fieldfilterformat(v_recon_field,v_extraction_criteria,v_extraction_filter);
+            set v_recon_field_format = fn_get_fieldfilterformat(v_recon_field,v_extraction_criteria,0);
 
             set v_build_condition = concat(v_open_parentheses_flag,
-                                           fn_get_comparisoncondition(in_recon_code,v_recon_field_format,v_lookup_field,v_comparison_criteria,v_comparison_filter),
+                                           fn_get_comparisoncondition(in_recon_code,v_recon_field_format,v_lookup_field,v_comparison_criteria,0),
                                            v_close_parentheses_flag,' ',
                                            v_join_condition);
 
@@ -306,8 +304,8 @@ me:BEGIN
 
       if v_process_method = 'F' then
         set v_sql = 'update $TABLENAME$ set ';
-        set v_sql = concat(v_sql,v_update_recon_field,' = ifnull(');
-        set v_sql = concat(v_sql,replace(v_process_function,'$FIELD$',v_lookup_return_field),',',v_update_recon_field,') ');
+        set v_sql = concat(v_sql,v_set_recon_field,' = ifnull(');
+        set v_sql = concat(v_sql,replace(v_process_function,'$FIELD$',v_get_recon_field),',',v_set_recon_field,') ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
@@ -334,7 +332,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'inner join ',v_lookup_dataset_code,' as b ');
         set v_sql = concat(v_sql,'on 1 = 1 ');
         set v_sql = concat(v_sql,v_lookup_condition);
-        set v_sql = concat(v_sql,'set a.',v_update_recon_field,'=b.',v_lookup_return_field,' ');
+        set v_sql = concat(v_sql,'set a.',v_set_recon_field,'=b.',v_lookup_return_field,' ');
         set v_sql = concat(v_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);

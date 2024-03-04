@@ -191,7 +191,7 @@ me:BEGIN
 		and b.delete_flag = 'N'
 	inner join recon_mst_tdataset c on a.comparison_dataset_code = c.dataset_code
 		and c.delete_flag = 'N'
-	where a.recon_code = v_clone_reconcode
+	where a.recon_code = in_recon_code
 	-- and a.rule_apply_on = in_rule_apply_on
 	and a.delete_flag = 'N' and a.active_status='Y'
 	ORDER BY a.rule_order;

@@ -18,6 +18,8 @@ me:BEGIN
   declare v_rule_code text default '';
   declare v_rule_name text default '';
   declare v_rule_apply_on text default '';
+  declare v_system_match_flag text default '';
+  declare v_probable_match_flag text default '';
   declare v_group_flag text default '';
 
   declare v_txt_recon_code text default '';
@@ -297,7 +299,13 @@ me:BEGIN
   rule_block:begin
     declare rule_done int default 0;
     declare rule_cursor cursor for
-      select rule_code,rule_apply_on,group_flag from recon_mst_trule
+      select
+        rule_code,
+        rule_apply_on,
+        group_flag,
+        system_match_flag,
+        probable_match_flag
+      from recon_mst_trule
       where recon_code = in_recon_code
       and hold_flag = 'N' 
       and delete_flag = 'N'
@@ -307,25 +315,44 @@ me:BEGIN
     open rule_cursor;
 
     rule_loop: loop
-      fetch rule_cursor into v_rule_code,v_rule_apply_on,v_group_flag;
+      fetch rule_cursor into v_rule_code,v_rule_apply_on,v_group_flag,v_system_match_flag,v_probable_match_flag;
 
       if rule_done = 1 then leave rule_loop; end if;
 
       set v_rule_code = ifnull(v_rule_code,'');
       set v_rule_apply_on = ifnull(v_rule_apply_on,'');
 
+      set v_system_match_flag = ifnull(v_system_match_flag,'N');
+      set v_probable_match_flag = ifnull(v_probable_match_flag,'N');
+
+      if in_automatch_flag = 'Y' then
+        if v_probable_match_flag = 'Y' then
+          set v_system_match_flag = 'N';
+
+          -- clear temp table
+          truncate recon_tmp_ttran;
+          truncate recon_tmp_ttranbrkp;
+
+          -- insert exception records
+          insert into recon_tmp_ttran select * from recon_trn_ttran where recon_code = in_recon_code and delete_flag = 'N';
+          insert into recon_tmp_ttranbrkp select * from recon_trn_ttranbrkp where recon_code = in_recon_code and delete_flag = 'N';
+        end if;
+      else
+        set v_system_match_flag = 'N';
+      end if;
+
       if v_rule_apply_on = 'T' then
-         call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
-         call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+        call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+        call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 
         if v_group_flag = 'MTM' then
           set v_group_flag = 'OTM';
 
-          call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
-          call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+          call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+          call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
         end if;
       elseif v_rule_apply_on = 'S' then
-        call pr_run_posttranbrkprule(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+        call pr_run_posttranbrkprule(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
       end if;
     end loop rule_loop;
 
@@ -334,7 +361,6 @@ me:BEGIN
 
   set v_job_input_param = concat(v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format),char(13),char(10));
   set v_job_input_param = concat(v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format),char(13),char(10));
-
 
   -- job remark
   set v_txt = concat('Rule version applied : ',v_recon_rule_version);
@@ -351,6 +377,11 @@ me:BEGIN
       last_job_gid = v_job_gid
     where recon_code = v_recon_code
     and delete_flag = 'N';
+
+    call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
+
+    call pr_get_tablequery(v_recon_code,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
+                                 in_user_code,@msg,@result);
   end if;
 
   -- update the count
