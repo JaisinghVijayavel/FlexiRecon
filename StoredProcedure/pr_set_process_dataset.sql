@@ -16,7 +16,7 @@ me:begin
     Created Date : 19-11-2023
 
     Updated By : Vijayavel
-    Updated Date : 20-12-2023
+    Updated Date : 05-03-2024
 
     Version : 2
   */
@@ -149,10 +149,17 @@ me:begin
   elseif v_dataset_code = 'KOMANUAL' then
     set v_sql = concat("insert into recon_trn_tmanualtran
       (
-        scheduler_gid,match_gid,tran_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_reason
+        scheduler_gid,match_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_mult,ko_reason
       )
       select
-        scheduler_gid,match_gid,tran_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_reason
+        scheduler_gid,match_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,ko_value,ko_acc_mode,
+        case
+          when ko_acc_mode = 'D' then -1
+          when ko_acc_mode = 'C' then 1
+          when ko_acc_mode = 'V' then 1
+          else 0
+        end as ko_mult,
+        ko_reason
       from ",v_dataset_table_name, "
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");

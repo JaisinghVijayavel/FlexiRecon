@@ -1,10 +1,11 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_run_manualmatchfile` $$
-CREATE PROCEDURE `pr_run_manualmatchfile`(
+CREATE PROCEDURE `pr_run_manualmatchfile`
+(
   in in_scheduler_gid int,
   in in_ip_addr varchar(255),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -49,12 +50,13 @@ me:BEGIN
 
   CREATE temporary TABLE recon_tmp_ttrangid(
     tran_gid int(10) unsigned NOT NULL,
+    tranbrkp_gid int(10) unsigned NOT NULL,
     dataset_code varchar(32) default null,
     dataset_type varchar(32) default null,
     excp_value decimal(15,2) not null default 0,
     ko_value decimal(15,2) not null default 0,
     tran_mult tinyint not null default 0,
-    PRIMARY KEY (tran_gid)
+    PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
   CREATE temporary TABLE recon_tmp_tmatchgid(
@@ -72,7 +74,7 @@ me:BEGIN
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     ko_value decimal(15,2) not null default 0,
-    tran_mult tinyint not null default 0,
+    ko_mult tinyint not null default 0,
     PRIMARY KEY (kodtl_gid),
     key idx_ko_gid(ko_gid),
     key idx_tran_gid(tran_gid),
@@ -144,13 +146,34 @@ me:BEGIN
 
   set v_job_gid = @out_job_gid;
 
+  -- update ko_mult in manualtran table
+  update recon_trn_tmanualtran
+  set ko_mult = -1
+  where scheduler_gid = in_scheduler_gid
+  and ko_acc_mode = 'D'
+  and delete_flag = 'N';
+
+  update recon_trn_tmanualtran
+  set ko_mult = 1
+  where scheduler_gid = in_scheduler_gid
+  and ko_acc_mode = 'C'
+  and delete_flag = 'N';
+
+  update recon_trn_tmanualtran
+  set ko_mult = 1
+  where scheduler_gid = in_scheduler_gid
+  and ko_acc_mode = 'V'
+  and delete_flag = 'N';
+
   -- validate tran_gid
   truncate recon_tmp_ttrangid;
 
   if v_recontype_code <> 'N' then
+    -- insert in trangid table where tranbrkp_gid = 0
     insert into recon_tmp_ttrangid
       select
         a.tran_gid,
+        0 as tranbrkp_gid,
         b.dataset_code,
         c.dataset_type,
         b.excp_value,
@@ -161,12 +184,36 @@ me:BEGIN
         on a.tran_gid = b.tran_gid
         and b.recon_code = a.recon_code
         and a.ko_value <= b.excp_value
+        and b.excp_value <> 0
+        -- and b.mapped_value = 0
+        and b.delete_flag = 'N'
+      inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code and c.delete_flag = 'N'
+      where a.scheduler_gid = in_scheduler_gid
+      and a.tranbrkp_gid = 0
+      and a.delete_flag = 'N'
+      group by a.tran_gid,b.dataset_code,b.excp_value,b.tran_mult;
+
+    -- insert in trangid table where tranbrkp_gid > 0
+    insert into recon_tmp_ttrangid
+      select
+        a.tran_gid,
+        a.tranbrkp_gid,
+        b.dataset_code,
+        c.dataset_type,
+        b.excp_value,
+        a.ko_value,
+        b.tran_mult
+      from recon_trn_tmanualtran as a
+      inner join recon_trn_ttranbrkp as b
+        on a.tran_gid = b.tran_gid
+        and a.tranbrkp_gid = b.tranbrkp_gid
+        and b.recon_code = a.recon_code
+        and a.ko_value <= b.excp_value
         and b.excp_value > 0
         and b.delete_flag = 'N'
       inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code and c.delete_flag = 'N'
       where a.scheduler_gid = in_scheduler_gid
-      and a.delete_flag = 'N'
-      group by a.tran_gid,b.dataset_code,b.excp_value,b.tran_mult;
+      and a.delete_flag = 'N';
   else
     insert into recon_tmp_ttrangid
       select
@@ -195,14 +242,15 @@ me:BEGIN
     insert into recon_tmp_tmatchgid
       select
         a.match_gid,
-        abs(sum(if(b.dataset_type='B',a.ko_value*b.tran_mult,0))) as ko_source_value,
-        abs(sum(if(b.dataset_type='T',a.ko_value*b.tran_mult,0))) as ko_comparison_value,
-        sum(a.ko_value*b.tran_mult) as ko_diff_value,
+        sum(if(a.ko_mult = -1,a.ko_value,0)) as ko_source_value,
+        sum(if(a.ko_mult = 1,a.ko_value,0)) as ko_comparison_value,
+        sum(a.ko_value*a.ko_mult) as ko_diff_value,
         max(a.ko_reason) as ko_reason
       from recon_trn_tmanualtran as a
       inner join recon_tmp_ttrangid as b
         on a.tran_gid = b.tran_gid
-        and b.excp_value > 0
+        and a.tranbrkp_gid = b.tranbrkp_gid
+        and b.excp_value <> 0
         and b.excp_value >= a.ko_value
       where a.scheduler_gid = in_scheduler_gid
       and a.delete_flag = 'N'
@@ -212,14 +260,15 @@ me:BEGIN
     insert into recon_tmp_tmatchgid
       select
         a.match_gid,
-        sum(if(b.dataset_type='B',a.ko_value,0)) as ko_source_value,
-        sum(if(b.dataset_type='T',a.ko_value,0)) as ko_comparison_value,
+        sum(if(b.dataset_type='B',a.ko_value*b.tran_mult,0)) as ko_source_value,
+        sum(if(b.dataset_type='T',a.ko_value*b.tran_mult,0)) as ko_comparison_value,
         sum(a.ko_value*b.tran_mult) as ko_diff_value,
         max(a.ko_reason) as ko_reason
       from recon_trn_tmanualtran as a
       inner join recon_tmp_ttrangid as b
         on a.tran_gid = b.tran_gid
-        and b.excp_value > 0
+        and a.tranbrkp_gid = b.tranbrkp_gid
+        and b.excp_value <> 0
         and b.excp_value >= a.ko_value
       where a.scheduler_gid = in_scheduler_gid
       and a.delete_flag = 'N'
@@ -262,20 +311,40 @@ me:BEGIN
 
       -- select @msg,@result,v_match_gid,v_ko_tran,v_ko_amount,v_ko_reason;
 
-      truncate recon_tmp_tkodtl;
-      truncate recon_tmp_ttrangid;
-
       if v_ko_gid > 0 then
+        truncate recon_tmp_tkodtl;
+
         if v_recontype_code <> 'N' then
-          insert into recon_tmp_tkodtl (ko_gid,tran_gid,ko_value,tran_mult)
+          insert into recon_tmp_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
             select
               v_ko_gid,
               a.tran_gid,
+              a.tranbrkp_gid,
               a.ko_value,
               b.tran_mult
             from recon_trn_tmanualtran as a
             inner join recon_trn_ttran as b
               on a.tran_gid = b.tran_gid
+              and b.excp_value <> 0
+              and b.excp_value >= a.ko_value
+              and b.delete_flag = 'N'
+            where a.scheduler_gid = in_scheduler_gid
+            and a.match_gid = v_match_gid
+            and a.tranbrkp_gid = 0
+            and a.ko_gid = 0
+            and a.delete_flag = 'N';
+
+          insert into recon_tmp_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
+            select
+              v_ko_gid,
+              a.tran_gid,
+              a.tranbrkp_gid,
+              a.ko_value,
+              b.tran_mult
+            from recon_trn_tmanualtran as a
+            inner join recon_trn_ttranbrkp as b
+              on a.tran_gid = b.tran_gid
+              and a.tranbrkp_gid = b.tranbrkp_gid
               and b.excp_value > 0
               and b.excp_value >= a.ko_value
               and b.delete_flag = 'N'
@@ -284,28 +353,35 @@ me:BEGIN
             and a.ko_gid = 0
             and a.delete_flag = 'N';
 
-          select abs(sum(a.ko_value*b.tran_mult)) into v_value from recon_tmp_tkodtl as a
-          inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
-            and b.excp_value > 0
-            and b.delete_flag = 'N';
+          select abs(sum(ko_value*ko_mult)) into v_value from recon_tmp_tkodtl;
 
           if (v_value > 0 and v_recontype_code = 'I') or v_value = 0 then
-            insert into recon_trn_tkodtl (ko_gid,tran_gid,ko_value,ko_mult)
+            insert into recon_trn_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
+              select ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult from recon_tmp_tkodtl;
+            /*
               select a.ko_gid,a.tran_gid,a.ko_value,a.tran_mult from recon_tmp_tkodtl as a
               inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
                 and b.excp_value > 0
                 and b.delete_flag = 'N';
+            */
 
             update recon_trn_ttran as a
             inner join recon_tmp_tkodtl as b on a.tran_gid = b.tran_gid
-            set a.excp_value = a.excp_value - b.ko_value,
+            set a.excp_value = a.excp_value - (b.ko_value*b.ko_mult)*a.tran_mult,
+              a.ko_gid = b.ko_gid,
+              a.ko_date = curdate()
+            where a.excp_value <> 0
+            and a.delete_flag = 'N';
+
+            update recon_trn_ttranbrkp as a
+            inner join recon_tmp_tkodtl as b on a.tran_gid = b.tran_gid
+              and a.tranbrkp_gid = b.tranbrkp_gid
+            set a.excp_value = 0,
               a.ko_gid = b.ko_gid,
               a.ko_date = curdate()
             where a.excp_value > 0
-            and a.excp_value >= b.ko_value
-            and a.delete_flag = 'N';
 
-            truncate recon_tmp_tkodtl;
+            and a.delete_flag = 'N';
           end if;
         else
           insert into recon_tmp_tkodtl (ko_gid,tran_gid,ko_value)
@@ -329,12 +405,9 @@ me:BEGIN
 
           update recon_trn_ttran as a
           inner join recon_tmp_tkodtl as b on a.tran_gid = b.tran_gid
-          set a.excp_value = a.excp_value - b.ko_value,
-              a.ko_gid = b.ko_gid,
+          set a.ko_gid = b.ko_gid,
               a.ko_date = curdate()
           where a.delete_flag = 'N';
-
-          truncate recon_tmp_tkodtl;
         end if;
 
         update recon_trn_tmanualtran set
@@ -356,15 +429,82 @@ me:BEGIN
         and match_gid = v_match_gid
         and delete_flag = 'N';
 
+        -- get tran_gid
+        truncate recon_tmp_ttrangid;
+
+        insert into recon_tmp_ttrangid (tran_gid)
+          select a.tran_gid from recon_tmp_tkodtl as a
+          inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
+            and b.excp_value = 0
+            and b.delete_flag = 'N'
+          where a.tranbrkp_gid = 0
+          group by a.tran_gid;
+
         -- move record(s) to tranko table
         insert into recon_trn_ttranko
-          select * from recon_trn_ttran as a
-          where ko_gid = v_ko_gid
-          and excp_value = 0
-          and delete_flag = 'N';
+          select a.* from recon_trn_ttran as a
+          inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid;
 
         delete from recon_trn_ttran
-        where ko_gid = v_ko_gid
+        where tran_gid in
+        (
+          select tran_gid from recon_tmp_ttrangid
+        )
+        and excp_value = 0
+        and delete_flag = 'N';
+
+        -- get tranbrkp_gid
+        truncate recon_tmp_ttrangid;
+
+        insert into recon_tmp_ttrangid (tran_gid,tranbrkp_gid)
+          select a.tran_gid,a.tranbrkp_gid from recon_tmp_tkodtl as a
+          inner join recon_trn_ttranbrkp as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
+            and b.excp_value = 0
+            and b.delete_flag = 'N';
+
+        -- move record(s) to tranbrkpko table
+        insert into recon_trn_ttranbrkpko
+          select a.* from recon_trn_ttranbrkp as a
+          inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
+          where a.excp_value = 0
+          and a.delete_flag = 'N';
+
+        delete from recon_trn_ttranbrkp
+        where tranbrkp_gid in
+        (
+          select tranbrkp_gid from recon_tmp_ttrangid
+        )
+        and excp_value = 0
+        and delete_flag = 'N';
+
+        -- find tran_gid zero cases for breakup line
+        truncate recon_tmp_ttrangid;
+
+        insert into recon_tmp_ttrangid (tran_gid)
+          select a.tran_gid from recon_trn_ttran as a
+          inner join
+          (
+            select a.tran_gid from recon_tmp_tkodtl as a
+            left join recon_trn_ttranbrkp as b on a.tran_gid = b.tran_gid
+              and b.delete_flag = 'N'
+            where b.tran_gid is null
+            and a.tranbrkp_gid > 0
+            group by a.tran_gid
+          ) as b on b.tran_gid = a.tran_gid
+          where a.excp_value = 0
+          and a.delete_flag = 'N';
+
+        insert into recon_trn_ttranko
+          select a.* from recon_trn_ttran as a
+          inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
+          where a.excp_value = 0
+          and a.delete_flag = 'N';
+
+        delete from recon_trn_ttran
+        where tran_gid in
+        (
+          select tran_gid from recon_tmp_ttrangid
+        )
         and excp_value = 0
         and delete_flag = 'N';
 

@@ -14,7 +14,7 @@ CREATE PROCEDURE `pr_run_posttranbrkprule`(
 )
 me:BEGIN
   declare v_recon_name text default '';
-  declare v_recontype_code varchar(16);
+  declare v_recontype_code varchar(32);
 
   declare v_source_head_sql text default '';
   declare v_comparison_head_sql text default '';
@@ -283,6 +283,11 @@ me:BEGIN
 
       set v_source_acc_mode = ifnull(v_source_acc_mode,'');
       set v_comparison_acc_mode = ifnull(v_comparison_acc_mode,'');
+
+      if v_recontype_code = 'V' then
+        set v_source_acc_mode = 'V';
+      end if;
+
       set v_tran_acc_mode = v_source_acc_mode;
 
       if v_tran_acc_mode = 'D' then

@@ -128,6 +128,7 @@ me:BEGIN
 
   declare v_recon_name text default '';
   declare v_recon_value_flag text default '';
+  declare v_recon_date_flag text default '';
   declare v_recon_automatch_partial text default '';
   declare v_rule_name text default '';
   declare v_field_type text default '';
@@ -221,13 +222,15 @@ me:BEGIN
   insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_tran_date','Y';
   insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_tran_date','Y';
 
+  /*
   drop table if exists recon_tmp_tmatch;
   drop table if exists recon_tmp_tmatchdtl;
   drop table if exists recon_tmp_tmatchko;
   drop table if exists recon_tmp_tmatchdiff;
   drop table if exists recon_tmp_tmatchdiffdtl;
+  */
 
-  CREATE /*temporary*/ TABLE recon_tmp_tmatch(
+  CREATE temporary TABLE recon_tmp_tmatch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -245,7 +248,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create /*temporary*/ table recon_tmp_tmatchdtl(
+  create temporary table recon_tmp_tmatchdtl(
     matchdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -263,7 +266,7 @@ me:BEGIN
     key idx_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create /*temporary*/ table recon_tmp_tmatchko(
+  create temporary table recon_tmp_tmatchko(
     tran_gid int unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
     excp_value decimal(15,2) not null default 0,
@@ -274,7 +277,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create /*temporary*/ table recon_tmp_tmatchdiff(
+  create temporary table recon_tmp_tmatchdiff(
     tran_gid int unsigned NOT NULL,
     tran_mult tinyint not null default 0,
     tran_value decimal(15,2) not null default 0,
@@ -284,7 +287,7 @@ me:BEGIN
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  create /*temporary*/ table recon_tmp_tmatchdiffdtl(
+  create temporary table recon_tmp_tmatchdiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -445,9 +448,9 @@ me:BEGIN
   order by display_order;
 
   select
-    recon_name,recontype_code,recon_value_flag,recon_automatch_partial
+    recon_name,recontype_code,recon_value_flag,recon_date_flag,recon_automatch_partial
   into
-    v_recon_name,v_recontype_code,v_recon_value_flag,v_recon_automatch_partial
+    v_recon_name,v_recontype_code,v_recon_value_flag,v_recon_date_flag,v_recon_automatch_partial
   from recon_mst_trecon
   where recon_code = in_recon_code
   and period_from <= curdate()
@@ -521,6 +524,12 @@ me:BEGIN
       set v_rule_code = ifnull(v_rule_code,'');
 
       set v_reversal_flag = ifnull(v_reversal_flag,'N');
+
+      -- mirror reveral
+      if v_recontype_code = 'I' and v_source_dataset_code = v_comparison_dataset_code then
+        set v_reversal_flag = 'Y';
+      end if;
+
       set v_group_method_flag = ifnull(v_group_method_flag,'C');
 
       set v_group_flag = ifnull(v_group_flag,'N');
@@ -552,6 +561,9 @@ me:BEGIN
         elseif v_source_acc_mode <> v_comparison_acc_mode then
           set v_group_method_flag = 'C';
         end if;
+      elseif v_recontype_code = 'V' then
+        set v_source_acc_mode = 'V';
+        set v_comparison_acc_mode = 'V';
       end if;
 
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
@@ -840,7 +852,10 @@ me:BEGIN
                 set v_sql = '';
                 set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
-                set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_comparison_acc_mode,char(39), ' ');
+
+                if v_recontype_code <> 'N' then
+                  set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_comparison_acc_mode,char(39), ' ');
+                end if;
 
                 insert into recon_tmp_tsql(table_type,acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
 
@@ -848,7 +863,7 @@ me:BEGIN
 									set v_sql = '';
 									set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
 									set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
-									set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_source_acc_mode,char(39),' ');
+                  set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_source_acc_mode,char(39),' ');
 
 									insert into recon_tmp_tsql(table_type,acc_mode,sql_query) values ('C',v_source_acc_mode,v_sql);
 								end if;
@@ -912,9 +927,16 @@ me:BEGIN
 
           set v_source_sql = v_source_head_sql;
           set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
-          set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
-          set v_source_sql = concat(v_source_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-          set v_source_sql = concat(v_source_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+
+          if v_recontype_code <> 'N' then
+            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+          end if;
+
+          if v_recon_date_flag = 'Y' then
+            set v_source_sql = concat(v_source_sql,' and tran_date >= ',char(39),in_period_from,char(39));
+            set v_source_sql = concat(v_source_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+          end if;
+
           set v_source_sql = concat(v_source_sql,' and delete_flag = ',char(39),'N',char(39));
           set v_source_sql = concat(v_source_sql,' ',v_source_condition);
           set v_source_sql = concat(v_source_sql,' ',v_sourcebase_filter);
@@ -923,9 +945,16 @@ me:BEGIN
 
           set v_source_sql = v_source_headbrkp_sql;
           set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
-          set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
-          set v_source_sql = concat(v_source_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-          set v_source_sql = concat(v_source_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+
+          if v_recontype_code <> 'N' then
+            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+          end if;
+
+          if v_recon_date_flag = 'Y' then
+            set v_source_sql = concat(v_source_sql,' and tran_date >= ',char(39),in_period_from,char(39));
+            set v_source_sql = concat(v_source_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+          end if;
+
           set v_source_sql = concat(v_source_sql,' and delete_flag = ',char(39),'N',char(39));
           set v_source_sql = concat(v_source_sql,' ',v_source_condition);
           set v_source_sql = concat(v_source_sql,' ',v_sourcebase_filter);
@@ -934,9 +963,16 @@ me:BEGIN
 
           set v_comparison_sql = v_comparison_head_sql;
           set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
-          set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
-          set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-          set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+
+          if v_recontype_code <> 'N' then
+            set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
+          end if;
+
+          if v_recon_date_flag = 'Y' then
+            set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
+            set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+          end if;
+
           set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
           set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition);
           set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
@@ -945,9 +981,16 @@ me:BEGIN
 
           set v_comparison_sql = v_comparison_headbrkp_sql;
           set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
-          set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
-          set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-          set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+
+          if v_recontype_code <> 'N' then
+            set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
+          end if;
+
+          if v_recon_date_flag = 'Y' then
+            set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
+            set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+          end if;
+
           set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
           set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition);
           set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
@@ -958,9 +1001,16 @@ me:BEGIN
             and v_source_dataset_code <> v_comparison_dataset_code then
 						set v_comparison_sql = v_comparison_head_sql;
 						set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+
+            if v_recontype_code <> 'N' then
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
+
+            if v_recon_date_flag = 'Y' then
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+            end if;
+
 						set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
 						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition);
 						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
@@ -969,9 +1019,16 @@ me:BEGIN
 
 						set v_comparison_sql = v_comparison_headbrkp_sql;
 						set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+
+            if v_recontype_code <> 'N' then
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
+
+            if v_recon_date_flag = 'Y' then
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
+            end if;
+
 						set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
 						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition);
 						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
@@ -1072,7 +1129,7 @@ me:BEGIN
 						if v_recontype_code <> 'N' then
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
 
-              if v_recontype_code <> 'I' then
+              if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
                 -- contra
 							  set v_match_sql = concat(v_match_sql,'having sum(source_value*tran_mult) = (comparison_value*-1) ');
               else
@@ -1259,7 +1316,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
 
             if v_recontype_code <> 'N' then
-              if v_recontype_code <> 'I' then
+              if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
                 -- contra
                 set v_match_sql = concat(v_match_sql,'and a.excp_value*a.tran_mult = sum(b.excp_value*b.tran_mult)*-1 ');
               else
@@ -1360,15 +1417,14 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
 						set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
-						if v_recontype_code <> 'N' then
-							set v_match_sql = concat(v_match_sql,'and a.excp_value = b.excp_value ');
-						end if;
-
 						set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
-						set v_match_sql = concat(v_match_sql,'where a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
-						set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
-						set v_match_sql = concat(v_match_sql,'and 1 = 1 ');
+						if v_recontype_code <> 'N' then
+							set v_match_sql = concat(v_match_sql,'and a.excp_value = b.excp_value ');
+
+						  set v_match_sql = concat(v_match_sql,'where a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
+						  set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
+						end if;
 
 						set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');
 						set v_match_sql = concat(v_match_sql,'having count(*) = 1 ');

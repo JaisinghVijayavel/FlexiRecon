@@ -14,6 +14,7 @@ CREATE PROCEDURE `pr_run_reconrule`(
 me:BEGIN
   declare i int default 0;
 
+  declare v_recon_date_flag text default '';
   declare v_txt_rule_code text default '';
   declare v_rule_code text default '';
   declare v_rule_name text default '';
@@ -67,7 +68,7 @@ me:BEGIN
     and active_status = 'Y'
     and period_from <= curdate()
     and (period_to >= curdate()
-    or until_active_flag = 'Y') 
+    or until_active_flag = 'Y')
     and delete_flag = 'N') then
 
     set out_msg = 'Invalid recon !';
@@ -83,6 +84,18 @@ me:BEGIN
 
     set v_recon_rule_version = ifnull(v_recon_rule_version,'');
   end if;
+
+  -- get recon details
+  select
+    recon_date_flag
+  into
+    v_recon_date_flag
+  from recon_mst_trecon
+  where recon_code = in_recon_code
+  and period_from <= curdate()
+  and (until_active_flag = 'Y'
+  or period_to >= curdate())
+  and delete_flag = 'N';
 
   if in_automatch_flag = 'Y' then
     if exists(select job_gid from recon_trn_tjob
@@ -152,8 +165,31 @@ me:BEGIN
 
   -- insert exception records
   if in_automatch_flag = 'N' then
-    insert into recon_tmp_ttran select * from recon_trn_ttran where recon_code = in_recon_code and delete_flag = 'N';
-    insert into recon_tmp_ttranbrkp select * from recon_trn_ttranbrkp where recon_code = in_recon_code and delete_flag = 'N';
+    if v_recon_date_flag = 'Y' then
+      insert into recon_tmp_ttran
+        select * from recon_trn_ttran
+        where recon_code = in_recon_code
+        and tran_date >= in_period_from
+        and tran_date <= in_period_to
+        and delete_flag = 'N';
+
+      insert into recon_tmp_ttranbrkp
+        select * from recon_trn_ttranbrkp
+        where recon_code = in_recon_code
+        and tran_date >= in_period_from
+        and tran_date <= in_period_to
+        and delete_flag = 'N';
+    else
+      insert into recon_tmp_ttran
+        select * from recon_trn_ttran
+        where recon_code = in_recon_code
+        and delete_flag = 'N';
+
+      insert into recon_tmp_ttranbrkp
+        select * from recon_trn_ttranbrkp
+        where recon_code = in_recon_code
+        and delete_flag = 'N';
+    end if;
   end if;
 
   -- update the count
@@ -378,10 +414,14 @@ me:BEGIN
     where recon_code = v_recon_code
     and delete_flag = 'N';
 
+    -- run propable match report
     call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
 
     call pr_get_tablequery(v_recon_code,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
                                  in_user_code,@msg,@result);
+
+    -- update theme
+    call pr_run_theme(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
   end if;
 
   -- update the count

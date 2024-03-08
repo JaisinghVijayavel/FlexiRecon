@@ -80,10 +80,10 @@ me:BEGIN
 			select
 				count(distinct match_gid) as 'Match Count',
 				sum(if(b.tran_acc_mode = 'D',1,0)) as 'DR Count',
-				sum(if(b.tran_acc_mode = 'D',b.excp_value,0)) as 'DR Total',
+				format(sum(if(b.tran_acc_mode = 'D',b.excp_value,0)),2,'en_IN') as 'DR Total',
 				sum(if(b.tran_acc_mode = 'C',1,0)) as 'CR Count',
-				sum(if(b.tran_acc_mode = 'C',b.excp_value,0)) as 'CR Total',
-				sum(b.excp_value*b.tran_mult) as 'Difference'
+				format(sum(if(b.tran_acc_mode = 'C',b.excp_value,0)),2,'en_IN') as 'CR Total',
+				format(sum(b.excp_value*b.tran_mult),2,'en_IN') as 'Difference'
 			from recon_trn_tmanualtran as a
 			inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
 				and b.recon_code = v_recon_code
