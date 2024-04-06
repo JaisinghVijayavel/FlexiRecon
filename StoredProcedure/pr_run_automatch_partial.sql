@@ -138,6 +138,10 @@ me:BEGIN
   declare v_src_acc_mode char(1) default null;
   declare v_cmp_acc_mode char(1) default null;
 
+  declare v_recorder_source text default '';
+  declare v_recorder_comparison text default '';
+  declare v_recorder text default '';
+
   declare v_preview_gid int default 0;
 
   declare err_msg text default '';
@@ -346,6 +350,34 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
+  create temporary table recon_tmp_tmatchdiff(
+    tran_gid int unsigned NOT NULL,
+    tran_mult tinyint not null default 0,
+    tran_value decimal(15,2) not null default 0,
+    excp_value decimal(15,2) not null default 0,
+    mapped_value decimal(15,2) not null default 0,
+    diff_value decimal(15,2) not null default 0,
+    PRIMARY KEY (tran_gid)
+  ) ENGINE = MyISAM;
+
+  create temporary table recon_tmp_tmatchdiffdtl(
+    matchdiffdtl_gid int unsigned NOT NULL,
+    parent_tran_gid int unsigned NOT NULL default 0,
+    parent_tranbrkp_gid int unsigned NOT NULL default 0,
+    tran_gid int unsigned NOT NULL default 0,
+    tranbrkp_gid int unsigned not null default 0,
+    ko_value decimal(15,2) not null default 0,
+    tran_mult tinyint not null default 0,
+    src_comp_flag char(1) default null,
+    dup_flag char(1) not null default 'N',
+    ko_flag char(1) not null default 'N',
+    PRIMARY KEY (matchdiffdtl_gid),
+    key idx_parent_tran_gid(parent_tran_gid),
+    key idx_parent_gid(parent_tran_gid,parent_tranbrkp_gid),
+    key idx_tran_gid(tran_gid),
+    key idx_gid(tran_gid,tranbrkp_gid)
+  ) ENGINE = MyISAM;
+
   CREATE temporary TABLE recon_tmp_tpseudorows(
     row int unsigned NOT NULL,
     PRIMARY KEY (row)
@@ -382,6 +414,28 @@ me:BEGIN
   ) ENGINE = MyISAM;
 
   if in_rule_code = '' then set in_rule_code = null; end if;
+
+  -- get record order
+  -- source & comparison
+  set v_recorder_source = fn_get_rulerecorder(in_rule_code,'S','a.');
+  set v_recorder_comparison = fn_get_rulerecorder(in_rule_code,'C','b.');
+  set v_recorder = '';
+
+  if v_recorder_source <> '' then
+    set v_recorder = v_recorder_source;
+  end if;
+
+  if v_recorder_comparison <> '' then
+    if v_recorder = '' then
+      set v_recorder = v_recorder_comparison;
+    else
+      set v_recorder = concat(v_recorder,',',v_recorder_comparison);
+    end if;
+  end if;
+
+  if v_recorder <> '' then
+    set v_recorder = concat('order by ',v_recorder);
+  end if;
 
   select
     group_concat(field_name)
@@ -1557,6 +1611,11 @@ me:BEGIN
 
 						set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
 
+            -- add record order by
+            if v_recorder <> '' then
+              set v_match_sql = concat(v_match_sql,v_recorder);
+            end if;
+
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- insert in match table
@@ -1706,6 +1765,12 @@ me:BEGIN
               end if;
             end if;
 
+            -- add record order by
+            if v_recorder <> '' then
+              set v_match_sql = concat(v_match_sql,v_recorder);
+            end if;
+
+            -- run match query one to many
             call pr_run_sql(v_match_sql,@msg,@result);
 
             select max(matched_count) into v_count from recon_tmp_tmatch;
@@ -1813,6 +1878,12 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');
 						set v_match_sql = concat(v_match_sql,'having count(*) = 1 ');
 
+            -- add record order by
+            if v_recorder <> '' then
+              set v_match_sql = concat(v_match_sql,v_recorder);
+            end if;
+
+            -- run match query one to one
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- pseudorows
@@ -2054,7 +2125,8 @@ me:BEGIN
               inner join recon_tmp_tkodtlsumm as b on a.tran_gid = b.tran_gid
               set a.excp_value = a.excp_value - (b.ko_value * a.tran_mult),
                   a.ko_gid = b.max_ko_gid,
-                  a.ko_date = curdate()
+                  a.ko_date = curdate(),
+                  a.theme_code = ''
               where a.excp_value <> 0
               and a.delete_flag = 'N';
 
@@ -2062,21 +2134,24 @@ me:BEGIN
               inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
               set a.excp_value = a.excp_value - b.ko_value,
                   a.ko_gid = b.ko_gid,
-                  a.ko_date = curdate()
+                  a.ko_date = curdate(),
+                  a.theme_code = ''
               where a.excp_value <> 0
               and a.delete_flag = 'N';
             else
               update recon_trn_ttran as a
               inner join recon_tmp_tkodtlsumm as b on a.tran_gid = b.tran_gid
               set a.ko_gid = b.max_ko_gid,
-                  a.ko_date = curdate()
+                  a.ko_date = curdate(),
+                  a.theme_code = ''
               where a.ko_gid = 0
               and a.delete_flag = 'N';
 
               update recon_trn_ttranbrkp as a
               inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
               set a.ko_gid = b.ko_gid,
-                  a.ko_date = curdate()
+                  a.ko_date = curdate(),
+                  a.theme_code = ''
               where a.ko_gid = 0
               and a.delete_flag = 'N';
             end if;

@@ -196,7 +196,7 @@ me:begin
         and delete_flag = 'N';
 
         update recon_trn_ttranbrkp
-        set tran_gid = 0
+        set tran_gid = 0,posted_job_gid = 0
         where posted_job_gid = in_job_gid
         and delete_flag = 'N';
       end if;

@@ -47,6 +47,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_ttrangid;
   drop temporary table if exists recon_tmp_tmatchgid;
   drop temporary table if exists recon_tmp_tkodtl;
+  drop temporary table if exists recon_tmp_ttrankodtl;
 
   CREATE temporary TABLE recon_tmp_ttrangid(
     tran_gid int(10) unsigned NOT NULL,
@@ -79,6 +80,16 @@ me:BEGIN
     key idx_ko_gid(ko_gid),
     key idx_tran_gid(tran_gid),
     key idx_tranbrkp_gid(tranbrkp_gid)
+  ) ENGINE = MyISAM;
+
+  create temporary table recon_tmp_ttrankodtl(
+    trankodtl_gid int unsigned NOT NULL AUTO_INCREMENT,
+    ko_gid int unsigned NOT NULL,
+    tran_gid int unsigned NOT NULL,
+    ko_value decimal(15,2) not null default 0,
+    PRIMARY KEY (trankodtl_gid),
+    key idx_ko_gid(ko_gid),
+    key idx_tran_gid(tran_gid)
   ) ENGINE = MyISAM;
 
 
@@ -313,6 +324,7 @@ me:BEGIN
 
       if v_ko_gid > 0 then
         truncate recon_tmp_tkodtl;
+        truncate recon_tmp_ttrankodtl;
 
         if v_recontype_code <> 'N' then
           insert into recon_tmp_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
@@ -321,12 +333,12 @@ me:BEGIN
               a.tran_gid,
               a.tranbrkp_gid,
               a.ko_value,
-              b.tran_mult
+              a.ko_mult
             from recon_trn_tmanualtran as a
             inner join recon_trn_ttran as b
               on a.tran_gid = b.tran_gid
               and b.excp_value <> 0
-              and b.excp_value >= a.ko_value
+              and b.excp_value >= ((a.ko_value*a.ko_mult)*b.tran_mult)
               and b.delete_flag = 'N'
             where a.scheduler_gid = in_scheduler_gid
             and a.match_gid = v_match_gid
@@ -353,6 +365,23 @@ me:BEGIN
             and a.ko_gid = 0
             and a.delete_flag = 'N';
 
+          insert into recon_tmp_ttrankodtl (ko_gid,tran_gid,ko_value)
+            select
+              v_ko_gid,
+              a.tran_gid,
+              sum(a.ko_value*a.ko_mult)
+            from recon_trn_tmanualtran as a
+            inner join recon_trn_ttran as b
+              on a.tran_gid = b.tran_gid
+              and b.excp_value <> 0
+              and b.excp_value >= a.ko_value
+              and b.delete_flag = 'N'
+            where a.scheduler_gid = in_scheduler_gid
+            and a.match_gid = v_match_gid
+            and a.ko_gid = 0
+            and a.delete_flag = 'N'
+            group by a.tran_gid;
+
           select abs(sum(ko_value*ko_mult)) into v_value from recon_tmp_tkodtl;
 
           if (v_value > 0 and v_recontype_code = 'I') or v_value = 0 then
@@ -366,8 +395,8 @@ me:BEGIN
             */
 
             update recon_trn_ttran as a
-            inner join recon_tmp_tkodtl as b on a.tran_gid = b.tran_gid
-            set a.excp_value = a.excp_value - (b.ko_value*b.ko_mult)*a.tran_mult,
+            inner join recon_tmp_ttrankodtl as b on a.tran_gid = b.tran_gid
+            set a.excp_value = a.excp_value - b.ko_value*a.tran_mult,
               a.ko_gid = b.ko_gid,
               a.ko_date = curdate()
             where a.excp_value <> 0
@@ -380,7 +409,6 @@ me:BEGIN
               a.ko_gid = b.ko_gid,
               a.ko_date = curdate()
             where a.excp_value > 0
-
             and a.delete_flag = 'N';
           end if;
         else
@@ -533,6 +561,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_ttrangid;
   drop temporary table if exists recon_tmp_tmatchgid;
   drop temporary table if exists recon_tmp_tkodtl;
+  drop temporary table if exists recon_tmp_ttrankodtl;
 
   if v_succ_count > 0 then
     set out_msg = concat('Out of ',cast(v_tot_count as nchar),' pair(s) ,',

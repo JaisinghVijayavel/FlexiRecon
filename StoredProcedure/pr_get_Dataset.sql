@@ -36,12 +36,16 @@ begin
     a.system_flag,
     a.active_status,
     fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
-  from recon_mst_tdataset a
-  inner join admin_mst_tdatasetcontext c on c.dataset_code = a.dataset_code
-    and c.parent_master_syscode='QCD_L1'
+  from admin_mst_tusercontext as u
+  inner join admin_mst_tdatasetcontext c on u.master_syscode = c.master_syscode
+    and c.parent_master_syscode = u.parent_master_syscode
     and c.delete_flag = 'N'
+  inner join recon_mst_tdataset as a on c.dataset_code = a.dataset_code
+    and a.delete_flag = 'N'
   left join recon_trn_tjob as b on a.last_job_gid = b.job_gid and b.delete_flag = 'N'
-  where a.delete_flag = 'N'
+  where u.user_code = in_user_code
+  and u.parent_master_syscode='QCD_L1'
+  and u.delete_flag = 'N'
   order by a.dataset_gid desc;
 end $$
 

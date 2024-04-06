@@ -2,8 +2,7 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_pagereport` $$
 CREATE PROCEDURE `pr_run_pagereport`(
-  in in_recon_code varchar(32),
-  in in_report_code varchar(32),
+  in in_reporttemplate_code varchar(32),
   in in_report_condition text,
   in in_ip_addr varchar(255),
   in in_user_code varchar(32),
@@ -12,8 +11,11 @@ CREATE PROCEDURE `pr_run_pagereport`(
   out out_result int
 )
 me:BEGIN
+  declare v_recon_code varchar(32) default '';
+  declare v_report_code varchar(32) default '';
+  declare v_sortby_code varchar(32);
+
   declare v_rptsession_gid int default 0;
-  declare v_report_code text default '';
   declare v_report_desc text default '';
   declare v_sp_name text default '';
   declare v_table_name text default '';
@@ -21,6 +23,7 @@ me:BEGIN
   declare v_sql text default '';
   declare v_recon_code_field text default '';
   declare v_report_default_condition text default '';
+  declare v_sorting_order text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -46,8 +49,25 @@ me:BEGIN
   END;
   */
 
+  -- get report template code
+  select
+    recon_code,
+    report_code,
+    sortby_code
+  into
+    v_recon_code,
+    v_report_code,
+    v_sortby_code
+  from recon_mst_treporttemplate
+  where reporttemplate_code = in_reporttemplate_code
+  and delete_flag = 'N';
+
+  set v_recon_code = ifnull(v_recon_code,'');
+  set v_report_code = ifnull(v_report_code,'');
+  set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
+
   if exists(select report_desc from recon_mst_treport
-     where report_code = in_report_code
+     where report_code = v_report_code
      and delete_flag = 'N') then
     select
       report_code,
@@ -66,10 +86,10 @@ me:BEGIN
       v_recon_code_field,
       v_report_default_condition
     from recon_mst_treport
-    where report_code = in_report_code
+    where report_code = v_report_code
     and delete_flag = 'N';
   elseif exists(select report_desc from recon_mst_treport
-     where report_code = in_report_code
+     where report_code = v_report_code
      and delete_flag = 'N') then
     select
       report_code,
@@ -88,7 +108,7 @@ me:BEGIN
       v_recon_code_field,
       v_report_default_condition
     from recon_mst_treport
-    where report_code = in_report_code
+    where report_code = v_report_code
     and delete_flag = 'N';
   else
       set out_msg = 'Invalid report';
@@ -97,8 +117,8 @@ me:BEGIN
       leave me;
   end if;
 
-  set v_report_code = ifnull(v_report_code,0);
-  set v_report_desc = ifnull(v_report_desc,in_report_code);
+  set v_report_code = ifnull(v_report_code,'');
+  set v_report_desc = ifnull(v_report_desc,v_report_code);
   set v_table_name = ifnull(v_table_name,'');
   set v_src_table_name = ifnull(v_src_table_name,'');
   set v_sp_name = ifnull(v_sp_name,'');
@@ -114,9 +134,26 @@ me:BEGIN
 
   set in_report_condition = ifnull(in_report_condition,'');
 
-  set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(34),in_recon_code,char(34),' ', in_report_condition);
+  set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(34),v_recon_code,char(34),' ', in_report_condition);
 
   set in_report_condition = concat(in_report_condition,' ',v_report_default_condition);
+
+  -- sorting order
+  select
+    group_concat(report_field)
+  into
+    v_sorting_order
+  from recon_mst_treporttemplatesorting
+  where reporttemplate_code = in_reporttemplate_code
+  and active_status = 'Y'
+  and delete_flag = 'N'
+  order by sorting_order;
+
+  set v_sorting_order = ifnull(v_sorting_order,'');
+
+  if v_sorting_order <> '' then
+    set v_sorting_order = concat('order by ',v_sorting_order,' ',v_sortby_code);
+  end if;
 
   -- create new report session
   insert into recon_trn_treportsession (report_code,ip_addr,insert_date,insert_by)
@@ -134,7 +171,7 @@ me:BEGIN
     call pr_run_sql(v_sql,@msg,@result);
   end if;
 
-  call pr_run_sp(in_recon_code,v_sp_name,0,v_rptsession_gid,in_report_condition,in_user_code,@msg,@result);
+  call pr_run_sp(v_recon_code,v_sp_name,0,v_rptsession_gid,in_report_condition,v_sorting_order,in_user_code,@msg,@result);
 
   set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
   set v_sql = concat(v_sql,'where rptsession_gid = ',cast(v_rptsession_gid as nchar),' ');

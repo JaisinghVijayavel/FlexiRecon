@@ -10,7 +10,7 @@ CREATE PROCEDURE `pr_fetch_recondetail`
 )
 me:BEGIN
 	declare v_dataset_count int default 0;
-	declare v_recon_code text default ''; 
+	declare v_recon_code text default '';
 	declare v_clone_reconcode text default '';
 
   set v_clone_reconcode = (select clone_recon_code from recon_mst_trecon
@@ -33,14 +33,17 @@ me:BEGIN
     a.recon_date_flag,
     a.recon_date_field,
     a.recon_automatch_partial,
+    a.threshold_code,
+    fn_get_mastername(a.threshold_code, 'QCD_TV') as threshold_desc,
     a.threshold_plus_value,
     a.threshold_minus_value,
     a.clone_recon_code,
-	a.active_status,
-	fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
+	  a.active_status,
+	  fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
   from recon_mst_trecon a
   inner join recon_mst_trecontype b on a.recontype_code = b.recontype_code
-  where a.recon_code =in_recon_code
+    and b.delete_flag = 'N'
+  where a.recon_code = in_recon_code
   and a.delete_flag = 'N';
 
 	set v_recon_code = (select recon_code from recon_mst_trecon

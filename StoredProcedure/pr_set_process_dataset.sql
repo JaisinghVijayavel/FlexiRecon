@@ -16,9 +16,9 @@ me:begin
     Created Date : 19-11-2023
 
     Updated By : Vijayavel
-    Updated Date : 05-03-2024
+    Updated Date : 26-03-2024
 
-    Version : 2
+    Version : 3
   */
   declare v_pipeline_code text default '';
   declare v_dataset_code text default '';
@@ -166,10 +166,20 @@ me:begin
   elseif v_dataset_code = 'POSTMANUAL' then
     set v_sql = concat("insert into recon_trn_tmanualtranbrkp
       (
-        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
+        scheduler_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
       )
       select
         scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
+      from ",v_dataset_table_name,"
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
+  elseif v_dataset_code = 'THEMEMANUAL' then
+    set v_sql = concat("insert into recon_trn_tthemeupdate
+      (
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,theme_desc
+      )
+      select
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,theme_desc
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
@@ -196,7 +206,7 @@ me:begin
 
         if recon_done = 1 then leave recon_loop; end if;
 
-        call pr_set_dataset_transer(in_scheduler_gid,v_recon_code,v_job_gid,@msg,@result);
+        call pr_set_dataset_transfer(in_scheduler_gid,v_recon_code,v_job_gid,@msg,@result);
       end loop recon_loop;
 
       close recon_cursor;
@@ -208,6 +218,10 @@ me:begin
     prepare _sql from @v_sql;
     execute _sql;
     deallocate prepare _sql;
+
+    if v_dataset_code = 'THEMEMANUAL' then
+      call pr_set_themeupdate(in_scheduler_gid,in_user_code,in_role_code,in_lang_code,@msg,@result);
+    end if;
   end if;
 
   -- set last job_gid

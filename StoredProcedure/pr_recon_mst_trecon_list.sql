@@ -9,11 +9,15 @@ CREATE PROCEDURE `pr_recon_mst_trecon_list`
 )
 BEGIN
   declare v_master_sys_code text default '';
+  declare v_app_date_format text default '';
+
   set v_master_sys_code = (select master_syscode from admin_mst_tusercontext
     where user_code=in_user_code
     and parent_master_syscode='QCD_L3'
     and delete_flag = 'N'
   );
+
+  set v_app_date_format = fn_get_configvalue('app_date_format');
 
   select
     a.recon_gid,
@@ -21,8 +25,12 @@ BEGIN
     a.recon_name,
     a.recontype_code,
     fn_get_mastername(a.recontype_code, 'QCD_RC_RCON_TYPE') as recontype_desc,
-    date_format(a.period_from,'%d/%m/%Y') as period_from,
-    date_format( a.period_to,'%d/%m/%Y') as period_to,
+    a.period_from,
+    a.period_to,
+    /*
+    date_format(a.period_from,v_app_date_format) as period_from,
+    date_format(a.period_to,v_app_date_format) as period_to,
+    */
     a.until_active_flag,
 	  a.active_status,
     fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc

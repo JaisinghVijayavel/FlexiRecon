@@ -90,11 +90,15 @@ me:BEGIN
       fetch field_cursor into v_field_name,v_field_alias_name,v_field_type;
       if field_done = 1 then leave field_loop; end if;
 
+      set v_field = concat(fn_get_fieldformat(in_recon_code,v_field_name),' as ',char(39),v_field_alias_name,char(39));
+
+      /*
       if v_field_type = 'NUMBER' then
         set v_field = concat('ifnull(',fn_get_fieldformat(in_recon_code,v_field_name),',0) as ',char(39),v_field_alias_name,char(39));
       else
         set v_field = concat('ifnull(cast(',fn_get_fieldformat(in_recon_code,v_field_name),' as nchar),',char(39),char(39),') as ',char(39),v_field_alias_name,char(39));
       end if;
+      */
 
       if v_sql_field = '' then
         set v_sql_field = v_field;

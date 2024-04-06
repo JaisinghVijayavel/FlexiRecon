@@ -1,6 +1,6 @@
 ﻿DELIMITER $$
-DROP PROCEDURE IF EXISTS `pr_set_dataset_transer` $$
-CREATE procedure `pr_set_dataset_transer`
+DROP PROCEDURE IF EXISTS `pr_set_dataset_transfer` $$
+CREATE procedure `pr_set_dataset_transfer`
 (
   in in_scheduler_gid int,
   in in_recon_code text,

@@ -33,7 +33,7 @@ me:BEGIN
     in_dataset_code,
     'QCD_L1',
     v_master_syscode,
-    'A',
+    'Y',
     sysdate(),
     in_user_code
   );

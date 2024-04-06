@@ -20,7 +20,7 @@ me:BEGIN
   declare v_user_status char(1) default '';
   declare v_password_attempt int default 0;
   declare v_max_password_attempt int default 0;
-  declare v_last_login_date date;
+  declare v_last_login_date datetime;
   declare v_password_expiry_date date;
   declare v_password_expiry_days int default 0;
   declare v_config_value varchar(255) default '';
@@ -44,9 +44,9 @@ me:BEGIN
   else
     set v_password_expiry_days = 30;
   end if;
-  
-  select 
-		config_value into v_config_value 
+
+  select
+		config_value into v_config_value
 	from admin_mst_tconfig
 	where config_name = 'password_attempt_count'
 	and delete_flag = 'N';
@@ -58,9 +58,9 @@ me:BEGIN
   else
     set v_max_password_attempt = 5;
   end if;
-	
+
 	set v_usergroup_desc = (select distinct b.role_name from admin_mst_tuser a
-											    left join admin_mst_trole b on a.role_code=b.role_code 
+											    left join admin_mst_trole b on a.role_code=b.role_code
 														and b.active_status='Y'
 														and b.delete_flag = 'N'
 													where a.user_code = in_user_code
@@ -74,7 +74,7 @@ me:BEGIN
     user_password,
     user_status,
     password_attempt,
-    cast(last_login_date as date),
+    last_login_date,
     password_expiry_date
   into
     v_user_gid,
@@ -124,7 +124,9 @@ me:BEGIN
         v_user_name as user_name,
         v_password_expiry_date as password_expiry_date,
         v_usergroup_code as usergroup_code,
+        v_usergroup_desc as usergroup_desc,
         v_out_result as out_result,
+        v_last_login_date as lastlogin,
         v_out_msg as out_msg,
         v_user_status as user_status;
 
@@ -172,7 +174,9 @@ me:BEGIN
         v_user_name as user_name,
         v_password_expiry_date as password_expiry_date,
         v_usergroup_code as usergroup_code,
+        v_usergroup_desc as usergroup_desc,
         v_out_result as out_result,
+        v_last_login_date as lastlogin,
         v_out_msg as out_msg,
         v_user_status as user_status;
 
@@ -187,7 +191,9 @@ me:BEGIN
         v_user_name as user_name,
         v_password_expiry_date as password_expiry_date,
         v_usergroup_code as usergroup_code,
+        v_usergroup_desc as usergroup_desc,
         v_out_result as out_result,
+        v_last_login_date as lastlogin,
         v_out_msg as out_msg,
         v_user_status as user_status;
 
@@ -200,7 +206,9 @@ me:BEGIN
         v_user_name as user_name,
         v_password_expiry_date as password_expiry_date,
         v_usergroup_code as usergroup_code,
+        v_usergroup_desc as usergroup_desc,
         v_out_result as out_result,
+        v_last_login_date as lastlogin,
         v_out_msg as out_msg,
         v_user_status as user_status;
 
@@ -213,7 +221,9 @@ me:BEGIN
         v_user_name as user_name,
         v_password_expiry_date as password_expiry_date,
         v_usergroup_code as usergroup_code,
+        v_usergroup_desc as usergroup_desc,
         v_out_result as out_result,
+        v_last_login_date as lastlogin,
         v_out_msg as out_msg,
         v_user_status as user_status;
 
@@ -233,7 +243,9 @@ me:BEGIN
         v_user_name as user_name,
         v_password_expiry_date as password_expiry_date,
         v_usergroup_code as usergroup_code,
+        v_usergroup_desc as usergroup_desc,
         v_out_result as out_result,
+        v_last_login_date as lastlogin,
         v_out_msg as out_msg,
         v_user_status as user_status;
 
@@ -262,10 +274,14 @@ me:BEGIN
   set v_out_msg = 'Login success !';
   set v_out_result = 1;
 
-  
+  set v_last_login_date = (select last_login_date from admin_mst_tuser
+    where user_gid = v_user_gid
+    and delete_flag = 'N');
+
+
   select min(tran_date) into v_min_tran_date from recon_trn_ttran;
 
-  
+
   select date(concat(cast(year(curdate()) as nchar),'-04-01')) into v_fin_start_date;
 
   if curdate() < v_fin_start_date then
@@ -280,6 +296,7 @@ me:BEGIN
     v_out_result as out_result,
     v_out_msg as out_msg,
     v_user_status as user_status,
+    v_last_login_date as lastlogin,
     CAST(date_format(ifnull(v_min_tran_date,curdate()),'%d-%m-%Y')AS CHAR(50)) as min_tran_date,
     CAST(date_format(v_fin_start_date,'%d-%m-%Y')AS CHAR(50)) as fin_start_date;
 END $$

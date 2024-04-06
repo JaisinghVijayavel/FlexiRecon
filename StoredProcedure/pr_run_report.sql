@@ -113,6 +113,10 @@ me:BEGIN
   set v_report_default_condition = ifnull(v_report_default_condition,'');
   set v_sort_order = ifnull(v_sort_order,'');
 
+  if v_sort_order <> '' then
+    set v_sort_order = concat('order by ',v_sort_order);
+  end if;
+
   set in_report_condition = ifnull(in_report_condition,'');
 
   if in_recon_code <> '' and v_recon_flag = 'Y' then
@@ -134,21 +138,27 @@ me:BEGIN
 
   if v_report_exec_type = 'S' and v_sp_name <> '' then
     if v_job_gid = 0 then
-      set v_sql = "delete from  recon_trn_tpreview where job_gid = 0";
+      set v_sql = "delete from  recon_trn_tpreview where job_gid = 0 and rptsession_gid = 0";
       call pr_run_sql(v_sql,@msg,@result);
 
-      set v_sql = "delete from  recon_trn_tpreviewdtl where job_gid = 0";
+      set v_sql = "delete from  recon_trn_tpreviewdtl where job_gid = 0 and rptsession_gid = 0";
+      call pr_run_sql(v_sql,@msg,@result);
+
+      set v_sql = concat("delete from ",v_table_name," where job_gid = 0 and rptsession_gid = 0 ");
+
       call pr_run_sql(v_sql,@msg,@result);
     end if;
 
-    call pr_run_sp(in_recon_code,v_sp_name,v_job_gid,0,in_report_condition,in_user_code,@msg,@result);
+    call pr_run_sp(in_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sort_order,in_user_code,@msg,@result);
     call pr_get_tablequery(in_recon_code,v_table_name,concat(' and job_gid = ', cast(v_job_gid as nchar) ,' '),v_job_gid,in_user_code,@msg,@result);
 
+    /*
     if v_job_gid = 0 then
       set v_sql = concat("delete from ",v_table_name," where job_gid = 0");
 
       call pr_run_sql(v_sql,@msg,@result);
     end if;
+    */
   else
     call pr_get_tablequery(in_recon_code,v_table_name,in_report_condition,v_job_gid,in_user_code,@msg,@result);
   end if;

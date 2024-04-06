@@ -11,6 +11,7 @@ CREATE PROCEDURE `pr_run_theme`(
 )
 me:BEGIN
   declare v_theme_code text default '';
+  declare v_theme_desc text default '';
 
   declare v_recon_date_flag text default '';
   declare v_recon_date_field text default '';
@@ -101,7 +102,7 @@ me:BEGIN
     declare theme_done int default 0;
     declare theme_cursor cursor for
       select
-        theme_code
+        theme_code,theme_desc
       from recon_mst_ttheme
       where recon_code = in_recon_code
       and active_status = 'Y'
@@ -112,11 +113,12 @@ me:BEGIN
     open theme_cursor;
 
     theme_loop: loop
-      fetch theme_cursor into v_theme_code;
+      fetch theme_cursor into v_theme_code,v_theme_desc;
 
       if theme_done = 1 then leave theme_loop; end if;
 
       set v_theme_code = ifnull(v_theme_code,'');
+      set v_theme_desc = ifnull(v_theme_desc,'');
 
       -- filter condition
       if v_theme_code <> '' then
@@ -190,9 +192,9 @@ me:BEGIN
         end if;
 
         set v_sql = 'update $TABLENAME$ set ';
-        set v_sql = concat(v_sql,'theme_code = concat(if(theme_code is null,',char(39),v_theme_code,char(39),',');
+        set v_sql = concat(v_sql,'theme_code = concat(if(theme_code is null,',char(39),v_theme_desc,char(39),',');
         set v_sql = concat(v_sql,'concat(theme_code,',char(39),',',char(39),',');
-        set v_sql = concat(v_sql,char(39),v_theme_code,char(39),'))) ');
+        set v_sql = concat(v_sql,char(39),v_theme_desc,char(39),'))) ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql, v_theme_filter);

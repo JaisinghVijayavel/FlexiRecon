@@ -35,11 +35,15 @@ begin
     */
   end if;
 
+  /*
   if txt = '' then
     return null;
   else
     return txt;
   end if;
+  */
+
+  return txt;
 end $$
 
 DELIMITER ;

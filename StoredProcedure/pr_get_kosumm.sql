@@ -135,7 +135,7 @@ me:BEGIN
   )
   select
     d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
-    r.recon_name,t.dataset_code,t.tran_acc_mode,d.ko_mult,e.rule_name,e.rule_order
+    r.recon_name,t.dataset_code,if(d.ko_mult=-1,'D','C'),d.ko_mult,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
   inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'
@@ -152,7 +152,7 @@ me:BEGIN
   )
   select
     d.kodtl_gid,r.recon_code,d.tran_gid,d.ko_value,k.manual_matchoff,
-    r.recon_name,t.dataset_code,t.tran_acc_mode,d.ko_mult,e.rule_name,e.rule_order
+    r.recon_name,t.dataset_code,if(d.ko_mult=-1,'D','C'),d.ko_mult,e.rule_name,e.rule_order
   from recon_tmp_treconcode as r
   inner join recon_trn_tko as k on r.recon_code = k.recon_code
   inner join recon_trn_tkodtl as d on k.ko_gid = d.ko_gid and d.delete_flag = 'N'

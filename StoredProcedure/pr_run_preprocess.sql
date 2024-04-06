@@ -157,6 +157,16 @@ me:BEGIN
         set v_lookup_dataset_code = concat(v_dataset_db_name,'.',v_lookup_dataset_code);
       end if;
 
+      if v_process_method = 'QCD_QUERY' then
+        set v_process_method = 'Q';
+      elseif v_process_method = 'QCD_LOOKUP' then
+        set v_process_method = 'L';
+      elseif v_process_method = 'QCD_FUNCTION' then
+        set v_process_method = 'F';
+      else
+        set v_process_method = '';
+      end if;
+
       -- filter condition
       if v_process_method <> 'Q' then
         set v_preprocess_filter = ' and ';

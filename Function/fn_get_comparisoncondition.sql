@@ -91,7 +91,8 @@ begin
   else
     set in_comparison_field = v_org_target_field;
     set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
-    set v_txt = concat(' ',in_source_field,' ',in_comparison_criteria,' ',in_comparison_field,' ');
+    -- set v_txt = concat(' ',in_source_field,' ',in_comparison_criteria,' ',in_comparison_field,' ');
+    set v_txt = concat(' ',in_comparison_field,' ',in_comparison_criteria,' ',in_source_field,' ');
   end if;
 
   return v_txt;

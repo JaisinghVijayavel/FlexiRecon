@@ -1,4 +1,4 @@
-DELIMITER $$
+﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_recon_mst_treconfieldmapping` $$
 CREATE PROCEDURE `pr_recon_mst_treconfieldmapping`
@@ -9,7 +9,7 @@ CREATE PROCEDURE `pr_recon_mst_treconfieldmapping`
 	in in_acc_code varchar(32),
 	in in_recon_field_name varchar(255),
 	in in_filetemplate_field_name varchar(255),
-	in in_action varchar(16),
+	in in_action varchar(32),
 	in in_action_by varchar(32),
 	out out_msg text,
 	out out_result int(10)
@@ -60,22 +60,23 @@ me:BEGIN
   if in_action = "INSERT" then
 		if exists(select reconfieldmapping_gid from recon_mst_treconfieldmapping 
 			where recon_field_name = in_recon_field_name
-            and delete_flag = 'N') then
+      and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Duplicate record,');
 			set err_flag := true;
 		end if;
 	end if;
-	
+
   if err_flag = true then
 		set out_result = 0;
 		set out_msg = err_msg;
     leave me;
 	end if;
-	
+
   start transaction;
+
 	if (in_action = 'INSERT') then
-		set in_reconfieldmapping_gid = 0;  
-		
+		set in_reconfieldmapping_gid = 0;
+
     insert into recon_mst_treconfieldmapping
 		(
 			reconfieldmapping_gid,
@@ -98,39 +99,40 @@ me:BEGIN
 			sysdate(),
 			in_action_by
 		);
-                
-				select max(reconfieldmapping_gid) into v_reconfieldmapping_gid from recon_mst_treconfieldmapping;
-				set in_reconfieldmapping_gid = v_reconfieldmapping_gid;
-				set v_msg = 'Record saved successfully.. !';
-			elseif(in_action = 'UPDATE') then
-				update recon_mst_treconfieldmapping set
-					recon_code = in_recon_code,
-                    filetemplate_code = in_filetemplate_code,
-                    acc_code = in_acc_code,
-                    recon_field_name = in_recon_field_name,
-                    filetemplate_field_name = in_filetemplate_field_name,
-                    update_date = sysdate(),
-                    update_by = in_action_by
-				where reconfieldmapping_gid = in_reconfieldmapping_gid
-                and delete_flag = 'N';
-                
-				set v_reconfieldmapping_gid = in_reconfieldmapping_gid;
-				set v_msg = 'Record Updated Successfully.. !';
-			elseif(in_action = 'DELETE') then 
-				update recon_mst_treconfieldmapping set
-					update_date = sysdate(),
-                    update_by = in_action_by,
-                    delete_flag = 'Y'  
-				where reconfieldmapping_gid = in_reconfieldmapping_gid
-                and delete_flag = 'N';
-                
-				set v_reconfieldmapping_gid = in_reconfieldmapping_gid;
-				set v_msg = 'Record deleted successfully.. !';
-        end if;
-    commit;
-    
-    	set out_result = 1;
-		set out_msg = v_msg;
+
+    select max(reconfieldmapping_gid) into v_reconfieldmapping_gid from recon_mst_treconfieldmapping;
+    set in_reconfieldmapping_gid = v_reconfieldmapping_gid;
+    set v_msg = 'Record saved successfully.. !';
+  elseif(in_action = 'UPDATE') then
+    update recon_mst_treconfieldmapping set
+      recon_code = in_recon_code,
+      filetemplate_code = in_filetemplate_code,
+      acc_code = in_acc_code,
+      recon_field_name = in_recon_field_name,
+      filetemplate_field_name = in_filetemplate_field_name,
+      update_date = sysdate(),
+      update_by = in_action_by
+    where reconfieldmapping_gid = in_reconfieldmapping_gid
+    and delete_flag = 'N';
+
+    set v_reconfieldmapping_gid = in_reconfieldmapping_gid;
+    set v_msg = 'Record Updated Successfully.. !';
+  elseif(in_action = 'DELETE') then
+    update recon_mst_treconfieldmapping set
+      update_date = sysdate(),
+      update_by = in_action_by,
+      delete_flag = 'Y'
+    where reconfieldmapping_gid = in_reconfieldmapping_gid
+    and delete_flag = 'N';
+
+    set v_reconfieldmapping_gid = in_reconfieldmapping_gid;
+    set v_msg = 'Record deleted successfully.. !';
+  end if;
+
+  commit;
+
+  set out_result = 1;
+  set out_msg = v_msg;
 END $$
 
 DELIMITER ;

@@ -7,6 +7,7 @@ CREATE PROCEDURE `pr_recon_mst_trulesetup`
 	in in_rule_code varchar(32),
 	in in_rule_name varchar(255),
 	in in_recon_code varchar(32),
+  in in_probableflag varchar(32),
 	in in_rule_order decimal(9,2),
 	in in_period_from date,
 	in in_period_to date,
@@ -20,7 +21,7 @@ CREATE PROCEDURE `pr_recon_mst_trulesetup`
 	in in_parent_dataset_code varchar(32),
 	in in_parent_acc_mode varchar(32),
 	in in_active_status char(1),
-	in in_action varchar(16),
+	in in_action varchar(32),
 	in in_action_by varchar(32),
 	in in_user_code varchar(32),
 	in in_role_code varchar(32),
@@ -44,6 +45,7 @@ me:BEGIN
 	declare v_rule_gid int default 0;
   declare v_result int default 0;
 	declare v_msg text default '';
+  declare v_system_match_flag text default '';
 
   set in_comparison_dataset_code = ifnull(in_comparison_dataset_code,'');
   set in_comparison_acc_mode = ifnull(in_comparison_acc_mode,'');
@@ -64,14 +66,14 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Rule name cannot be empty,');
 			set err_flag := true;
 		end if;
-		
-		if not exists(select recon_gid from recon_mst_trecon 
+
+		if not exists(select recon_gid from recon_mst_trecon
 			where recon_code = in_recon_code
 			and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Invalid recon code');
 			set err_flag := true;
 		end if;
-		
+
 		if in_applyrule_on <> 'T' and in_applyrule_on <> 'S' or in_applyrule_on is null then
 			set err_msg := concat(err_msg,'Invalid applyrule value,');
 			set err_flag := true;
@@ -131,6 +133,15 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Invalid active status value,');
 			set err_flag := true;
 		end if;
+
+    if in_probableflag <> 'Y'and
+       in_probableflag <> 'N'or
+       in_probableflag is null then
+      set err_msg := concat(err_msg,'Invalid probableflag value,');
+      set err_flag := true;
+    elseif in_probableflag = 'Y' then
+      set v_system_match_flag = 'N';
+    end if;
 
     if in_group_flag is null then
 			set err_msg := concat(err_msg,'Invalid group flag value,');
@@ -230,6 +241,8 @@ me:BEGIN
 			comparison_dataset_code,
 			comparison_acc_mode,
 			group_flag,
+      system_match_flag,
+      probable_match_flag,
 			active_status,
 			insert_date,
 			insert_by
@@ -249,6 +262,8 @@ me:BEGIN
 			in_comparison_dataset_code,
 			in_comparison_acc_mode,
 			in_group_flag,
+      v_system_match_flag,
+      in_probableflag,
 			in_active_status,
 			sysdate(),
 			in_action_by
@@ -274,7 +289,9 @@ me:BEGIN
 			comparison_dataset_code = in_comparison_dataset_code,
 			comparison_acc_mode = in_comparison_acc_mode,
 			group_flag = in_group_flag,
-			active_status = in_active_status,
+      system_match_flag= v_system_match_flag,
+      probable_match_flag=in_probableflag,
+      active_status = in_active_status,
 			update_date = sysdate(),
 			update_by = in_action_by
 		where rule_gid = in_rule_gid

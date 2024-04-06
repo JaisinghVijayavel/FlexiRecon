@@ -34,7 +34,7 @@ me:BEGIN
       in_recon_code,
       'QCD_L3',
       v_master_syscode,
-      'A',
+      'Y',
       sysdate(),
       in_user_code
     );
