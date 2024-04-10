@@ -3,6 +3,8 @@
 DROP PROCEDURE IF EXISTS `pr_run_dynamicreport` $$
 CREATE PROCEDURE `pr_run_dynamicreport`(
   in in_reporttemplate_code varchar(32),
+  in in_recon_code varchar(32),
+  in in_report_code varchar(32),
   in in_report_param text,
   in in_report_condition text,
   in in_outputfile_flag boolean,
@@ -53,22 +55,31 @@ me:BEGIN
     MESSAGE_TEXT = @text;
   END;
 
-  select
-    recon_code,
-    report_code,
-    sortby_code
-  into
-    v_recon_code,
-    v_report_code,
-    v_sortby_code
-  from recon_mst_treporttemplate
-  where reporttemplate_code = in_reporttemplate_code
-  and delete_flag = 'N';
+  set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
-  set v_recon_code = ifnull(v_recon_code,'');
-  set v_report_code = ifnull(v_report_code,'');
-  set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
+  if in_reporttemplate_code <> '' then
+    select
+      recon_code,
+      report_code,
+      sortby_code
+    into
+      v_recon_code,
+      v_report_code,
+      v_sortby_code
+    from recon_mst_treporttemplate
+    where reporttemplate_code = in_reporttemplate_code
+    and delete_flag = 'N';
 
+    set v_recon_code = ifnull(v_recon_code,'');
+    set v_report_code = ifnull(v_report_code,'');
+    set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
+  else
+    set v_recon_code = ifnull(in_recon_code,'');
+    set v_report_code = ifnull(in_report_code,'');
+    set v_sortby_code = 'asc';
+  end if;
+
+  -- file type xlsx/csv
   set in_outputfile_type = lower(in_outputfile_type);
 
   if exists(select report_desc from recon_mst_treport
@@ -123,15 +134,27 @@ me:BEGIN
   end if;
 
   -- sorting order
-  select
-    group_concat(report_field)
-  into
-    v_sorting_order
-  from recon_mst_treporttemplatesorting
-  where reporttemplate_code = in_reporttemplate_code
-  and active_status = 'Y'
-  and delete_flag = 'N'
-  order by sorting_order;
+  if in_reporttemplate_code <> '' then
+    select
+      group_concat(report_field)
+    into
+      v_sorting_order
+    from recon_mst_treporttemplatesorting
+    where reporttemplate_code = in_reporttemplate_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by sorting_order;
+  else
+    select
+      group_concat(report_field)
+    into
+      v_sorting_order
+    from recon_mst_treportsorting
+    where report_code = v_report_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by sorting_order;
+  end if;
 
   set v_sorting_order = ifnull(v_sorting_order,'');
 
@@ -185,6 +208,8 @@ me:BEGIN
 
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
   set out_result = v_job_gid;
+
+  select out_result as result, out_msg as msg;
 end $$
 
 DELIMITER ;

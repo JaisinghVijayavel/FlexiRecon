@@ -33,12 +33,10 @@ begin
     call pr_run_kotranreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranwithbrkpreport' then
     call pr_run_tranwithbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
-  elseif in_sp_name = 'pr_run_tranthemereport' then
-    call pr_run_tranthemereport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
-  elseif in_sp_name = 'pr_run_tranbrkpthemereport' then
-    call pr_run_tranbrkpthemereport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
-  elseif in_sp_name = 'pr_run_tranwithbrkpthemereport' then
-    call pr_run_tranwithbrkpthemereport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_errorlogreport' then
+    call pr_run_errorlogreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_accbalreport' then
+    call pr_run_accbalreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   end if;
 
   set out_msg = @msg;

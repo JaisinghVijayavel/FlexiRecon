@@ -46,7 +46,7 @@ begin
   set v_field_format = ifnull(v_field_format,'');
 
   if v_field_type = 'INTEGER' then
-    set v_txt = concat('ifnull(cast(',in_field_name,' as unsigned),0)');
+    set v_txt = concat('ifnull(cast(',in_field_name,' as signed),0)');
   elseif v_field_type = 'NUMERIC' then
     if v_field_format = '' then
       set v_field_format = '15,2';

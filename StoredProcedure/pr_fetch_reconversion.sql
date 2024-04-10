@@ -12,6 +12,7 @@ BEGIN
   select
     rule_gid,
     rule_code,
+    b.rule_order,
     rule_name,
     a.recon_code,
     a.recon_name,
@@ -20,7 +21,8 @@ BEGIN
     c.dataset_name as source_dataset_desc,
     comparison_dataset_code,
     d.dataset_name as comparison_dataset_desc,
-    a.recon_rule_version,system_match_flag,
+    a.recon_rule_version,
+    system_match_flag,
     case system_match_flag
       when 'Y' then 'YES'
       else 'NO'
@@ -29,7 +31,12 @@ BEGIN
     case hold_flag
       when 'Y' then 'YES'
       else 'NO'
-    end as hold_flag_desc
+    end as hold_flag_desc,
+    probable_match_flag as probable_flag,
+    case probable_match_flag
+      when 'Y' then 'YES'
+      else 'NO'
+    end as probable_match_desc
   from recon_mst_trecon a
   inner join recon_mst_trule b on a.recon_code=b.recon_code
     and b.active_status = 'Y' and b.delete_flag = 'N'

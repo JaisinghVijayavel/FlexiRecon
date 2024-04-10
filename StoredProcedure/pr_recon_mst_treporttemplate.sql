@@ -24,7 +24,7 @@ me:BEGIN
     Created Date : 13-02-2024
 
     Updated By : Vijayavel
-    Updated Date : 29-03-2024
+    Updated Date : 07-04-2024
 
     Version No : 1
   */
@@ -32,6 +32,7 @@ me:BEGIN
 	declare err_flag boolean default false;
 	declare v_msg text default '';
 	declare v_reporttemplate_gid int default 0;
+  declare v_rpt_table_name text default '';
 
 	if(in_action = 'INSERT' or in_action = 'UPDATE') then
 		if in_reporttemplate_name = '' or in_reporttemplate_name is null then
@@ -56,6 +57,18 @@ me:BEGIN
 	end if;
 
 	if (in_action = 'INSERT') then
+    -- get rpt_table_name
+    select
+      table_name
+    into
+      v_rpt_table_name
+    from recon_mst_treport
+    where report_code = in_report_code
+    and delete_flag = 'N';
+
+    set v_rpt_table_name = ifnull(v_rpt_table_name,'');
+
+    -- template variable
 		set in_reporttemplate_code = fn_get_autocode('RT');
 		set in_reporttemplate_gid = 0;
 
@@ -89,6 +102,124 @@ me:BEGIN
 		select max(reporttemplate_gid) into v_reporttemplate_gid from recon_mst_treporttemplate;
 
 		set in_reporttemplate_gid = v_reporttemplate_gid;
+
+    -- insert in recon_mst_treporttemplatefilter
+    insert into recon_mst_treporttemplatefilter
+    (
+      reporttemplate_code,
+      filter_seqno,
+      report_field,
+      filter_criteria,
+      filter_value,
+      open_parentheses_flag,
+      close_parentheses_flag,
+      join_condition,
+      system_flag,
+      active_status,
+      insert_date,
+      insert_by
+    )
+    select
+      in_reporttemplate_code,
+      filter_seqno,
+      report_field,
+      filter_criteria,
+      filter_value,
+      open_parentheses_flag,
+      close_parentheses_flag,
+      join_condition,
+      'Y',
+      active_status,
+      sysdate(),
+      in_user_code
+    from recon_mst_treportfilter
+    where report_code = in_report_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by filter_seqno;
+
+    -- insert in recon_mst_treporttemplatesorting
+    insert into recon_mst_treporttemplatesorting
+    (
+      reporttemplate_code,
+      report_field,
+      sorting_order,
+      active_status,
+      insert_date,
+      insert_by
+    )
+    select
+      in_reporttemplate_code,
+      report_field,
+      sorting_order,
+      active_status,
+      sysdate(),
+      in_user_code
+    from recon_mst_treportsorting
+    where report_code = in_report_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by sorting_order;
+
+    -- insert in recon_mst_treporttemplatefield
+    set @sno := 0;
+
+		insert into recon_mst_treporttemplatefield
+		(
+			reporttemplate_code,
+			report_field,
+			display_desc,
+			display_flag,
+			display_order,
+			system_flag,
+			active_status,
+			insert_date,
+			insert_by
+		)
+		SELECT
+			in_reporttemplate_code,
+			field_name,
+			report_field_desc,
+			'Y',
+			@sno := @sno + 1,
+			'Y',
+      'Y',
+      sysdate(),
+      in_user_code
+		FROM recon_mst_tsystemfield
+		WHERE table_name = v_rpt_table_name
+		and active_status = 'Y'
+		and delete_flag = 'N'
+		order by display_order;
+
+		insert ignore into recon_mst_treporttemplatefield
+		(
+			reporttemplate_code,
+			report_field,
+			display_desc,
+			display_flag,
+			display_order,
+			system_flag,
+			active_status,
+			insert_date,
+			insert_by
+		)
+		SELECT
+			in_reporttemplate_code,
+      recon_field_name,
+      fn_get_reconfieldname(recon_code,recon_field_name),
+			'Y',
+			@sno := @sno + 1,
+			'N',
+      'Y',
+      sysdate(),
+      in_user_code
+    from recon_mst_treconfield
+    where recon_code = in_recon_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by display_order;
+
 		set out_result = 1;
 		set out_msg = 'Record saved successfully.. !';
 	elseif(in_action = 'UPDATE') then

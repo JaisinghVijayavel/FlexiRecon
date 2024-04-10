@@ -191,6 +191,8 @@ me:BEGIN
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
+    left join recon_trn_ttranko as g on b.tran_gid = g.tran_gid and 1 = 2
+    left join recon_trn_ttran as h on b.tran_gid = h.tran_gid and 1 = 2
 		where true ", in_condition,"
 
     union
@@ -366,6 +368,8 @@ me:BEGIN
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
+    left join recon_trn_ttranko as g on b.tran_gid = g.tran_gid and 1 = 2
+    left join recon_trn_ttran as h on b.tran_gid = h.tran_gid and 1 = 2
 		where true ", in_condition,"
 
     union

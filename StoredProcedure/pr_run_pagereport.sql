@@ -3,6 +3,8 @@
 DROP PROCEDURE IF EXISTS `pr_run_pagereport` $$
 CREATE PROCEDURE `pr_run_pagereport`(
   in in_reporttemplate_code varchar(32),
+  in in_recon_code varchar(32),
+  in in_report_code varchar(32),
   in in_report_condition text,
   in in_ip_addr varchar(255),
   in in_user_code varchar(32),
@@ -49,22 +51,30 @@ me:BEGIN
   END;
   */
 
-  -- get report template code
-  select
-    recon_code,
-    report_code,
-    sortby_code
-  into
-    v_recon_code,
-    v_report_code,
-    v_sortby_code
-  from recon_mst_treporttemplate
-  where reporttemplate_code = in_reporttemplate_code
-  and delete_flag = 'N';
+  set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
-  set v_recon_code = ifnull(v_recon_code,'');
-  set v_report_code = ifnull(v_report_code,'');
-  set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
+  -- get report and recon code
+  if in_reporttemplate_code <> '' then
+    select
+      recon_code,
+      report_code,
+      sortby_code
+    into
+      v_recon_code,
+      v_report_code,
+      v_sortby_code
+    from recon_mst_treporttemplate
+    where reporttemplate_code = in_reporttemplate_code
+    and delete_flag = 'N';
+
+    set v_recon_code = ifnull(v_recon_code,'');
+    set v_report_code = ifnull(v_report_code,'');
+    set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
+  else
+    set v_recon_code = ifnull(in_recon_code,'');
+    set v_report_code = ifnull(in_report_code,'');
+    set v_sortby_code = 'asc';
+  end if;
 
   if exists(select report_desc from recon_mst_treport
      where report_code = v_report_code
@@ -88,33 +98,11 @@ me:BEGIN
     from recon_mst_treport
     where report_code = v_report_code
     and delete_flag = 'N';
-  elseif exists(select report_desc from recon_mst_treport
-     where report_code = v_report_code
-     and delete_flag = 'N') then
-    select
-      report_code,
-      report_desc,
-      table_name,
-      src_table_name,
-      sp_name,
-      recon_code_field,
-      default_condition
-    into
-      v_report_code,
-      v_report_desc,
-      v_table_name,
-      v_src_table_name,
-      v_sp_name,
-      v_recon_code_field,
-      v_report_default_condition
-    from recon_mst_treport
-    where report_code = v_report_code
-    and delete_flag = 'N';
   else
-      set out_msg = 'Invalid report';
-      set out_result = 0;
+    set out_msg = 'Invalid report';
+    set out_result = 0;
 
-      leave me;
+    leave me;
   end if;
 
   set v_report_code = ifnull(v_report_code,'');
@@ -122,7 +110,7 @@ me:BEGIN
   set v_table_name = ifnull(v_table_name,'');
   set v_src_table_name = ifnull(v_src_table_name,'');
   set v_sp_name = ifnull(v_sp_name,'');
-  set v_recon_code_field = ifnull(v_recon_code_field,'recon_code');
+  set v_recon_code_field = ifnull(v_recon_code_field,'');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
 
   if v_table_name = '' then
@@ -134,20 +122,34 @@ me:BEGIN
 
   set in_report_condition = ifnull(in_report_condition,'');
 
-  set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(34),v_recon_code,char(34),' ', in_report_condition);
+  if v_recon_code_field <> '' then
+    set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(34),v_recon_code,char(34),' ', in_report_condition);
+  end if;
 
   set in_report_condition = concat(in_report_condition,' ',v_report_default_condition);
 
   -- sorting order
-  select
-    group_concat(report_field)
-  into
-    v_sorting_order
-  from recon_mst_treporttemplatesorting
-  where reporttemplate_code = in_reporttemplate_code
-  and active_status = 'Y'
-  and delete_flag = 'N'
-  order by sorting_order;
+  if in_reporttemplate_code <> '' then
+    select
+      group_concat(report_field)
+    into
+      v_sorting_order
+    from recon_mst_treporttemplatesorting
+    where reporttemplate_code = in_reporttemplate_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by sorting_order;
+  else
+    select
+      group_concat(report_field)
+    into
+      v_sorting_order
+    from recon_mst_treportsorting
+    where report_code = v_report_code
+    and active_status = 'Y'
+    and delete_flag = 'N'
+    order by sorting_order;
+  end if;
 
   set v_sorting_order = ifnull(v_sorting_order,'');
 

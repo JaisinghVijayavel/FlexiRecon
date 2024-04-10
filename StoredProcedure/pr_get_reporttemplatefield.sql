@@ -3,7 +3,9 @@
 DROP PROCEDURE IF EXISTS `pr_get_reporttemplatefield` $$
 CREATE PROCEDURE `pr_get_reporttemplatefield`
 (
-  in_reporttemplate_code varchar(32)
+  in_reporttemplate_code varchar(32),
+  in_recon_code varchar(32),
+  in_report_code varchar(32)
 )
 BEGIN
     declare v_report_code text default '';
@@ -12,6 +14,8 @@ BEGIN
     declare v_src_table_name text default '';
     declare v_rpt_table_name text default '';
     declare v_recon_field_prefix text default '';
+
+    set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
     select
       report_code,
@@ -23,12 +27,21 @@ BEGIN
     where reporttemplate_code = in_reporttemplate_code
     and delete_flag = 'N';
 
+    set v_report_code = ifnull(v_report_code,'');
+    set v_recon_code = ifnull(v_recon_code,'');
+
+    if in_reporttemplate_code = '' then
+      set v_recon_code = in_recon_code;
+      set v_report_code = in_report_code;
+    end if;
+
     if exists(select * from recon_mst_treporttemplatefield
       where reporttemplate_code = in_reporttemplate_code
       and delete_flag = 'N') then
       select
         report_field,
         fn_get_reconfieldname(v_recon_code,report_field) as report_field_desc,
+        display_desc,
         display_flag,
         display_order
       from recon_mst_treporttemplatefield
@@ -108,6 +121,7 @@ BEGIN
       select
         reportparam_code as report_field,
         reportparam_desc as report_field_desc,
+        reportparam_desc as display_desc,
         display_flag,
         reportparam_order as display_order
       from recon_tmp_treportparam

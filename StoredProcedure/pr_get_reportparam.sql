@@ -47,7 +47,7 @@ BEGIN
 
       set @sno := 0;
 
-      insert into recon_tmp_treportparam
+      insert ignore into recon_tmp_treportparam
       (
         report_code,
         reportparam_code,

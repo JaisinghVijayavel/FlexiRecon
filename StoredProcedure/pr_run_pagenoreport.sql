@@ -3,6 +3,8 @@
 DROP PROCEDURE IF EXISTS `pr_run_pagenoreport` $$
 CREATE PROCEDURE `pr_run_pagenoreport`(
   in in_reporttemplate_code varchar(32),
+  in in_recon_code varchar(32),
+  in in_report_code varchar(32),
   in in_rptsession_gid int,
   in in_page_no int,
   in in_page_size int,
@@ -37,17 +39,24 @@ me:BEGIN
     MESSAGE_TEXT = @text;
   END;
 
-  -- get recon code
-  select
-    recon_code,report_code
-  into
-    v_recon_code,v_report_code
-  from recon_mst_treporttemplate
-  where reporttemplate_code = in_reporttemplate_code
-  and delete_flag = 'N';
+  set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
-  set v_recon_code = ifnull(v_recon_code,'');
-  set v_report_code = ifnull(v_report_code,'');
+  -- get recon code
+  if in_reporttemplate_code <> '' then
+    select
+      recon_code,report_code
+    into
+      v_recon_code,v_report_code
+    from recon_mst_treporttemplate
+    where reporttemplate_code = in_reporttemplate_code
+    and delete_flag = 'N';
+
+    set v_recon_code = ifnull(v_recon_code,'');
+    set v_report_code = ifnull(v_report_code,'');
+  else
+    set v_recon_code = ifnull(in_recon_code,'');
+    set v_report_code = ifnull(in_report_code,'');
+  end if;
 
   if exists(select rptsession_gid from recon_trn_treportsession
      where rptsession_gid = in_rptsession_gid
@@ -80,7 +89,6 @@ me:BEGIN
 
   set v_condition = concat('and rptsession_gid = ',cast(in_rptsession_gid as nchar) ,' ');
   set v_condition = concat(v_condition,' limit ',cast(v_start_rec_no as nchar),',',cast(in_page_size as nchar),' ');
-
 
   call pr_run_tablequery(in_reporttemplate_code,
                          v_recon_code,

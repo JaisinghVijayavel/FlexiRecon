@@ -343,7 +343,7 @@ me:BEGIN
         probable_match_flag
       from recon_mst_trule
       where recon_code = in_recon_code
-      and hold_flag = 'N' 
+      and hold_flag = 'N'
       and delete_flag = 'N'
       order by rule_order;
     declare continue handler for not found set rule_done=1;
@@ -398,11 +398,6 @@ me:BEGIN
   set v_job_input_param = concat(v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format),char(13),char(10));
   set v_job_input_param = concat(v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format),char(13),char(10));
 
-  -- job remark
-  set v_txt = concat('Rule version applied : ',v_recon_rule_version);
-
-  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
-
   if in_automatch_flag = 'N' then
     call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
 
@@ -422,7 +417,51 @@ me:BEGIN
 
     -- update theme
     call pr_run_theme(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+
+		-- rule theme
+		rule_theme_block:begin
+			declare rule_theme_done int default 0;
+			declare rule_theme_cursor cursor for
+				select
+					rule_code,
+					group_flag
+				from recon_mst_trule
+				where recon_code = in_recon_code
+				and system_match_flag = 'Y'
+				and rule_apply_on = 'T'
+				and hold_flag = 'N'
+        and active_status = 'Y'
+        and period_from <= curdate()
+        and (period_to >= curdate()
+        or until_active_flag 
+				and delete_flag = 'N'
+				order by rule_order;
+			declare continue handler for not found set rule_theme_done=1;
+
+			open rule_theme_cursor;
+
+			rule_theme_loop: loop
+				fetch rule_theme_cursor into v_rule_code,v_group_flag;
+
+				if rule_theme_done = 1 then leave rule_theme_loop; end if;
+
+				set v_rule_code = ifnull(v_rule_code,'');
+
+				call pr_run_automatch_theme(v_recon_code,v_rule_code,v_group_flag,v_job_gid,
+					in_period_from,in_period_to,'short',in_user_code,@msg,@result);
+
+				call pr_run_automatch_theme(v_recon_code,v_rule_code,v_group_flag,v_job_gid,
+					in_period_from,in_period_to,'excess',in_user_code,@msg,@result);
+			end loop rule_theme_loop;
+
+			close rule_theme_cursor;
+		end rule_theme_block;
   end if;
+
+  -- job remark
+  set v_txt = concat('Rule version applied : ',v_recon_rule_version);
+
+  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
 
   -- update the count
   if in_automatch_flag = 'Y' then

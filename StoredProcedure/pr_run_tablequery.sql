@@ -25,6 +25,9 @@ me:BEGIN
   declare v_file_name varchar(128) default '';
   declare v_table_stru_flag boolean default false;
   declare v_rpt_path text default '';
+  declare v_report_code text default '';
+  declare v_rpt_table_name text default '';
+  declare v_recon_field_prefix text default '';
   declare v_sortby_code varchar(32);
   declare v_sorting_field text default '';
 
@@ -36,12 +39,12 @@ me:BEGIN
 
   create temporary table recon_tmp_tfield
   (
-    field_gid int unsigned NOT NULL AUTO_INCREMENT,
     field_name varchar(255),
     field_alias_name text,
     field_type varchar(32),
-    primary key (field_gid),
-    key idx_field_name(field_name)
+    display_order decimal(7,3) not null default 0,
+    primary key (field_name),
+    key idx_display_order(display_order)
   ) ENGINE = MyISAM;
 
   create temporary table recon_tmp_tfielddisplay
@@ -55,23 +58,91 @@ me:BEGIN
 
   -- sortby
   select
+    report_code,
     sortby_code
   into
+    v_report_code,
     v_sortby_code
   from recon_mst_treporttemplate
   where reporttemplate_code = in_reporttemplate_code
   and delete_flag = 'N';
 
   set v_sortby_code = ifnull(v_sortby_code,'asc');
+  set v_report_code = ifnull(v_report_code,'');
 
-  if exists(select field_name from recon_mst_ttablestru
+  if exists(select field_name from recon_mst_tsystemfield
+    where table_name = in_table_name
+    and delete_flag = 'N') then
+    set @sno := 0;
+
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    select
+      field_name,
+      fn_get_reconfieldname(in_recon_code,field_name),
+      '' as field_type,
+      @sno := @sno + 1
+    from recon_mst_tsystemfield
+    where table_name = in_table_name
+    and delete_flag = 'N'
+    order by display_order;
+
+    insert ignore into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    select
+      a.recon_field_name,
+      fn_get_reconfieldname(in_recon_code,a.recon_field_name),
+      a.recon_field_type as field_type,
+      @sno := @sno + 1
+    from recon_mst_treconfield as a
+    inner join recon_mst_ttablestru as b on a.recon_field_name = b.field_name
+      and b.table_name = in_table_name
+      and b.delete_flag = 'N'
+    where a.recon_code = in_recon_code
+    and a.delete_flag = 'N'
+    order by a.display_order;
+  elseif exists(select field_name from recon_mst_ttablestru
     where table_name = in_table_name
     and delete_flag = 'N') then
 
-    insert into recon_tmp_tfield (field_name,field_alias_name,field_type)
+    set @sno := 0;
+
+    insert ignore into recon_tmp_tfield
+    (
+      field_name,
+      field_alias_name,
+      field_type,
+      display_order
+    )
+    select
+      field_name,
+      fn_get_reconfieldname(in_recon_code,field_name),
+      '' as field_type,
+      @sno := @sno + 1
+    from recon_mst_ttablestru
+    where table_name = in_table_name
+    and display_flag = 'Y'
+    and delete_flag = 'N'
+    order by display_order;
+
+    insert ignore into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    select
+      a.recon_field_name,
+      fn_get_reconfieldname(in_recon_code,a.recon_field_name),
+      a.recon_field_type as field_type,
+      @sno := @sno + 1
+    from recon_mst_treconfield as a
+    inner join recon_mst_ttablestru as b on a.recon_field_name = b.field_name
+      and b.table_name = in_table_name
+      and b.display_flag = 'N'
+      and b.delete_flag = 'N'
+    where a.recon_code = in_recon_code
+    and a.delete_flag = 'N'
+    order by a.display_order;
+
+    /*
+    insert ignore into recon_tmp_tfield (field_name,field_alias_name,field_type)
       select
         t.field_name,
-        ifnull(f.recon_field_desc,ifnull(s.field_alias_name,t.field_name)),
+        fn_get_reconfieldname(in_recon_code,t.field_name),
         ifnull(f.recon_field_type,'')
       from recon_mst_ttablestru as t
       left join recon_mst_treconfield as f on t.field_name = f.recon_field_name
@@ -84,6 +155,7 @@ me:BEGIN
       and t.delete_flag = 'N'
       order by if(ifnull(f.display_order,999)>t.display_order,t.display_order,f.display_order);
       -- order by if(t.field_name like 'col%',ifnull(f.display_order,128),t.display_order);
+    */
 
     set v_table_stru_flag := true;
   else
@@ -108,42 +180,62 @@ me:BEGIN
   if exists(select * from recon_mst_treporttemplatefield
     where reporttemplate_code = in_reporttemplate_code
     and delete_flag = 'N') then
-    insert into recon_tmp_tfielddisplay
+    -- get report table name
+    select
+      table_name,
+      recon_field_prefix
+    into
+      v_rpt_table_name,
+      v_recon_field_prefix
+    from recon_mst_treport
+    where report_code = v_report_code
+    and delete_flag = 'N';
+
+    set v_recon_field_prefix = ifnull(v_recon_field_prefix,'');
+
+    insert ignore into recon_tmp_tfielddisplay
     (
       field_name,
       display_flag,
       display_order
     )
     select
-      report_field,
-      display_flag,
-      display_order
-    from recon_mst_treporttemplatefield
-    where reporttemplate_code = in_reporttemplate_code
-    and active_status = 'Y'
-    and display_flag = 'Y'
-    and delete_flag = 'N';
+      ifnull(b.field_name,replace(a.report_field,v_recon_field_prefix,'')) as field_name,
+      a.display_flag,
+      a.display_order
+    from recon_mst_treporttemplatefield as a
+    left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
+      and b.table_name = in_table_name
+      and b.delete_flag = 'N'
+    where a.reporttemplate_code = in_reporttemplate_code
+    and a.active_status = 'Y'
+    and a.display_flag = 'Y'
+    and a.delete_flag = 'N'
+    order by a.display_order;
 
     -- sort order
     select
-      group_concat(if(instr(report_field,'.') = 0,report_field,SPLIT(report_field,'.',2)))
+      group_concat(ifnull(b.field_name,if(instr(a.report_field,'.') = 0,a.report_field,SPLIT(a.report_field,'.',2))))
     into
       v_sorting_field
-    from recon_mst_treporttemplatesorting
-    where reporttemplate_code = in_reporttemplate_code
-    and active_status = 'Y'
-    and delete_flag = 'N'
-    order by sorting_order;
+    from recon_mst_treporttemplatesorting as a
+    left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
+      and b.table_name = in_table_name
+      and b.delete_flag = 'N'
+    where a.reporttemplate_code = in_reporttemplate_code
+    and a.active_status = 'Y'
+    and a.delete_flag = 'N'
+    order by a.sorting_order;
 
     set v_sorting_field = ifnull(v_sorting_field,'');
   else
-    insert into recon_tmp_tfielddisplay
+    insert ignore into recon_tmp_tfielddisplay
     (
       field_name,
       display_flag,
       display_order
     )
-    select field_name,'Y',field_gid from recon_tmp_tfield;
+    select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
   end if;
 
   field_block:begin
