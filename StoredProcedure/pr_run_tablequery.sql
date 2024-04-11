@@ -70,7 +70,26 @@ me:BEGIN
   set v_sortby_code = ifnull(v_sortby_code,'asc');
   set v_report_code = ifnull(v_report_code,'');
 
-  if exists(select field_name from recon_mst_tsystemfield
+
+  if exists(select * from recon_mst_treporttemplatefield
+    where reporttemplate_code = in_reporttemplate_code
+    and delete_flag = 'N') then
+    set @sno := 0;
+
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    select
+      a.report_field,
+      a.display_desc,
+      ifnull(b.recon_field_type,'') as field_type,
+      a.display_order
+    from recon_mst_treporttemplatefield as a
+    left join recon_mst_treconfield as b on a.report_field = b.recon_field_name
+      and b.recon_code = in_recon_code
+      and b.delete_flag = 'N'
+    where a.reporttemplate_code = in_reporttemplate_code
+    and a.delete_flag = 'N'
+    order by a.display_order;
+  elseif exists(select field_name from recon_mst_tsystemfield
     where table_name = in_table_name
     and delete_flag = 'N') then
     set @sno := 0;

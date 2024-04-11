@@ -344,6 +344,10 @@ me:BEGIN
       from recon_mst_trule
       where recon_code = in_recon_code
       and hold_flag = 'N'
+      and active_status = 'Y'
+      and period_from <= curdate()
+      and (period_to >= curdate()
+      or until_active_flag = 'Y')
       and delete_flag = 'N'
       order by rule_order;
     declare continue handler for not found set rule_done=1;
@@ -433,7 +437,7 @@ me:BEGIN
         and active_status = 'Y'
         and period_from <= curdate()
         and (period_to >= curdate()
-        or until_active_flag 
+        or until_active_flag = 'Y')
 				and delete_flag = 'N'
 				order by rule_order;
 			declare continue handler for not found set rule_theme_done=1;

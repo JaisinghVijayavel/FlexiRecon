@@ -345,7 +345,8 @@ me:BEGIN
             from recon_mst_truleselefilter
             where rule_code = v_rule_code
             and active_status = 'Y'
-            and delete_flag = 'N';
+            and delete_flag = 'N'
+            order by filter_applied_on,ruleselefilter_seqno,ruleselefilter_gid;
 
             declare continue handler for not found set basefilter_done=1;
 
@@ -437,7 +438,8 @@ me:BEGIN
             from recon_mst_trulecondition as a
             where a.rule_code = v_rule_code
             and a.active_status = 'Y'
-            and a.delete_flag = 'N';
+            and a.delete_flag = 'N'
+            order by rulecondition_seqno,rulecondition_gid;
 
             declare continue handler for not found set rule_done=1;
 

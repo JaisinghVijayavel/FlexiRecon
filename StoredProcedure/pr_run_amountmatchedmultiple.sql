@@ -107,7 +107,7 @@ me:begin
   set v_sql = concat(v_sql,'select ',v_tran_field,' from recon_trn_ttran ');
   set v_sql = concat(v_sql,'where true ');
   set v_sql = concat(v_sql,in_condition,' ');
-  set v_sql = concat(v_sql,'and excp_value > 0 ');
+  set v_sql = concat(v_sql,'and excp_value <> 0 ');
   set v_sql = concat(v_sql,'and mapped_value = 0 ');
   set v_sql = concat(v_sql,'and delete_flag = ''N'' ');
 
@@ -141,6 +141,7 @@ me:begin
     sub_sno int not null default 0,
     tran_gid int not null default 0,
     tranbrkp_gid int not null default 0,
+    tran_mult tinyint not null default 0,
     excp_value double(15,2) not null default 0,
     primary key(gid),
     key idx_tran_gid(tran_gid),
@@ -185,26 +186,26 @@ me:begin
   call pr_run_sql(v_sql,v_out_msg,v_out_result);
 
   if v_recontype_code = 'W' or v_recontype_code = 'B' then
-    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,excp_value)
-    select m.sno,t.tran_gid,t.tranbrkp_gid,t.excp_value from recon_tmp_tvaluematched as m
+    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,tran_mult,excp_value)
+    select m.sno,t.tran_gid,t.tranbrkp_gid,-1,t.excp_value from recon_tmp_tvaluematched as m
     inner join recon_tmp_ttranvalue as t on m.tran_value = t.excp_value
                                   and t.tran_acc_mode = 'D'
                                   and t.delete_flag = 'N';
 
-    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,excp_value)
-    select m.sno,t.tran_gid,t.tranbrkp_gid,t.excp_value from recon_tmp_tvaluematched as m
+    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,tran_mult,excp_value)
+    select m.sno,t.tran_gid,t.tranbrkp_gid,1,t.excp_value from recon_tmp_tvaluematched as m
     inner join recon_tmp_ttranvalue as t on m.tran_value = t.excp_value
                                   and t.tran_acc_mode = 'C'
                                   and t.delete_flag = 'N';
   else
-    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,excp_value)
-    select m.sno,t.tran_gid,t.tranbrkp_gid,t.excp_value from recon_tmp_tvaluematched as m
+    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,tran_mult,excp_value)
+    select m.sno,t.tran_gid,t.tranbrkp_gid,t.tran_mult,t.excp_value from recon_tmp_tvaluematched as m
     inner join recon_tmp_ttranvalue as t on m.tran_value = t.excp_value
                                   and t.dataset_type = 'B'
                                   and t.delete_flag = 'N';
 
-    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,excp_value)
-    select m.sno,t.tran_gid,t.tranbrkp_gid,t.excp_value from recon_tmp_tvaluematched as m
+    insert into recon_tmp_ttranvaluematched (sno,tran_gid,tranbrkp_gid,tran_mult,excp_value)
+    select m.sno,t.tran_gid,t.tranbrkp_gid,t.tran_mult,t.excp_value from recon_tmp_tvaluematched as m
     inner join recon_tmp_ttranvalue as t on m.tran_value = t.excp_value
                                   and t.dataset_type = 'T'
                                   and t.delete_flag = 'N';
@@ -246,6 +247,7 @@ me:begin
     rptsession_gid,
     tran_gid,
     tranbrkp_gid,
+    tran_mult,
     excp_value
   )
   select
@@ -255,6 +257,7 @@ me:begin
     in_rptsession_gid,
     tran_gid,
     tranbrkp_gid,
+    tran_mult,
     excp_value
   from recon_tmp_ttranvaluematched;
 

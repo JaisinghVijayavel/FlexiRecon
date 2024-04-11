@@ -105,6 +105,7 @@ me:BEGIN
         theme_code,theme_desc
       from recon_mst_ttheme
       where recon_code = in_recon_code
+      and hold_flag = 'N' 
       and active_status = 'Y'
       and delete_flag = 'N'
       order by theme_order;

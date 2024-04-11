@@ -100,6 +100,7 @@ BEGIN
 			a.open_parentheses_flag,
 			a.close_parentheses_flag,
 			a.join_condition,
+      a.system_flag,
 			a.active_status,
 			fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
 		from recon_mst_treporttemplatefilter a
@@ -109,7 +110,7 @@ BEGIN
 		order by a.filter_seqno;
   else
 		select
-			0 as reporttemplatefilter_gid,
+			1 as reporttemplatefilter_gid,
 			a.filter_seqno,
 			a.report_field,
 			fn_get_reconfieldname(v_recon_code,a.report_field) as reportparam_value,
@@ -119,6 +120,7 @@ BEGIN
 			a.open_parentheses_flag,
 			a.close_parentheses_flag,
 			a.join_condition,
+      'Y' as system_flag,
 			a.active_status,
 			fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
 		from recon_mst_treportfilter a

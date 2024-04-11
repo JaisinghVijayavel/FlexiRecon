@@ -124,6 +124,7 @@ me:BEGIN
         lookup_return_field
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
+      and hold_flag = 'N' 
       and active_status = 'Y'
       and delete_flag = 'N'
       order by preprocess_order;

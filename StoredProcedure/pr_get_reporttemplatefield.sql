@@ -43,7 +43,8 @@ BEGIN
         fn_get_reconfieldname(v_recon_code,report_field) as report_field_desc,
         display_desc,
         display_flag,
-        display_order
+        display_order,
+        system_flag
       from recon_mst_treporttemplatefield
       where reporttemplate_code = in_reporttemplate_code
       and active_status = 'Y'
@@ -59,6 +60,7 @@ BEGIN
 				reportparam_desc varchar(255) not null,
         display_flag varchar(32) not null default 'N',
 				reportparam_order double(7,3) not null default 0,
+        system_flag varchar(32) not null default 'N',
 				PRIMARY KEY (report_code,reportparam_code),
 				key idx_reportparam_order(reportparam_order)
 			) ENGINE = MyISAM;
@@ -87,13 +89,15 @@ BEGIN
         report_code,
         reportparam_code,
         reportparam_desc,
-        reportparam_order
+        reportparam_order,
+        system_flag
       )
       SELECT
         v_report_code,
         field_name,
         report_field_desc,
-        @sno := @sno + 1
+        @sno := @sno + 1,
+        system_flag
       FROM recon_mst_tsystemfield
       WHERE table_name = v_rpt_table_name
       and active_status = 'Y'

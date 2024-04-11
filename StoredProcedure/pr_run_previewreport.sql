@@ -20,6 +20,7 @@ me:BEGIN
   set in_user_code = ifnull(in_user_code,'');
 
   set v_condition = concat(' and a.job_gid = ',cast(in_job_gid as nchar),' ');
+  set v_condition = concat(v_condition,' and a.rptsession_gid = ',cast(in_rptsession_gid as nchar),' ');
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tpreview
 		select
@@ -45,6 +46,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+      c.mapped_value,
+      c.roundoff_value,
       0,
       0,
       '',
@@ -213,6 +216,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+      0,
+      0,
       g.tran_value,
       g.excp_value,
       g.tran_acc_mode,

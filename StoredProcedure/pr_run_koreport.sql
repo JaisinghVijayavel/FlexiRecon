@@ -184,7 +184,11 @@ me:BEGIN
 			c.col128,
 		  c.tran_remark1,
 		  c.tran_remark2,
-      '' as tranbrkptype_name
+      '' as tranbrkptype_name,
+      c.value_debit,
+      c.value_credit,
+      c.bal_value_debit,
+      c.bal_value_credit
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
 		inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -361,7 +365,11 @@ me:BEGIN
 			c.col128,
 		  c.tran_remark1,
 		  c.tran_remark2,
-      '' as tranbrkptype_name
+      '' as tranbrkptype_name,
+      c.value_debit,
+      c.value_credit,
+      c.bal_value_debit,
+      c.bal_value_credit
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
 		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -538,7 +546,11 @@ me:BEGIN
 			c.col128,
 		  '' as tran_remark1,
 		  '' as tran_remark2,
-      f.dataset_name
+      f.dataset_name,
+      c.value_debit,
+      c.value_credit,
+      0,
+      0
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid
 		inner join recon_trn_ttranbrkpko as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
@@ -715,7 +727,11 @@ me:BEGIN
 			c.col128,
 		  '' as tran_remark1,
 		  '' as tran_remark2,
-      f.dataset_name
+      f.dataset_name,
+      c.value_debit,
+      c.value_credit,
+      0,
+      0
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid 
 		inner join recon_trn_ttranbrkp as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'

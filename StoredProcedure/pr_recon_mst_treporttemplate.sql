@@ -182,7 +182,7 @@ me:BEGIN
 			report_field_desc,
 			'Y',
 			@sno := @sno + 1,
-			'Y',
+			system_flag,
       'Y',
       sysdate(),
       in_user_code

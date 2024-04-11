@@ -27,7 +27,9 @@ me:BEGIN
   declare v_recon_flag text default '';
   declare v_report_default_condition text default '';
   declare v_sorting_order text default '';
+
   declare v_sql text default '';
+  declare v_txt text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -56,6 +58,7 @@ me:BEGIN
   END;
 
   set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
+  set in_outputfile_type = ifnull(in_outputfile_type,'');
 
   if in_reporttemplate_code <> '' then
     select
@@ -126,6 +129,32 @@ me:BEGIN
 
   set in_report_condition = concat(in_report_condition,' ',v_report_default_condition);
 
+  -- get report template name (if available)
+  set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
+
+  if exists(select * from recon_mst_treporttemplate
+     where reporttemplate_code = in_reporttemplate_code
+     and delete_flag = 'N') then
+
+    select
+      reporttemplate_name
+    into
+      v_txt
+    from recon_mst_treporttemplate
+    where reporttemplate_code = in_reporttemplate_code
+    and delete_flag = 'N';
+
+    set v_txt = ifnull(v_txt,'');
+
+    if v_txt <> '' then
+      set v_report_desc = v_txt;
+    end if;
+  end if;
+
+  if in_outputfile_type <> 'csv' and in_outputfile_type <> '' then
+    set v_report_desc = concat(v_report_desc,' (',in_outputfile_type,')');
+  end if;
+
   if v_table_name = '' then
     set out_msg = 'Invalid table name';
     set out_result = 0;
@@ -163,7 +192,7 @@ me:BEGIN
   end if;
 
   if in_outputfile_flag then
-    call pr_ins_job(v_recon_code,'R',0,concat('Generating ',v_report_desc),in_user_code,in_ip_addr,'I',in_report_param,'Initiated...',v_job_gid,@msg,@result);
+    call pr_ins_job(v_recon_code,'R',0,v_report_desc,in_report_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
 
     update recon_trn_tjob set
       file_type = in_outputfile_type 

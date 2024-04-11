@@ -133,7 +133,7 @@ me:BEGIN
   end if;
 
   if in_outputfile_flag then
-    call pr_ins_job(in_recon_code,'R',0,concat('Generating ',v_report_desc),in_user_code,in_ip_addr,'I',in_report_param,'Initiated...',v_job_gid,@msg,@result);
+    call pr_ins_job(v_recon_code,'R',0,v_report_desc,in_report_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
   end if;
 
   if v_report_exec_type = 'S' and v_sp_name <> '' then
