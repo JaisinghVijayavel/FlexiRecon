@@ -23,6 +23,8 @@ me:begin
   declare v_tran_acc_mode varchar(32) default '';
   declare v_txt text default '';
   declare v_web_date_format text default '';
+  declare v_threshold_value double(15,2) default 0;
+  declare v_threshold_total double(15,2) default 0;
 
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
@@ -117,6 +119,20 @@ me:begin
     select * from tb_proof;
     leave me;
   else
+    -- get recon threshold_value
+    select
+      (threshold_plus_value+abs(threshold_minus_value))
+    into
+      v_threshold_value
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and recontype_code = 'W'
+    and active_status = 'Y'
+    and delete_flag = 'N';
+
+    set v_threshold_value = ifnull(v_threshold_value,0);
+
+    -- recon dataset
     select
       group_concat(a.dataset_code),
       group_concat(b.dataset_name)
@@ -186,6 +202,7 @@ me:begin
   select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
   and excp_value <> 0
+  and (excp_value - roundoff_value) <> 0
   and tran_acc_mode = 'D'
   and tran_date <= in_tran_date
   and delete_flag = 'N';
@@ -218,6 +235,7 @@ me:begin
   select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
   and excp_value <> 0
+  and (excp_value - roundoff_value) <> 0
   and tran_acc_mode = 'C'
   and tran_date <= in_tran_date
   and delete_flag = 'N';
@@ -247,9 +265,51 @@ me:begin
     ''
   );
 
+
   insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
-  set v_value = v_cr_total - v_dr_total;
+  -- rounding off
+  if v_threshold_value > 0 then
+		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_trn_ttran as a
+		where a.recon_code = in_recon_code
+		and a.excp_value <> 0
+    and a.roundoff_value <> 0
+		and a.tran_value <> a.excp_value
+		and (a.excp_value - a.roundoff_value) = 0
+		and a.delete_flag = 'N';
+
+    set v_value = ifnull(v_value,0);
+    set v_count = ifnull(v_count,0);
+
+    set v_threshold_total = v_value;
+
+		set v_txt = 'Rounding off ';
+
+		if v_count > 0 then
+			set v_txt = concat(v_txt,' (',cast(v_count as char),')');
+		end if;
+
+    if v_count > 0 then
+			insert into tb_proof
+			(
+				particulars,
+				tran_value,
+				tran_acc_mode,
+				bal_value
+			)
+			values
+			(
+				v_txt,
+				format(v_value,2,'en_IN'),
+				'',
+				''
+			);
+
+			insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
+    end if;
+  end if;
+
+  set v_value = v_cr_total - v_dr_total + v_threshold_total;
   set v_value = round(v_value,2);
 
   if v_value >= 0 then

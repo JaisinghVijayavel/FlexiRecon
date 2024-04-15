@@ -195,6 +195,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_ttrangid;
   drop temporary table if exists recon_tmp_ttranbrkpgid;
   drop temporary table if exists recon_tmp_tgid;
+  drop temporary table if exists recon_tmp_ttranroundoff;
 
   drop temporary table if exists recon_tmp_tthresholddiff;
   drop temporary table if exists recon_tmp_tthresholddiffdtl;
@@ -308,6 +309,7 @@ me:BEGIN
     tran_gid int unsigned NOT NULL,
     excp_value decimal(15,2) not null default 0,
     ko_value decimal(15,2) not null default 0,
+    roundoff_value decimal(15,2) not null default 0,
     rec_count int not null default 0,
     PRIMARY KEY (kodtlsumm_gid),
     key idx_tran_gid(tran_gid)
@@ -402,6 +404,13 @@ me:BEGIN
   CREATE temporary TABLE recon_tmp_tgid(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned NOT NULL,
+    PRIMARY KEY (tran_gid,tranbrkp_gid)
+  ) ENGINE = MyISAM;
+
+  CREATE temporary TABLE recon_tmp_ttranroundoff(
+    tran_gid int unsigned NOT NULL,
+    tranbrkp_gid int unsigned NOT NULL,
+    roundoff_value double(15,2) NOT NULL default 0,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
@@ -1511,10 +1520,14 @@ me:BEGIN
               end if;
 
               if v_diff_value > 0 then
-                update recon_tmp_tsource
-                  set excp_value = excp_value - v_diff_value
-                  where tran_gid = v_tran_gid
-                  and tranbrkp_gid = v_tranbrkp_gid;
+                update recon_tmp_tsource set
+                  excp_value = excp_value - v_diff_value
+                where tran_gid = v_tran_gid
+                and tranbrkp_gid = v_tranbrkp_gid;
+
+                -- insert roundoff value
+                insert into recon_tmp_ttranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
+                select v_tran_gid,v_tranbrkp_gid,v_diff_value;
               else
                 set v_diff_value = abs(v_diff_value);
 
@@ -1536,16 +1549,21 @@ me:BEGIN
                     if comparison_done = 1 then leave comparison_loop; end if;
 
                     if v_ko_value >= v_diff_value then
-                      update recon_tmp_tcomparison
-                       set excp_value = excp_value - v_diff_value
-                        where tran_gid = v_tran_gid
-                        and tranbrkp_gid = v_tranbrkp_gid;
+                      update recon_tmp_tcomparison set
+                        excp_value = excp_value - v_diff_value
+                      where tran_gid = v_tran_gid
+                      and tranbrkp_gid = v_tranbrkp_gid;
+
+                      -- insert roundoff value
+                      insert into recon_tmp_ttranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
+                      select v_tran_gid,v_tranbrkp_gid,v_diff_value * -1;
+
                       leave comparison_loop;
                     else
-                      update recon_tmp_tcomparison
-                       set excp_value = 0
-                        where tran_gid = v_tran_gid
-                        and tranbrkp_gid = v_tranbrkp_gid;
+                      update recon_tmp_tcomparison set
+                        excp_value = 0
+                      where tran_gid = v_tran_gid
+                      and tranbrkp_gid = v_tranbrkp_gid;
 
                       set v_diff_value = v_diff_value - v_ko_value;
                     end if;
@@ -2117,20 +2135,41 @@ me:BEGIN
             insert into recon_trn_tkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
               select ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_tkodtl;
 
-            insert into recon_tmp_tkodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
-              select max(ko_gid) as max_ko_gid,tran_gid,sum(ko_value*tran_mult) as ko_value,count(*) as rec_count from recon_tmp_tkodtl
+            if v_recontype_code <> 'N' then
+              insert into recon_tmp_tkodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
+              select
+                max(ko_gid) as max_ko_gid,tran_gid,sum(ko_value*tran_mult) as ko_value,count(*) as rec_count
+              from recon_tmp_tkodtl
               group by tran_gid;
 
-            if v_recontype_code <> 'N' then
+              -- roundoff tranbrkp_gid = 0 cases
+              update recon_tmp_tkodtlsumm as a
+              inner join recon_tmp_ttranroundoff as b on a.tran_gid = b.tran_gid
+                and b.tranbrkp_gid = 0
+              set a.roundoff_value = a.roundoff_value + b.roundoff_value;
+
+              -- roundoff tranbrkp_gid > 0 cases
+              update recon_tmp_tkodtlsumm as a
+              inner join
+              (
+                select tran_gid,sum(roundoff_value) as roundoff_value from recon_tmp_ttranroundoff
+                where tranbrkp_gid > 0
+                group by tran_gid
+              ) as b on a.tran_gid = b.tran_gid
+              set a.roundoff_value = a.roundoff_value + b.roundoff_value;
+
+              -- update in tran table
               update recon_trn_ttran as a
               inner join recon_tmp_tkodtlsumm as b on a.tran_gid = b.tran_gid
               set a.excp_value = a.excp_value - (b.ko_value * a.tran_mult),
+                  a.roundoff_value = a.roundoff_value + b.roundoff_value,
                   a.ko_gid = b.max_ko_gid,
                   a.ko_date = curdate(),
                   a.theme_code = ''
               where a.excp_value <> 0
               and a.delete_flag = 'N';
 
+              -- update in tranbrkp table
               update recon_trn_ttranbrkp as a
               inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
               set a.excp_value = a.excp_value - b.ko_value,
@@ -2139,6 +2178,13 @@ me:BEGIN
                   a.theme_code = ''
               where a.excp_value <> 0
               and a.delete_flag = 'N';
+
+              -- update in tranbrkp table
+              update recon_trn_ttranbrkp as a
+              inner join recon_tmp_ttranroundoff as r on a.tranbrkp_gid = r.tranbrkp_gid
+              inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
+              set a.roundoff_value = r.roundoff_value
+              where a.delete_flag = 'N';
             else
               update recon_trn_ttran as a
               inner join recon_tmp_tkodtlsumm as b on a.tran_gid = b.tran_gid
@@ -2353,6 +2399,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_tindex;
   drop temporary table if exists recon_tmp_tsql;
   drop temporary table if exists recon_tmp_tgid;
+  drop temporary table if exists recon_tmp_ttranroundoff;
 
   drop temporary table if exists recon_tmp_tthresholddiff;
   drop temporary table if exists recon_tmp_tthresholddiffdtl;

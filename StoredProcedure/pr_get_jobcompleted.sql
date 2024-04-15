@@ -14,7 +14,7 @@ me:BEGIN
 
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
 
-	if in_jobtype_code = '0' then
+if in_jobtype_code = '0' then
 	select
 		a.job_gid,
 		a.jobtype_code,
@@ -27,7 +27,8 @@ me:BEGIN
 		a.job_remark,
 		b.jobstatus_desc,
 		c.jobtype_desc,
-    a.file_type
+    a.file_type,
+    ifnull(a.file_name,concat(cast(a.job_gid as nchar),'.',ifnull(a.file_type,'csv'))) as file_name
 	from recon_trn_tjob a
 	inner join recon_mst_tjobstatus b on a.job_status = b.job_status
 	inner join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code
@@ -50,7 +51,8 @@ else
 		a.job_remark,
 		b.jobstatus_desc,
 		c.jobtype_desc,
-    a.file_type
+    a.file_type,
+    ifnull(a.file_name,concat(cast(a.job_gid as nchar),'.',ifnull(a.file_type,'csv'))) as file_name
 	from recon_trn_tjob a
 	inner join recon_mst_tjobstatus b on a.job_status = b.job_status
 	inner join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code

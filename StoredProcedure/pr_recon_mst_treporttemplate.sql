@@ -40,7 +40,7 @@ me:BEGIN
 			set err_flag := true;
 		end if;
 
-     if in_active_status <> 'Y' and
+    if in_active_status <> 'Y' and
 				in_active_status <> 'N' and
 				in_active_status <> 'D' or
 				in_active_status is null then
@@ -54,6 +54,34 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Invalid report code,');
 			set err_flag := true;
 		end if;
+
+    -- duplicate validation
+    if in_action = 'INSERT' then
+      if exists(select * from recon_mst_treporttemplate
+        where reporttemplate_name = in_reporttemplate_name
+        and recon_code = in_recon_code
+        and active_status <> 'N'
+        and delete_flag = 'N') then
+			  set err_msg := concat(err_msg,'Duplicate custom report name,');
+			  set err_flag := true;
+      end if;
+    else
+      if exists(select * from recon_mst_treporttemplate
+        where reporttemplate_name = in_reporttemplate_name
+        and recon_code = in_recon_code
+        and reporttemplate_gid = in_reporttemplate_gid
+        and active_status <> 'N'
+        and delete_flag = 'N') then
+			  set err_msg := concat(err_msg,'Duplicate custom report name,');
+			  set err_flag := true;
+      end if;
+    end if;
+
+    if err_flag = true then
+		  set out_result = 0;
+		  set out_msg = err_msg;
+      leave me;
+    end if;
 	end if;
 
 	if (in_action = 'INSERT') then

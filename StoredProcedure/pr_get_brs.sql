@@ -29,6 +29,7 @@ me:begin
   declare v_web_date_format text default '';
   declare v_threshold_value double(15,2) default 0;
   declare v_threshold_total double(15,2) default 0;
+  declare v_roundoff_value double(15,2) default 0;
 
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
@@ -95,7 +96,7 @@ me:begin
     leave me;
   else
     select
-      threshold_plus_value
+      (threshold_plus_value+abs(threshold_minus_value))
     into
       v_threshold_value
     from recon_mst_trecon
@@ -207,9 +208,12 @@ me:begin
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
+  /*
   and (a.tran_value = a.excp_value
   or (a.tran_value <> a.excp_value
   and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -244,9 +248,12 @@ me:begin
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
+  /*
   and (a.tran_value = a.excp_value
   or (a.tran_value <> a.excp_value
   and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -293,9 +300,12 @@ me:begin
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
+  /*
   and (a.tran_value = a.excp_value
   or (a.tran_value <> a.excp_value
   and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -330,9 +340,12 @@ me:begin
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
+  /*
   and (a.tran_value = a.excp_value
   or (a.tran_value <> a.excp_value
   and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -375,8 +388,9 @@ me:begin
 		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_trn_ttran as a
 		where a.recon_code = in_recon_code
 		and a.excp_value <> 0
+    and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value
-		and a.excp_value <= v_threshold_value
+		and (a.excp_value - a.roundoff_value) = 0
 		and a.delete_flag = 'N';
 
     set v_value = ifnull(v_value,0);
