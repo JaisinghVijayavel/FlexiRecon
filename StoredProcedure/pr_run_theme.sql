@@ -17,7 +17,7 @@ me:BEGIN
   declare v_recon_date_field text default '';
   declare v_recon_date_condition text default '';
 
-  declare v_recon_field text default '';
+  declare v_filter_field text default '';
 
   declare v_theme_filter text default '';
 
@@ -105,7 +105,8 @@ me:BEGIN
         theme_code,theme_desc
       from recon_mst_ttheme
       where recon_code = in_recon_code
-      and hold_flag = 'N' 
+      and theme_type_code = 'QCD_THEME_DIRECT'
+      and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'
       order by theme_order;
@@ -131,7 +132,7 @@ me:BEGIN
 
 					declare filter_cursor cursor for
 					  select
-              recon_field,
+              filter_field,
               filter_criteria,
               filter_value,
               open_parentheses_flag,
@@ -141,7 +142,7 @@ me:BEGIN
             where theme_code = v_theme_code
             and active_status = 'Y'
             and delete_flag = 'N'
-            order by theme_seqno;
+            order by themefilter_seqno;
 
 					declare continue handler for not found set filter_done=1;
 
@@ -149,7 +150,7 @@ me:BEGIN
 
 					filter_loop: loop
 						fetch filter_cursor into
-              v_recon_field,
+              v_filter_field,
               v_filter_criteria,
               v_filter_value,
               v_open_parentheses_flag,
@@ -158,7 +159,7 @@ me:BEGIN
 
 						if filter_done = 1 then leave filter_loop; end if;
 
-            set v_recon_field = ifnull(v_recon_field,'');
+            set v_filter_field = ifnull(v_filter_field,'');
             set v_filter_criteria = ifnull(v_filter_criteria,'');
             set v_filter_value = ifnull(v_filter_value,'');
 
@@ -176,7 +177,7 @@ me:BEGIN
 
             set v_theme_filter = concat(v_theme_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_recon_field,'EXACT',0,v_filter_criteria,v_filter_value),
+                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
 

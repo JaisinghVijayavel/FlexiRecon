@@ -420,8 +420,13 @@ me:BEGIN
                                  in_user_code,@msg,@result);
 
     -- update theme
-    call pr_run_theme(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+    if in_automatch_flag = 'Y' then
+      call pr_run_theme(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      call pr_run_theme_comparison(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      call pr_run_theme_comparisonagg(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+    end if;
 
+    /*
 		-- rule theme
 		rule_theme_block:begin
 			declare rule_theme_done int default 0;
@@ -460,6 +465,7 @@ me:BEGIN
 
 			close rule_theme_cursor;
 		end rule_theme_block;
+    */
   end if;
 
   -- job remark

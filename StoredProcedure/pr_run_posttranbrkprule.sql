@@ -922,7 +922,8 @@ me:BEGIN
             update recon_trn_ttranbrkp as a
             inner join recon_tmp_tmatchdtl as b on a.tranbrkp_gid = b.tranbrkp_gid and a.excp_value= b.excp_value and b.tran_gid > 0
             set a.tran_gid = b.tran_gid,
-                a.posted_job_gid = in_job_gid
+                a.posted_job_gid = in_job_gid,
+                a.mapped_value = a.tran_value 
             where a.excp_value > 0
             and a.tran_gid = 0
             and a.delete_flag = 'N';
