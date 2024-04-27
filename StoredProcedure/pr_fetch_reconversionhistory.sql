@@ -42,6 +42,34 @@ BEGIN
 	where a.recon_code=in_recon_code 
 	and a.recon_rule_version=in_version_code
 	and a.delete_flag = 'N';
+
+  select
+    themehistory_gid,
+    theme_code,
+    theme_desc,
+    theme_order,
+    case hold_flag
+      when 'Y' then 'YES'
+      else 'NO'
+    end as hold_flag_desc
+  from recon_mst_tthemehistory
+  where recon_code=in_recon_code
+  and recon_version=in_version_code
+  and delete_flag = 'N';
+
+  select
+    preprocesshistory_gid,
+    preprocess_code,
+    preprocess_desc,
+    preprocess_order,
+    case hold_flag
+      when 'Y' then 'YES'
+      else 'NO'
+    end as hold_flag_desc
+  from recon_mst_tpreprocesshistory
+  where recon_code=in_recon_code
+  and recon_version=in_version_code
+  and delete_flag = 'N';
 END $$
 
 DELIMITER ;

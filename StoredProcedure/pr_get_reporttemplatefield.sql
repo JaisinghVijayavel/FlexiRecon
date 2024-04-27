@@ -10,13 +10,14 @@ CREATE PROCEDURE `pr_get_reporttemplatefield`
 BEGIN
     declare v_report_code text default '';
     declare v_recon_code text default '';
-
+    declare v_recon_flag text default '';
     declare v_src_table_name text default '';
     declare v_rpt_table_name text default '';
     declare v_recon_field_prefix text default '';
 
     set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
+    -- get recon and report code
     select
       report_code,
       recon_code
@@ -69,11 +70,13 @@ BEGIN
       select
         table_name,
         src_table_name,
-        recon_field_prefix
+        recon_field_prefix,
+        recon_flag
       into
         v_rpt_table_name,
         v_src_table_name,
-        v_recon_field_prefix
+        v_recon_field_prefix,
+        v_recon_flag
       from recon_mst_treport
       where report_code = v_report_code
       and delete_flag = 'N';
@@ -81,6 +84,7 @@ BEGIN
       set v_rpt_table_name = ifnull(v_rpt_table_name,'');
       set v_src_table_name = ifnull(v_src_table_name,'');
       set v_recon_field_prefix = ifnull(v_recon_field_prefix,'');
+      set v_recon_flag = ifnull(v_recon_flag,'');
 
       set @sno := 0;
 
@@ -104,32 +108,34 @@ BEGIN
       and delete_flag = 'N'
       order by display_order;
 
-      insert ignore into recon_tmp_treportparam
-      (
-        report_code,
-        reportparam_code,
-        reportparam_desc,
-        reportparam_order
-      )
-      select
-        v_report_code as report_code,
-        recon_field_name as reportparam_code,
-        fn_get_reconfieldname(recon_code,recon_field_name),
-        @sno := @sno + 1
-      from recon_mst_treconfield
-      where recon_code = v_recon_code
-      and active_status = 'Y'
-      and delete_flag = 'N'
-      order by display_order;
+      if v_recon_flag = 'Y' then
+				insert ignore into recon_tmp_treportparam
+				(
+					report_code,
+					reportparam_code,
+					reportparam_desc,
+					reportparam_order
+				)
+				select
+					v_report_code as report_code,
+					recon_field_name as reportparam_code,
+					fn_get_reconfieldname(recon_code,recon_field_name),
+					@sno := @sno + 1
+				from recon_mst_treconfield
+				where recon_code = v_recon_code
+				and active_status = 'Y'
+				and delete_flag = 'N'
+				order by display_order;
+      end if;
 
-      select
-        reportparam_code as report_field,
-        reportparam_desc as report_field_desc,
-        reportparam_desc as display_desc,
-        display_flag,
-        reportparam_order as display_order
-      from recon_tmp_treportparam
-      order by reportparam_order;
+			select
+				reportparam_code as report_field,
+				reportparam_desc as report_field_desc,
+				reportparam_desc as display_desc,
+				display_flag,
+				reportparam_order as display_order
+			from recon_tmp_treportparam
+			order by reportparam_order;
 
 			drop temporary table if exists recon_tmp_treportparam;
     end if;

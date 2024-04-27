@@ -92,7 +92,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_trn_ttran as a on s.tran_gid = a.tran_gid ');
   set v_sql = concat(v_sql,'where true ');
-  set v_sql = concat(v_sql,in_condition,' ');
+  set v_sql = concat(v_sql,replace(in_condition,'a.','s.'),' ');
 
   if v_recontype_code <> 'N' then
     set v_sql = concat(v_sql,'and s.excp_value <> 0 ');
@@ -100,7 +100,7 @@ me:BEGIN
   end if;
 
   set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
-  set v_sql = concat(v_sql,' ',in_sorting_order);
+  set v_sql = concat(v_sql,' ',replace(in_sorting_order,'a.','s.'));
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
 

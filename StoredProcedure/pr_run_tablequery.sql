@@ -5,6 +5,7 @@ CREATE PROCEDURE `pr_run_tablequery`
 (
   in_reporttemplate_code varchar(32),
   in_recon_code varchar(32),
+  in_report_code varchar(32),
   in_table_name varchar(128),
   in_condition text,
   in_job_gid int,
@@ -26,10 +27,9 @@ me:BEGIN
   declare v_table_stru_flag boolean default false;
   declare v_rpt_path text default '';
   declare v_report_code text default '';
+  declare v_report_name text default '';
   declare v_rpt_table_name text default '';
   declare v_recon_field_prefix text default '';
-  declare v_sortby_code varchar(32);
-  declare v_sorting_field text default '';
 
   set in_condition = ifnull(in_condition,'');
   set in_job_gid = ifnull(in_job_gid,0);
@@ -56,20 +56,33 @@ me:BEGIN
     key idx_display_order(display_order)
   ) ENGINE = MyISAM;
 
-  -- sortby
+  -- get report code
   select
     report_code,
-    sortby_code
+    reporttemplate_name
   into
     v_report_code,
-    v_sortby_code
+    v_report_name
   from recon_mst_treporttemplate
   where reporttemplate_code = in_reporttemplate_code
   and delete_flag = 'N';
 
-  set v_sortby_code = ifnull(v_sortby_code,'asc');
   set v_report_code = ifnull(v_report_code,'');
+  set v_report_name = ifnull(v_report_name,'');
 
+  if v_report_name = '' then
+    select
+      report_desc
+    into
+      v_report_name
+    from recon_mst_treport
+    where report_code = in_report_code
+    and delete_flag = 'N';
+
+    set v_report_name = ifnull(v_report_name,'');
+  end if;
+
+  set v_report_name = GET_ALPHANUM(v_report_name);
 
   if exists(select * from recon_mst_treporttemplatefield
     where reporttemplate_code = in_reporttemplate_code
@@ -231,22 +244,6 @@ me:BEGIN
     and a.display_flag = 'Y'
     and a.delete_flag = 'N'
     order by a.display_order;
-
-    -- sort order
-    select
-      group_concat(ifnull(b.field_name,if(instr(a.report_field,'.') = 0,a.report_field,SPLIT(a.report_field,'.',2))))
-    into
-      v_sorting_field
-    from recon_mst_treporttemplatesorting as a
-    left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
-      and b.table_name = in_table_name
-      and b.delete_flag = 'N'
-    where a.reporttemplate_code = in_reporttemplate_code
-    and a.active_status = 'Y'
-    and a.delete_flag = 'N'
-    order by a.sorting_order;
-
-    set v_sorting_field = ifnull(v_sorting_field,'');
   else
     insert ignore into recon_tmp_tfielddisplay
     (
@@ -310,26 +307,26 @@ me:BEGIN
     set v_sql = concat(v_static_fields,'select a.* from (');
     set v_sql = concat(v_sql,'select ',v_sql_field,' from ',in_table_name,' where 1=1 ',in_condition);
 
-    /*
-    -- add sorting order
-    if v_sorting_field <> '' then
-      set v_sql = concat(v_sql,' order by ',v_sorting_field,' ',v_sortby_code,' ');
-    end if;
-    */
-
     set v_sql = concat(v_sql,') as a ');
 
     if in_job_gid > 0 and in_outputfile_flag = true and in_outputfile_type = 'csv' then
       set v_rpt_path = fn_get_configvalue('mysql_rpt_path');
+      set v_file_name = concat(cast(in_job_gid as nchar),"_",v_report_name,".csv");
 
-      set @outfile_qry = concat(" INTO outfile '",v_rpt_path,cast(in_job_gid as nchar),".csv'
+      set @outfile_qry = concat(" INTO outfile '",v_rpt_path,v_file_name,"'
 						  FIELDS TERMINATED BY ','
               OPTIONALLY ENCLOSED BY '""'
 						  LINES TERMINATED BY '\n' ;");
 
       set v_sql = concat(v_sql,@outfile_qry);
 
-      call pr_upd_job(in_job_gid,'P','Inprogress',@msg,@result);
+      -- update in job table
+      update recon_trn_tjob set
+        job_status = 'P',
+        job_remark = 'Inprogress',
+        file_name = v_file_name
+      where job_gid = in_job_gid
+      and delete_flag = 'N';
     end if;
 
 	  call pr_run_sql(v_sql,@msg,@result);

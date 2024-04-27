@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_fetch_reconversion`
   in in_lang_code varchar(32)
 )
 BEGIN
+  -- rule
   select
     rule_gid,
     rule_code,
@@ -48,10 +49,45 @@ BEGIN
   and a.delete_flag='N'
   order by b.rule_order;
 
+  -- rule version
   select distinct recon_rule_version from recon_mst_trulehistory
   where recon_code=in_recon_code
   and delete_flag = 'N'
   order by cast(replace(recon_rule_version,'.','') as unsigned) desc;
+
+  -- theme
+  select
+    theme_gid,
+    theme_code,
+    theme_desc,
+    a.recon_code,
+    theme_order,
+    b.recon_name,
+    a.active_status,
+    fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
+    a.hold_flag,
+    fn_get_mastername(a.hold_flag, 'QCD_YN') as hold_flag_desc
+  from recon_mst_ttheme  a
+  inner join recon_mst_trecon b on a.recon_code=b.recon_code
+    and b.delete_flag = 'N'
+  where a.recon_code=in_recon_code
+  and a.active_status='Y'
+  and a.delete_flag = 'N';
+
+  -- preprocess
+  select
+    preprocess_gid,
+    preprocess_code,
+    preprocess_desc,
+    preprocess_order,
+    a.hold_flag,
+    fn_get_mastername(a.hold_flag, 'QCD_YN') as hold_flag_desc
+  from recon_mst_tpreprocess  a
+  inner join recon_mst_trecon b on a.recon_code=b.recon_code
+    and b.delete_flag = 'N'
+  where a.recon_code=in_recon_code
+  and a.active_status='Y'
+  and a.delete_flag = 'N';
 END $$
 
 DELIMITER ;

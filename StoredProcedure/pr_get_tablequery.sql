@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_get_tablequery` $$
 CREATE PROCEDURE `pr_get_tablequery`
 (
   in_recon_code varchar(32),
+  in_file_name text,
   in_table_name varchar(128),
   in_condition text,
   in_job_gid int,
@@ -23,8 +24,13 @@ me:BEGIN
   declare v_table_stru_flag boolean default false;
   declare v_rpt_path text default '';
 
+  set v_file_name = ifnull(in_file_name,'');
   set in_condition = ifnull(in_condition,'');
   set in_job_gid = ifnull(in_job_gid,0);
+
+  if v_file_name = '' then
+    set v_file_name = concat(cast(in_job_gid as nchar),'.csv');
+  end if;
 
   drop temporary table if exists recon_tmp_tfield;
   create temporary table recon_tmp_tfield
@@ -129,13 +135,19 @@ me:BEGIN
     if in_job_gid > 0 then
       set v_rpt_path = fn_get_configvalue('mysql_rpt_path');
 
-      set @outfile_qry = concat(" INTO outfile '",v_rpt_path,cast(in_job_gid as nchar),".csv'
+      set @outfile_qry = concat(" INTO outfile '",v_rpt_path,v_file_name,"'
 						  FIELDS TERMINATED BY ','
               OPTIONALLY ENCLOSED BY '""'
 						  LINES TERMINATED BY '\n' ;");
       set v_sql = concat(v_sql,@outfile_qry);
 
-      call pr_upd_job(in_job_gid,'P','Inprogress',@msg,@result);
+      -- update in job table
+      update recon_trn_tjob set
+        job_status = 'P',
+        job_remark = 'Inprogress',
+        file_name = v_file_name
+      where job_gid = in_job_gid
+      and delete_flag = 'N';
     end if;
 
 	  call pr_run_sql(v_sql,@msg,@result);

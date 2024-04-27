@@ -403,7 +403,7 @@ me:BEGIN
 
   CREATE temporary TABLE recon_tmp_tgid(
     tran_gid int unsigned NOT NULL,
-    tranbrkp_gid int unsigned NOT NULL,
+    tranbrkp_gid int unsigned NOT NULL default 0,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
@@ -1966,7 +1966,9 @@ me:BEGIN
                 b.excp_value - sum(a.ko_value*a.tran_mult)*b.tran_mult
               from recon_tmp_tmatch as m
               inner join recon_tmp_tmatchdtl as a on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
-              inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid and b.excp_value <> 0 and b.delete_flag = 'N'
+              inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
+                and b.excp_value <> 0
+                and b.delete_flag = 'N'
               where m.dup_flag = 'N'
               and m.ko_flag = 'Y'
               group by a.tran_gid,b.tran_value,b.excp_value,b.tran_mult
@@ -2166,7 +2168,7 @@ me:BEGIN
                   a.ko_gid = b.max_ko_gid,
                   a.ko_date = curdate(),
                   a.theme_code = ''
-              where a.excp_value <> 0
+              where ((a.excp_value <> 0 and a.mapped_value = 0) or a.mapped_value > 0)
               and a.delete_flag = 'N';
 
               -- update in tranbrkp table
@@ -2203,11 +2205,15 @@ me:BEGIN
               and a.delete_flag = 'N';
             end if;
 
+            -- move tran table
             truncate recon_tmp_ttrangid;
 
             insert into recon_tmp_ttrangid
               select a.tran_gid from recon_tmp_tkodtlsumm as a
-              inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid and b.excp_value = 0 and b.delete_flag = 'N';
+              inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
+                and b.excp_value = 0
+                and b.mapped_value = 0
+                and b.delete_flag = 'N';
 
             insert into recon_trn_ttranko
               select t.* from recon_tmp_ttrangid as g
@@ -2215,6 +2221,7 @@ me:BEGIN
 
             delete from recon_trn_ttran where tran_gid in (select tran_gid from recon_tmp_ttrangid);
 
+            -- move tranbrkp table
             truncate recon_tmp_ttranbrkpgid;
 
             insert into recon_tmp_ttranbrkpgid (tranbrkp_gid) select tranbrkp_gid from recon_tmp_tkodtl where tranbrkp_gid > 0;
@@ -2224,6 +2231,30 @@ me:BEGIN
               inner join recon_trn_ttranbrkp as b on g.tranbrkp_gid = b.tranbrkp_gid;
 
             delete from recon_trn_ttranbrkp where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+
+            -- move tran mapped_value > 0
+            truncate recon_tmp_ttrangid;
+
+            insert into recon_tmp_ttrangid
+              select distinct a.tran_gid from recon_tmp_ttranbrkpgid as a
+              left join recon_trn_ttranbrkp as b on a.tran_gid = b.tran_gid and b.delete_flag = 'N'
+              where b.tran_gid is null;
+
+            -- keep excp value non-zero cases
+            truncate recon_tmp_tgid;
+
+            insert into recon_tmp_tgid(tran_gid) select tran_gid from recon_trn_ttran
+              where tran_gid in (select tran_gid from recon_tmp_ttrangid)
+              and excp_value <> 0
+              and delete_flag = 'N';
+
+            delete from recon_tmp_ttrangid where tran_gid in (select tran_gid from recon_tmp_tgid);
+
+            insert into recon_trn_ttranko
+              select t.* from recon_tmp_ttrangid as g
+              inner join recon_trn_ttran as t on g.tran_gid = t.tran_gid;
+
+            delete from recon_trn_ttran where tran_gid in (select tran_gid from recon_tmp_ttrangid);
 
             update recon_trn_tko set
               kodtl_post_flag = 'Y'

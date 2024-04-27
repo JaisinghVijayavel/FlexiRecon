@@ -5,7 +5,7 @@ CREATE PROCEDURE `pr_get_dashboard`(
   in in_recon_code text,
   in in_period_from date,
   in in_period_to date,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -66,6 +66,7 @@ me:BEGIN
     tran_date date default null,
     tran_value double(15,2) not null default 0,
     excp_value double(15,2) not null default 0,
+    roundoff_value double(15,2) not null default 0,
     PRIMARY KEY (tran_gid),
     key idx_tran_date(tran_date),
     key idx_excp_value(excp_value)
@@ -92,12 +93,19 @@ me:BEGIN
 
   if in_recon_code = '' then
     insert into recon_tmp_trecon
-      select recon_code from recon_mst_trecon
-      where active_status = 'Y'
-      and period_from <= curdate()
-      and (period_to >= curdate()
-      or until_active_flag = 'Y')
-      and delete_flag = 'N';
+      select a.recon_code from admin_mst_tusercontext as u
+      inner join admin_mst_treconcontext as r on u.master_syscode = r.master_syscode
+        and u.parent_master_syscode = r.parent_master_syscode
+        and r.delete_flag = 'N'
+      inner join recon_mst_trecon as a on r.recon_code = a.recon_code
+        and a.active_status = 'Y'
+        and a.period_from <= curdate()
+        and (a.period_to >= curdate()
+        or a.until_active_flag = 'Y')
+        and a.delete_flag = 'N'
+      where u.user_code = in_user_code
+      and u.active_status = 'Y'
+      and u.delete_flag = 'N';
   else
     insert into recon_tmp_trecon
       select recon_code from recon_mst_trecon
@@ -112,9 +120,9 @@ me:BEGIN
   -- insert in trangid table
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value
+    tran_gid,tran_date,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
@@ -122,9 +130,9 @@ me:BEGIN
 
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value
+    tran_gid,tran_date,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
@@ -133,22 +141,24 @@ me:BEGIN
   -- insert old excption
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value
+    tran_gid,tran_date,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
     and t.excp_value <> 0
+    and (t.excp_value + t.roundoff_value) <> 0
     and t.delete_flag = 'N';
 
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value
+    tran_gid,tran_date,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
     and t.excp_value <> 0
+    and (t.excp_value + t.roundoff_value) <> 0
     and t.delete_flag = 'N';
 
   -- insert in kodtlgid table
@@ -177,13 +187,15 @@ me:BEGIN
 
   -- get exception count
   select count(*) into v_excp_count from recon_tmp_ttrangid
-  where excp_value <> 0;
+  where excp_value <> 0
+  and (excp_value + roundoff_value) <> 0;
 
   set v_excp_count = ifnull(v_excp_count,0);
 
   -- get opening exception count
   select count(*) into v_openingexcp_count from recon_tmp_ttrangid
   where excp_value <> 0
+  and (excp_value + roundoff_value) <> 0
   and tran_date < in_period_from;
 
   set v_openingexcp_count = ifnull(v_openingexcp_count,0);
@@ -261,6 +273,7 @@ me:BEGIN
     right join recon_mst_taging as c on datediff(curdate(),t.tran_date) between c.aging_from and c.aging_to
       and c.delete_flag = 'N'
     where t.excp_value <> 0
+    and (t.excp_value + t.roundoff_value) <> 0
     group by c.aging_gid,c.aging_desc
   ) as ex on ag.aging_gid = ex.aging_gid;
 

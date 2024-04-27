@@ -14,6 +14,7 @@ CREATE PROCEDURE `pr_run_reconrule`(
 me:BEGIN
   declare i int default 0;
 
+  declare v_recon_name text default '';
   declare v_recon_date_flag text default '';
   declare v_txt_rule_code text default '';
   declare v_rule_code text default '';
@@ -34,6 +35,8 @@ me:BEGIN
   declare v_job_gid int default 0;
   declare v_job_input_param text default '';
   declare v_date_format text default '';
+
+  declare v_file_name text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -87,8 +90,10 @@ me:BEGIN
 
   -- get recon details
   select
+    recon_name,
     recon_date_flag
   into
+    v_recon_name,
     v_recon_date_flag
   from recon_mst_trecon
   where recon_code = in_recon_code
@@ -96,6 +101,8 @@ me:BEGIN
   and (until_active_flag = 'Y'
   or period_to >= curdate())
   and delete_flag = 'N';
+
+  set v_recon_name = ifnull(v_recon_name,'');
 
   if in_automatch_flag = 'Y' then
     if exists(select job_gid from recon_trn_tjob
@@ -331,6 +338,9 @@ me:BEGIN
     group by recon_code,dataset_code;
   end if;
 
+  -- preprocess
+  call pr_run_preprocess(in_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+
   -- rule
   rule_block:begin
     declare rule_done int default 0;
@@ -405,7 +415,9 @@ me:BEGIN
   if in_automatch_flag = 'N' then
     call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
 
-    call pr_get_tablequery(v_recon_code,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
+    set v_file_name = concat(cast(v_job_gid as nchar),'_',in_recon_code,'_MatchPreview.csv');
+
+    call pr_get_tablequery(v_recon_code,v_file_name,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
                                  in_user_code,@msg,@result);
   elseif in_automatch_flag = 'Y' then
     update recon_mst_trecon set
@@ -416,7 +428,9 @@ me:BEGIN
     -- run propable match report
     call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
 
-    call pr_get_tablequery(v_recon_code,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
+    set v_file_name = concat(cast(v_job_gid as nchar),'_',in_recon_code,'_ProbableMatchPreview.csv');
+
+    call pr_get_tablequery(v_recon_code,v_file_name,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
                                  in_user_code,@msg,@result);
 
     -- update theme
@@ -425,47 +439,6 @@ me:BEGIN
       call pr_run_theme_comparison(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
       call pr_run_theme_comparisonagg(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
     end if;
-
-    /*
-		-- rule theme
-		rule_theme_block:begin
-			declare rule_theme_done int default 0;
-			declare rule_theme_cursor cursor for
-				select
-					rule_code,
-					group_flag
-				from recon_mst_trule
-				where recon_code = in_recon_code
-				and system_match_flag = 'Y'
-				and rule_apply_on = 'T'
-				and hold_flag = 'N'
-        and active_status = 'Y'
-        and period_from <= curdate()
-        and (period_to >= curdate()
-        or until_active_flag = 'Y')
-				and delete_flag = 'N'
-				order by rule_order;
-			declare continue handler for not found set rule_theme_done=1;
-
-			open rule_theme_cursor;
-
-			rule_theme_loop: loop
-				fetch rule_theme_cursor into v_rule_code,v_group_flag;
-
-				if rule_theme_done = 1 then leave rule_theme_loop; end if;
-
-				set v_rule_code = ifnull(v_rule_code,'');
-
-				call pr_run_automatch_theme(v_recon_code,v_rule_code,v_group_flag,v_job_gid,
-					in_period_from,in_period_to,'short',in_user_code,@msg,@result);
-
-				call pr_run_automatch_theme(v_recon_code,v_rule_code,v_group_flag,v_job_gid,
-					in_period_from,in_period_to,'excess',in_user_code,@msg,@result);
-			end loop rule_theme_loop;
-
-			close rule_theme_cursor;
-		end rule_theme_block;
-    */
   end if;
 
   -- job remark

@@ -623,9 +623,6 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
-          -- select v_source_sql,v_comparison_sql;
-
-
           sql_block:begin
             declare sql_done int default 0;
             declare sql_cursor cursor for

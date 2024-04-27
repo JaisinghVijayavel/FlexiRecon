@@ -33,6 +33,7 @@ me:BEGIN
 	declare v_msg text default '';
 	declare v_reporttemplate_gid int default 0;
   declare v_rpt_table_name text default '';
+  declare v_recon_flag text default '';
 
 	if(in_action = 'INSERT' or in_action = 'UPDATE') then
 		if in_reporttemplate_name = '' or in_reporttemplate_name is null then
@@ -69,7 +70,7 @@ me:BEGIN
       if exists(select * from recon_mst_treporttemplate
         where reporttemplate_name = in_reporttemplate_name
         and recon_code = in_recon_code
-        and reporttemplate_gid = in_reporttemplate_gid
+        and reporttemplate_gid <> in_reporttemplate_gid
         and active_status <> 'N'
         and delete_flag = 'N') then
 			  set err_msg := concat(err_msg,'Duplicate custom report name,');
@@ -87,14 +88,17 @@ me:BEGIN
 	if (in_action = 'INSERT') then
     -- get rpt_table_name
     select
-      table_name
+      table_name,
+      recon_flag
     into
-      v_rpt_table_name
+      v_rpt_table_name,
+      v_recon_flag
     from recon_mst_treport
     where report_code = in_report_code
     and delete_flag = 'N';
 
     set v_rpt_table_name = ifnull(v_rpt_table_name,'');
+    set v_recon_flag = ifnull(v_recon_flag,'');
 
     -- template variable
 		set in_reporttemplate_code = fn_get_autocode('RT');
@@ -220,33 +224,35 @@ me:BEGIN
 		and delete_flag = 'N'
 		order by display_order;
 
-		insert ignore into recon_mst_treporttemplatefield
-		(
-			reporttemplate_code,
-			report_field,
-			display_desc,
-			display_flag,
-			display_order,
-			system_flag,
-			active_status,
-			insert_date,
-			insert_by
-		)
-		SELECT
-			in_reporttemplate_code,
-      recon_field_name,
-      fn_get_reconfieldname(recon_code,recon_field_name),
-			'Y',
-			@sno := @sno + 1,
-			'N',
-      'Y',
-      sysdate(),
-      in_user_code
-    from recon_mst_treconfield
-    where recon_code = in_recon_code
-    and active_status = 'Y'
-    and delete_flag = 'N'
-    order by display_order;
+    if v_recon_flag = 'Y' then
+			insert ignore into recon_mst_treporttemplatefield
+			(
+				reporttemplate_code,
+				report_field,
+				display_desc,
+				display_flag,
+				display_order,
+				system_flag,
+				active_status,
+				insert_date,
+				insert_by
+			)
+			SELECT
+				in_reporttemplate_code,
+				recon_field_name,
+				fn_get_reconfieldname(recon_code,recon_field_name),
+				'Y',
+				@sno := @sno + 1,
+				'N',
+				'Y',
+				sysdate(),
+				in_user_code
+			from recon_mst_treconfield
+			where recon_code = in_recon_code
+			and active_status = 'Y'
+			and delete_flag = 'N'
+			order by display_order;			
+    end if;
 
 		set out_result = 1;
 		set out_msg = 'Record saved successfully.. !';

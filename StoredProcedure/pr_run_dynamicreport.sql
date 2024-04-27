@@ -26,7 +26,7 @@ me:BEGIN
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
   declare v_report_default_condition text default '';
-  declare v_sorting_order text default '';
+  declare v_sorting_field text default '';
 
   declare v_sql text default '';
   declare v_txt text default '';
@@ -137,17 +137,24 @@ me:BEGIN
      and delete_flag = 'N') then
 
     select
-      reporttemplate_name
+      reporttemplate_name,
+      sortby_code
     into
-      v_txt
+      v_txt,
+      v_sortby_code
     from recon_mst_treporttemplate
     where reporttemplate_code = in_reporttemplate_code
     and delete_flag = 'N';
 
     set v_txt = ifnull(v_txt,'');
+    set v_sortby_code = ifnull(v_sortby_code,'');
 
     if v_txt <> '' then
       set v_report_desc = v_txt;
+    end if;
+
+    if v_sortby_code = 'asc' then
+      set v_sortby_code = '';
     end if;
   end if;
 
@@ -164,31 +171,38 @@ me:BEGIN
 
   -- sorting order
   if in_reporttemplate_code <> '' then
-    select
-      group_concat(report_field)
-    into
-      v_sorting_order
-    from recon_mst_treporttemplatesorting
-    where reporttemplate_code = in_reporttemplate_code
-    and active_status = 'Y'
-    and delete_flag = 'N'
-    order by sorting_order;
+		-- sort order
+		select
+			group_concat(concat(ifnull(b.field_name,if(instr(a.report_field,'.') = 0,a.report_field,SPLIT(a.report_field,'.',2))),' ',v_sortby_code))
+		into
+			v_sorting_field
+		from recon_mst_treporttemplatesorting as a
+		left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
+			and b.table_name = v_table_name
+			and b.delete_flag = 'N'
+		where a.reporttemplate_code = in_reporttemplate_code
+		and a.active_status = 'Y'
+		and a.delete_flag = 'N'
+		order by a.sorting_order;
   else
-    select
-      group_concat(report_field)
-    into
-      v_sorting_order
-    from recon_mst_treportsorting
-    where report_code = v_report_code
-    and active_status = 'Y'
-    and delete_flag = 'N'
-    order by sorting_order;
+		select
+			group_concat(concat(ifnull(b.field_name,if(instr(a.report_field,'.') = 0,a.report_field,SPLIT(a.report_field,'.',2))),' ',v_sortby_code))
+		into
+			v_sorting_field
+		from recon_mst_treportsorting as a
+		left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
+			and b.table_name = v_table_name
+			and b.delete_flag = 'N'
+		where a.report_code = v_report_code
+		and a.active_status = 'Y'
+		and a.delete_flag = 'N'
+		order by a.sorting_order;
   end if;
 
-  set v_sorting_order = ifnull(v_sorting_order,'');
+  set v_sorting_field = ifnull(v_sorting_field,'');
 
-  if v_sorting_order <> '' then
-    set v_sorting_order = concat('order by ',v_sorting_order,' ',v_sortby_code);
+  if v_sorting_field <> '' then
+    set v_sorting_field = concat('order by ',v_sorting_field);
   end if;
 
   if in_outputfile_flag then
@@ -213,12 +227,13 @@ me:BEGIN
       call pr_run_sql(v_sql,@msg,@result);
     end if;
 
-    call pr_run_sp(v_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sorting_order,in_user_code,@msg,@result);
+    call pr_run_sp(v_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sorting_field,in_user_code,@msg,@result);
 
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,
+                           v_report_code,
                            v_table_name,
-                           concat(' and job_gid = ', cast(v_job_gid as nchar) ,' '),
+                           concat(' and job_gid = ', cast(v_job_gid as nchar) ,' ',v_sorting_field),
                            v_job_gid,
                            in_outputfile_flag,
                            in_outputfile_type,
@@ -232,7 +247,15 @@ me:BEGIN
     end if;
     */
   else
-    call pr_run_tablequery(in_reporttemplate_code,v_recon_code,v_table_name,in_report_condition,v_job_gid,in_outputfile_flag,in_outputfile_type,in_user_code,@msg,@result);
+    call pr_run_tablequery(in_reporttemplate_code,
+                           v_recon_code,
+                           v_report_code,
+                           v_table_name,
+                           in_report_condition,
+                           v_job_gid,
+                           in_outputfile_flag,
+                           in_outputfile_type,
+                           in_user_code,@msg,@result);
   end if;
 
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
