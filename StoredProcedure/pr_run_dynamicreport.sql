@@ -82,6 +82,10 @@ me:BEGIN
     set v_sortby_code = 'asc';
   end if;
 
+  if v_sortby_code = 'asc' then
+    set v_sortby_code = '';
+  end if;
+
   -- file type xlsx/csv
   set in_outputfile_type = lower(in_outputfile_type);
 
@@ -228,6 +232,8 @@ me:BEGIN
     end if;
 
     call pr_run_sp(v_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sorting_field,in_user_code,@msg,@result);
+
+    -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_dynamicreport',v_sorting_field,@msg,@result);
 
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,

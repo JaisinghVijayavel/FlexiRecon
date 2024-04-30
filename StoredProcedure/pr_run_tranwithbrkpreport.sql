@@ -96,9 +96,37 @@ me:BEGIN
 
   if v_recontype_code <> 'N' then
     set v_sql = concat(v_sql,'and s.excp_value <> 0 ');
-    set v_sql = concat(v_sql,'and s.tran_gid > 0 ');
   end if;
 
+  set v_sql = concat(v_sql,'and s.tran_gid > 0 ');
+  set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
+  set v_sql = concat(v_sql,' ',replace(in_sorting_order,'a.','s.'));
+
+  call pr_run_sql(v_sql,@out_msg,@out_result);
+
+  -- transfer tranbrkp records to report table - not posted cases
+  set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,tranbrkp_dataset_name,');
+  set v_sql = concat(v_sql,'base_tran_value,base_excp_value,base_acc_mode,');
+  set v_sql = concat(v_sql,v_tranbrkp_field,') ');
+  set v_sql = concat(v_sql,'select ');
+  set v_sql = concat(v_sql,cast(in_rptsession_gid as nchar),' as rptsession_gid,');
+  set v_sql = concat(v_sql,cast(in_job_gid as nchar),' as job_gid,');
+  set v_sql = concat(v_sql,char(39),in_user_code,char(39),' as user_code,');
+  set v_sql = concat(v_sql,'b.dataset_name,');
+  set v_sql = concat(v_sql,'c.dataset_name,');
+  set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
+  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
+  set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on s.dataset_code = b.dataset_code ');
+  set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
+  set v_sql = concat(v_sql,'left join recon_trn_ttran as a on s.tran_gid = a.tran_gid ');
+  set v_sql = concat(v_sql,'where true ');
+  set v_sql = concat(v_sql,replace(in_condition,'a.','s.'),' ');
+
+  if v_recontype_code <> 'N' then
+    set v_sql = concat(v_sql,'and s.excp_value <> 0 ');
+  end if;
+
+  set v_sql = concat(v_sql,'and s.tran_gid = 0 ');
   set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,' ',replace(in_sorting_order,'a.','s.'));
 

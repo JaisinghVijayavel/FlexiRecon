@@ -325,7 +325,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as ' ',",
+    '' as '-',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -352,7 +352,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as ' ',
+    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -372,7 +372,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as ' ',",
+    '' as '-',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -399,7 +399,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as ' ',
+    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -419,7 +419,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as ' ',",
+    '' as '-',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -446,7 +446,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as ' ',
+    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -466,7 +466,7 @@ me:begin
     date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
     "a.tran_value as 'Value',
     a.excp_value as 'Exception Value',
-    '' as ' ',",
+    '' as '-',",
     v_recon_field,"
     datediff(curdate(),a.tran_date) as 'Pending Days',
     if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
@@ -493,7 +493,7 @@ me:begin
     null as 'Tran Value',
     null as 'Exception Value',",
     v_recon_field_desc,"
-    null as ' ',
+    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -541,7 +541,7 @@ me:begin
 
 
 
-   call pr_get_tablequery(in_recon_code,'recon_trn_ttran',v_condition,0,in_user_code,@msg,@result);
+   call pr_get_tablequery(in_recon_code,'','recon_trn_ttran',v_condition,0,in_user_code,@msg,@result);
 
 
   if exists(select tranbrkp_gid from recon_trn_ttranbrkp
@@ -565,7 +565,7 @@ me:begin
     set v_condition = concat(" and 1 = 2 ");
   end if;
 
-  call pr_get_tablequery(in_recon_code,'recon_trn_ttranbrkp',v_condition,0,in_user_code,@msg,@result);
+  call pr_get_tablequery(in_recon_code,'','recon_trn_ttranbrkp',v_condition,0,in_user_code,@msg,@result);
 end $$
 
 DELIMITER ;

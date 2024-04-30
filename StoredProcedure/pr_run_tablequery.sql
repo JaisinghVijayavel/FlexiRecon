@@ -329,6 +329,8 @@ me:BEGIN
       and delete_flag = 'N';
     end if;
 
+    -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_tablequery',v_sql,@msg,@result);
+
 	  call pr_run_sql(v_sql,@msg,@result);
 
     if in_job_gid > 0 then

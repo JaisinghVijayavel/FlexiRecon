@@ -41,12 +41,13 @@ begin
     and c.parent_master_syscode = u.parent_master_syscode
     and c.delete_flag = 'N'
   inner join recon_mst_tdataset as a on c.dataset_code = a.dataset_code
+    and a.system_flag = 'N' 
     and a.delete_flag = 'N'
   left join recon_trn_tjob as b on a.last_job_gid = b.job_gid and b.delete_flag = 'N'
   where u.user_code = in_user_code
   and u.parent_master_syscode='QCD_L1'
   and u.delete_flag = 'N'
-  order by a.dataset_gid desc;
+  order by a.dataset_gid asc;
 end $$
 
 DELIMITER ;
