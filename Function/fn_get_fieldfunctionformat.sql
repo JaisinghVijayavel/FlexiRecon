@@ -8,6 +8,7 @@ CREATE FUNCTION `fn_get_fieldfunctionformat`
   in_function_name varchar(255)
 ) RETURNS text
 begin
+  declare v_field_name text default '';
   declare v_field_type varchar(32) default '';
   declare v_field_format text default '';
   declare v_field_formatted text default '';
@@ -15,10 +16,15 @@ begin
   declare v_txt text;
   declare n int default 0;
 
+  set v_field_name = ifnull(in_field_name,'');
   set v_field_type = in_field_type;
   set v_field_type = ifnull(v_field_type,'TEXT');
   set v_field_format = ifnull(v_field_format,'');
   set v_field_formatted = ifnull(in_function_name,'$FIELD$');
+
+  if in_field_name = 'excp_value' then
+    set in_field_name = 'excp_value*tran_mult';
+  end if;
 
   if v_field_type = 'INTEGER' then
     set v_txt = concat('ifnull(cast(',in_field_name,' as signed),0)');
@@ -49,6 +55,10 @@ begin
   end if;
 
   set v_field_formatted = replace(v_field_formatted,'$FIELD$',v_txt);
+
+  if v_field_name = 'excp_value' and lower(substr(v_field_formatted,1,3)) = 'sum' then
+    set v_field_formatted = concat('abs(',v_field_formatted,')');
+  end if;
 
   return v_field_formatted;
 end $$

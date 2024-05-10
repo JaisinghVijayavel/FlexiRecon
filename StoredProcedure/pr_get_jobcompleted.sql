@@ -21,13 +21,18 @@ if in_jobtype_code = '0' then
 		a.job_name,
     a.recon_code,
 		d.recon_name,
-		date_format(a.start_date,v_app_datetime_format) as start_date,
-		date_format(a.end_date,v_app_datetime_format) as end_date,
+        DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
+        DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
+       -- a.start_date,
+       -- a.end_date,
+		-- date_format(a.start_date,v_app_datetime_format) as start_date,
+		-- date_format(a.end_date,v_app_datetime_format) as end_date,
 		a.job_status,
 		a.job_remark,
 		b.jobstatus_desc,
 		c.jobtype_desc,
-    a.file_type,
+		a.file_type,
+        a.job_initiated_by,
     ifnull(a.file_name,concat(cast(a.job_gid as nchar),'.',ifnull(a.file_type,'csv'))) as file_name
 	from recon_trn_tjob a
 	inner join recon_mst_tjobstatus b on a.job_status = b.job_status
@@ -45,13 +50,18 @@ else
 		a.job_name,
 		a.recon_code,
 		d.recon_name,
-		date_format(a.start_date,v_app_datetime_format) as start_date,
-		date_format(a.end_date,v_app_datetime_format) as end_date,
+    DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
+		DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
+       -- a.start_date,
+        -- a.end_date,
+		-- date_format(a.start_date,v_app_datetime_format) as start_date,
+		-- date_format(a.end_date,v_app_datetime_format) as end_date,
 		a.job_status,
 		a.job_remark,
 		b.jobstatus_desc,
 		c.jobtype_desc,
     a.file_type,
+    a.job_initiated_by,
     ifnull(a.file_name,concat(cast(a.job_gid as nchar),'.',ifnull(a.file_type,'csv'))) as file_name
 	from recon_trn_tjob a
 	inner join recon_mst_tjobstatus b on a.job_status = b.job_status

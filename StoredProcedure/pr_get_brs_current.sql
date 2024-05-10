@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_get_brs_rollback` $$
-CREATE PROCEDURE `pr_get_brs_rollback`
+DROP PROCEDURE IF EXISTS `pr_get_brs_current` $$
+CREATE PROCEDURE `pr_get_brs_current`
 (
   in in_recon_code varchar(32),
   in in_tran_date date,
@@ -27,12 +27,9 @@ me:begin
   declare v_comparison_dataset_name varchar(255) default '';
   declare v_txt text default '';
   declare v_web_date_format text default '';
-
   declare v_threshold_value double(15,2) default 0;
   declare v_threshold_total double(15,2) default 0;
   declare v_roundoff_value double(15,2) default 0;
-
-  call pr_get_rollbacktran(in_recon_code,in_tran_date,@msg,@result);
 
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
@@ -86,6 +83,50 @@ me:begin
     PRIMARY KEY (bal_gid)
   );
 
+  if not exists(select recon_code from recon_mst_trecon
+    where recon_code = in_recon_code
+    and recontype_code = 'B'
+    and active_status = 'Y'
+    and delete_flag = 'N') then
+
+    set out_msg = 'Selected Recon is not BRS';
+    set out_result = 0;
+
+    select * from tb_brs;
+    leave me;
+  else
+    select
+      (threshold_plus_value+abs(threshold_minus_value))
+    into
+      v_threshold_value
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_threshold_value = ifnull(v_threshold_value,0);
+
+    -- get dataset
+    select
+      group_concat(dataset_code),
+      group_concat(dataset_name)
+    into
+      v_source_dataset,
+      v_source_dataset_name
+    from tb_dataset
+    where recon_code = in_recon_code
+    and dataset_type = 'B';
+
+    select
+      group_concat(dataset_code),
+      group_concat(dataset_name)
+    into
+      v_comparison_dataset,
+      v_comparison_dataset_name
+    from tb_dataset
+    where recon_code = in_recon_code
+    and dataset_type = 'T';
+  end if;
+
   dataset_block:begin
     declare dataset_done int default 0;
     declare dataset_cursor cursor for
@@ -119,51 +160,6 @@ me:begin
 
     close dataset_cursor;
   end dataset_block;
-
-  if not exists(select recon_code from recon_mst_trecon
-    where recon_code = in_recon_code
-    and recontype_code = 'B'
-    and active_status = 'Y'
-    and delete_flag = 'N') then
-
-    set out_msg = 'Selected Recon is not BRS';
-    set out_result = 0;
-
-    select * from tb_brs;
-    leave me;
-  else
-    -- threshold
-    select
-      (threshold_plus_value+abs(threshold_minus_value))
-    into
-      v_threshold_value
-    from recon_mst_trecon
-    where recon_code = in_recon_code
-    and delete_flag = 'N';
-
-    set v_threshold_value = ifnull(v_threshold_value,0);
-
-    -- dataset
-    select
-      group_concat(dataset_code),
-      group_concat(dataset_name)
-    into
-      v_source_dataset,
-      v_source_dataset_name
-    from tb_dataset
-    where recon_code = in_recon_code
-    and dataset_type = 'B';
-
-    select
-      group_concat(dataset_code),
-      group_concat(dataset_name)
-    into
-      v_comparison_dataset,
-      v_comparison_dataset_name
-    from tb_dataset
-    where recon_code = in_recon_code
-    and dataset_type = 'T';
-  end if;
 
   -- Base dqtaset balance
   select
@@ -206,13 +202,18 @@ me:begin
     sum(a.excp_value),count(*)
   into
     v_value,v_count
-  from recon_tmp_ttran as a
+  from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  /*
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -241,13 +242,18 @@ me:begin
     ''
   );
 
-  select sum(a.excp_value),count(*) into v_value,v_count from recon_tmp_ttran as a
+  select sum(a.excp_value),count(*) into v_value,v_count from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  /*
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -288,13 +294,18 @@ me:begin
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Less','','','');
 
 
-  select sum(a.excp_value),count(*) into v_value,v_count from recon_tmp_ttran as a
+  select sum(a.excp_value),count(*) into v_value,v_count from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  /*
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -323,13 +334,18 @@ me:begin
     ''
   );
 
-  select sum(a.excp_value),count(*) into v_value,v_count from recon_tmp_ttran as a
+  select sum(a.excp_value),count(*) into v_value,v_count from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  /*
+  and (a.tran_value = a.excp_value
+  or (a.tran_value <> a.excp_value
+  and a.excp_value > v_threshold_value))
+  */
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -358,7 +374,6 @@ me:begin
     '',
     ''
   );
-
 
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 

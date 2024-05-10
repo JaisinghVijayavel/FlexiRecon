@@ -46,6 +46,22 @@ begin
     end if;
   end if;
 
+  if in_themeagg_field_type = 'NUMERIC' then
+    set v_themeagg_field = concat('cast(',v_themeagg_field,' as decimal(15,2))');
+
+    if in_themeagg_value_flag = 'N' then
+      set v_themeagg_value = concat('cast(',v_themeagg_value,' as decimal(15,2))');
+    end if;
+  end if;
+
+  if in_themeagg_field_type = 'INTEGER' then
+    set v_themeagg_field = concat('cast(',v_themeagg_field,' as signed)');
+
+    if in_themeagg_value_flag = 'N' then
+      set v_themeagg_value = concat('cast(',v_themeagg_value,' as signed)');
+    end if;
+  end if;
+
   if in_themeagg_criteria = 'EXACT' then
     set v_txt = concat(' ',v_themeagg_field,' = ',v_themeagg_value,' ');
   else

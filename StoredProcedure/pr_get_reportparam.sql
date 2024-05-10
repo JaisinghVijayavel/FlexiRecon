@@ -16,8 +16,8 @@ BEGIN
     CREATE TEMPORARY TABLE recon_tmp_treportparam
     (
       report_code varchar(32) not null,
-      reportparam_code varchar(32) not null,
-      reportparam_desc varchar(25) not null,
+      reportparam_code varchar(255) not null,
+      reportparam_desc varchar(255) not null,
       reportparam_order double(7,3) not null default 0,
       PRIMARY KEY (report_code,reportparam_code),
       key idx_reportparam_order(reportparam_order)

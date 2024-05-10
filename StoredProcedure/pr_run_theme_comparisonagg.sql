@@ -11,10 +11,6 @@ CREATE PROCEDURE `pr_run_theme_comparisonagg`
   out out_result int
 )
 me:BEGIN
-  declare v_acc_mode varchar(32) default '';
-  declare v_source_acc_mode varchar(32) default '';
-  declare v_comparison_acc_mode varchar(32) default '';
-  declare v_base_acc_mode varchar(32) default '';
   declare v_recontype_code varchar(32) default '';
 
   declare v_source_head_sql text default '';
@@ -23,9 +19,7 @@ me:BEGIN
   declare v_source_headbrkp_sql text default '';
   declare v_comparison_headbrkp_sql text default '';
 
-  declare v_shortexcess_code text default '';
-  declare v_shortexcess_operator text default '';
-  declare v_theme_desc text default '';
+  declare v_theme_name text default '';
 
   declare v_sql text default '';
   declare v_tmp_sql text default '';
@@ -278,18 +272,13 @@ me:BEGIN
     declare theme_cursor cursor for
       select
 		    a.theme_code,
-        a.theme_desc,
-        a.shortexcess_code,
+        a.theme_name,
         a.source_dataset_code,
-        a.source_dataset_type,
-        a.source_acc_mode,
-        a.comparison_dataset_code,
-        a.comparison_dataset_type,
-        a.comparison_acc_mode,
-        a.group_flag
+        a.comparison_dataset_code
       from recon_mst_ttheme as a
       where a.recon_code = in_recon_code
       and a.theme_type_code = 'QCD_THEME_COMPARE_AGG'
+      and a.hold_flag = 'N'
       and a.active_status = 'Y'
       and a.delete_flag = 'N'
       order by a.theme_order;
@@ -299,62 +288,41 @@ me:BEGIN
 
     theme_loop: loop
       fetch theme_cursor into v_theme_code,
-                              v_theme_desc,
-                              v_shortexcess_code,
+                              v_theme_name,
                               v_source_dataset_code,
-                              v_source_dataset_type,
-                              v_source_acc_mode,
-                              v_comparison_dataset_code,
-                              v_comparison_dataset_type,
-                              v_comparison_acc_mode,
-                              v_group_flag;
+                              v_comparison_dataset_code;
 
       if theme_done = 1 then leave theme_loop; end if;
 
       set v_theme_code = ifnull(v_theme_code,'');
-      set v_theme_desc = ifnull(v_theme_desc,'');
-      set v_group_flag = ifnull(v_group_flag,'');
+      set v_theme_name = ifnull(v_theme_name,'');
 
-      if v_group_flag = 'OTO' then
-        set v_group_flag = 'N';
-        set v_manytomany_match_flag = 'N';
-      elseif v_group_flag = 'OTM' then
-        set v_group_flag = 'Y';
-        set v_manytomany_match_flag = 'N';
-      elseif v_group_flag = 'MTM' then
-        set v_group_flag = 'Y';
-        set v_manytomany_match_flag = 'Y';
-      end if;
+      set v_group_flag = 'Y';
+      set v_manytomany_match_flag = 'Y';
 
-      if v_recontype_code = 'B'
-        or v_recontype_code = 'W'
-        or v_recontype_code = 'I' then
-        if v_comparison_acc_mode = 'B' then
-          set v_group_method_flag = 'B';
+      -- v_source_dataset_type
+      select
+        dataset_type into v_source_dataset_type
+      from recon_mst_trecondataset
+      where recon_code = in_recon_code
+      and dataset_code = v_source_dataset_code
+      and active_status = 'Y'
+      and delete_flag = 'N';
 
-          if v_source_acc_mode = 'C' then
-            set v_comparison_acc_mode = 'D';
-          else
-            set v_comparison_acc_mode = 'C';
-          end if;
-        -- elseif v_source_acc_mode = v_comparison_acc_mode then
-        --  set v_group_method_flag = 'M';
-        elseif v_source_acc_mode <> v_comparison_acc_mode then
-          set v_group_method_flag = 'C';
-        end if;
-      elseif v_recontype_code = 'V' then
-        set v_source_acc_mode = 'V';
-        set v_comparison_acc_mode = 'V';
-      end if;
+      set v_source_dataset_type = ifnull(v_source_dataset_type,'B');
 
-      if v_shortexcess_code = 'short' then
-        set v_shortexcess_operator = '<';
-      elseif v_shortexcess_code = 'excess' then
-        set v_shortexcess_operator = '>';
-      else
-        set v_shortexcess_operator = '';
-      end if;
+      -- v_comparison_dataset_type
+      select
+        dataset_type into v_comparison_dataset_type
+      from recon_mst_trecondataset
+      where recon_code = in_recon_code
+      and dataset_code = v_comparison_dataset_code
+      and active_status = 'Y'
+      and delete_flag = 'N';
 
+      set v_comparison_dataset_type = ifnull(v_comparison_dataset_type,'T');
+
+      -- source from tran table
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
 
       set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from recon_trn_ttran ');
@@ -367,6 +335,7 @@ me:BEGIN
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
+      -- comparison from tran table
       set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tran_fields,') ');
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from recon_trn_ttran ');
@@ -379,6 +348,7 @@ me:BEGIN
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
 
+      -- source from tranbrkp table
       set v_source_headbrkp_sql = concat('insert into recon_tmp_tsource (',v_tranbrkp_fields,') ');
 
       set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_trn_ttranbrkp ');
@@ -391,6 +361,7 @@ me:BEGIN
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and ko_gid = 0 ');
       end if;
 
+      -- comparison from tranbrkp table
       set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,') ');
 
       set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_trn_ttranbrkp ');
@@ -485,10 +456,12 @@ me:BEGIN
           drop temporary table if exists recon_tmp_tcomparison;
           drop temporary table if exists recon_tmp_tsourcedup;
 
+          /*
           drop table if exists recon_tmp_tsource;
           drop table if exists recon_tmp_tcomparison;
+          */
 
-          create /*temporary*/ table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tsource ENGINE = MyISAM;
           alter table recon_tmp_tsource add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_tsource(excp_value);
@@ -496,7 +469,7 @@ me:BEGIN
           create index idx_recon_code on recon_tmp_tsource(recon_code);
           create index idx_dataset_code on recon_tmp_tsource(recon_code,dataset_code);
 
-          create /*temporary*/ table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tcomparison ENGINE = MyISAM;
           alter table recon_tmp_tcomparison add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_tcomparison(excp_value);
@@ -511,19 +484,19 @@ me:BEGIN
           create index idx_dataset_code on recon_tmp_tsourcedup(recon_code,dataset_code);
           alter table recon_tmp_tsourcedup ENGINE = MyISAM;
 
-          /*
           drop temporary table if exists recon_tmp_tsourceagg;
           drop temporary table if exists recon_tmp_tcomparisonagg;
           drop temporary table if exists recon_tmp_ttranagg;
-          */
 
+          /*
           drop table if exists recon_tmp_tsourceagg;
           drop table if exists recon_tmp_tcomparisonagg;
           drop table if exists recon_tmp_ttranagg;
+          */
 
           -- grouping temp table movement
           -- create agg temp tables
-          create /*temporary*/ table recon_tmp_tsourceagg select * from recon_rpt_tthemeagg where 1 = 2;
+          create temporary table recon_tmp_tsourceagg select * from recon_rpt_tthemeagg where 1 = 2;
           alter table recon_tmp_tsourceagg ENGINE = MyISAM;
           alter table recon_tmp_tsourceagg add primary key(themeagg_gid);
           alter table recon_tmp_tsourceagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
@@ -532,7 +505,7 @@ me:BEGIN
           create index idx_excp_value on recon_tmp_tsourceagg(excp_value);
           create index idx_tran_date on recon_tmp_tsourceagg(tran_date);
 
-          create /*temporary*/ table recon_tmp_tcomparisonagg select * from recon_rpt_tthemeagg where 1 = 2;
+          create temporary table recon_tmp_tcomparisonagg select * from recon_rpt_tthemeagg where 1 = 2;
           alter table recon_tmp_tcomparisonagg ENGINE = MyISAM;
           alter table recon_tmp_tcomparisonagg add primary key(themeagg_gid);
           alter table recon_tmp_tcomparisonagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
@@ -541,7 +514,7 @@ me:BEGIN
           create index idx_excp_value on recon_tmp_tcomparisonagg(excp_value);
           create index idx_tran_date on recon_tmp_tcomparisonagg(tran_date);
 
-          create /*temporary*/ table recon_tmp_ttranagg select * from recon_rpt_tthemeagg where 1 = 2;
+          create temporary table recon_tmp_ttranagg select * from recon_rpt_tthemeagg where 1 = 2;
           alter table recon_tmp_ttranagg ENGINE = MyISAM;
           alter table recon_tmp_ttranagg add primary key(themeagg_gid);
           alter table recon_tmp_ttranagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
@@ -704,7 +677,7 @@ me:BEGIN
                 set v_sql = concat(v_sql,'update recon_tmp_tsource set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format);
 
-                insert into recon_tmp_tsql(table_type,acc_mode,sql_query) values ('S',v_source_acc_mode,v_sql);
+                insert into recon_tmp_tsql(table_type,sql_query) values ('S',v_sql);
 
                 set v_extraction_criteria = 'EXACT';
                 set v_extraction_filter = 0;
@@ -724,19 +697,21 @@ me:BEGIN
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
 
                 if v_recontype_code <> 'N' then
-                  set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_comparison_acc_mode,char(39), ' ');
+                  set v_sql = concat(v_sql,'where true ');
                 end if;
 
-                insert into recon_tmp_tsql(table_type,acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
+                insert into recon_tmp_tsql(table_type,sql_query) values ('C',v_sql);
 
+                /*
 								if v_manytomany_match_flag = 'Y' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
 									set v_sql = '';
 									set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
 									set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
-                  set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_source_acc_mode,char(39),' ');
+                  set v_sql = concat(v_sql,'where true ');
 
-									insert into recon_tmp_tsql(table_type,acc_mode,sql_query) values ('C',v_source_acc_mode,v_sql);
+									insert into recon_tmp_tsql(table_type,sql_query) values ('C',v_sql);
 								end if;
+                */
 
                 set v_comparison_criteria = 'EXACT';
                 set v_comparison_filter = 0;
@@ -798,11 +773,13 @@ me:BEGIN
             set v_theme_condition  = concat(v_theme_condition,' 1 = 1 ');
           end if;
 
+          -- source from tran table
           set v_source_sql = v_source_head_sql;
-          set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
 
-          if v_recontype_code <> 'N' then
-            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+          if v_source_dataset_type <> 'S' then
+            set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
+          else
+            set v_source_sql = concat(v_source_sql,' and tranbrkp_dataset_code = ',char(39),v_source_dataset_code,char(39));
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -816,11 +793,13 @@ me:BEGIN
 
           call pr_run_sql(v_source_sql,@result,@msg);
 
+          -- source from tranbrkp table
           set v_source_sql = v_source_headbrkp_sql;
-          set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
 
-          if v_recontype_code <> 'N' then
-            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+          if v_source_dataset_type <> 'S' then
+            set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
+          else
+            set v_source_sql = concat(v_source_sql,' and tranbrkp_dataset_code = ',char(39),v_source_dataset_code,char(39));
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -834,11 +813,13 @@ me:BEGIN
 
           call pr_run_sql(v_source_sql,@result,@msg);
 
+          -- comparison from tran table
           set v_comparison_sql = v_comparison_head_sql;
-          set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
 
-          if v_recontype_code <> 'N' then
-            set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
+          if v_comparison_dataset_type <> 'S' then
+            set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
+          else
+            set v_comparison_sql = concat(v_comparison_sql,' and tranbrkp_dataset_code = ',char(39),v_comparison_dataset_code,char(39));
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -852,11 +833,13 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
+          -- comparison from tranbrkp table
           set v_comparison_sql = v_comparison_headbrkp_sql;
-          set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
 
-          if v_recontype_code <> 'N' then
-            set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
+          if v_comparison_dataset_type <> 'S' then
+            set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
+          else
+            set v_comparison_sql = concat(v_comparison_sql,' and tranbrkp_dataset_code = ',char(39),v_comparison_dataset_code,char(39));
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -869,45 +852,6 @@ me:BEGIN
           set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
-
-					if v_comparison_acc_mode = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V'
-            and v_source_dataset_code <> v_comparison_dataset_code then
-						set v_comparison_sql = v_comparison_head_sql;
-						set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
-
-            if v_recontype_code <> 'N' then
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
-            end if;
-
-            if v_recon_date_flag = 'Y' then
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
-            end if;
-
-						set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition);
-						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
-
-						call pr_run_sql(v_comparison_sql,@result,@msg);
-
-						set v_comparison_sql = v_comparison_headbrkp_sql;
-						set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
-
-            if v_recontype_code <> 'N' then
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
-            end if;
-
-            if v_recon_date_flag = 'Y' then
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date >= ',char(39),in_period_from,char(39));
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_date <= ',char(39),in_period_to,char(39));
-            end if;
-
-						set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
-						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition);
-						set v_comparison_sql = concat(v_comparison_sql,' ',v_comparisonbase_filter);
-
-						call pr_run_sql(v_comparison_sql,@result,@msg);
-					end if;
 
           -- sql block
           sql_block:begin
@@ -1091,7 +1035,7 @@ me:BEGIN
 					set v_sql = concat(v_sql,'"tran_gid":',char(39),',cast(tran_gid as nchar),',char(39),',');
 					set v_sql = concat(v_sql,'"tranbrkp_gid":',char(39),',cast(tranbrkp_gid as nchar),',char(39),',');
 					set v_sql = concat(v_sql,'"tran_mult":',char(39),',cast(tran_mult as nchar),',char(39),',');
-					set v_sql = concat(v_sql,'"src_comp_flag":"S",');
+					set v_sql = concat(v_sql,'"src_comp_flag":"C",');
 					set v_sql = concat(v_sql,'"ko_value":',char(39),',cast(excp_value as nchar),',char(39));
 					set v_sql = concat(v_sql,'}',char(39),' order by tran_gid,tranbrkp_gid),');
 					set v_sql = concat(v_sql,char(39), ']',char(39),') as json) as matched_json,');
@@ -1101,6 +1045,8 @@ me:BEGIN
 					set v_sql = concat(v_sql,'group by ',substr(replace(v_comparison_groupby,'b.',''),2));
 
           call pr_run_sql(v_sql,@result,@msg);
+
+          set v_themeagg_condition = '';
 
           -- agg condition block
           agg_condition_block:begin
@@ -1112,7 +1058,10 @@ me:BEGIN
               a.themeagg_criteria,
               a.themeagg_value_flag,
               a.themeagg_value,
-              b.themeagg_field_type
+              b.themeagg_field_type,
+              a.open_parentheses_flag,
+              a.close_parentheses_flag,
+              a.join_condition
             from recon_mst_tthemeaggcondition as a
             left join recon_mst_tthemeaggfield as b on a.themeagg_field = b.themeagg_field
               and a.theme_code = b.theme_code
@@ -1134,7 +1083,10 @@ me:BEGIN
                                               v_themeagg_criteria,
                                               v_themeagg_value_flag,
                                               v_themeagg_value,
-                                              v_themeagg_field_type;
+                                              v_themeagg_field_type,
+                                              v_open_parentheses_flag,
+                                              v_close_parentheses_flag,
+                                              v_join_condition;
 
               if agg_condition_done = 1 then leave agg_condition_loop; end if;
 
@@ -1144,6 +1096,15 @@ me:BEGIN
               set v_themeagg_value_flag = ifnull(v_themeagg_value_flag,'');
               set v_themeagg_value = ifnull(v_themeagg_value,'');
 
+              set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
+              set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
+
+              set v_join_condition = ifnull(v_join_condition,'');
+              if v_join_condition = '' then set v_join_condition = ' and '; end if;
+
+              set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
+              set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
+
               set v_txt = fn_get_themeaggcondition(v_themeagg_applied_on,
                                                    v_themeagg_field,
                                                    v_themeagg_field_type,
@@ -1151,11 +1112,22 @@ me:BEGIN
                                                    v_themeagg_value_flag,
                                                    v_themeagg_value);
 
-              set v_themeagg_condition = concat(v_themeagg_condition,' and ',v_txt);
+              if v_themeagg_condition = '' then
+                set v_themeagg_condition = ' and ';
+              end if;
+
+              set v_themeagg_condition = concat(v_themeagg_condition,
+                                                v_open_parentheses_flag,
+                                                v_txt,
+                                                v_close_parentheses_flag,' ',v_join_condition,' ');
             end loop agg_condition_loop;
 
             close agg_condition_cursor;
           end agg_condition_block;
+
+          if v_themeagg_condition <> '' then
+            set v_themeagg_condition = concat(v_themeagg_condition,' 1 = 1 ');
+          end if;
 
           -- inner join
           set v_sql = concat('insert into recon_tmp_ttranagg(rec_count,themeagg_json) ');
@@ -1207,20 +1179,19 @@ me:BEGIN
 						FROM recon_tmp_ttranagg
 						JOIN recon_tmp_tpseudorows
 						where rec_count > 0
-            group by themeagg_gid
-						HAVING themeagg_gid IS NOT NULL;
+						HAVING tran_gid IS NOT NULL;
 
           -- update theme
           -- tran table
           update recon_trn_ttran set
-            theme_code = concat(if(theme_code is null,v_theme_desc,concat(theme_code,',',v_theme_desc)))
+            theme_code = concat(if(theme_code is null,v_theme_name,concat(theme_code,',',v_theme_name)))
           where tran_gid in (select tran_gid from recon_tmp_ttranwithbrkpgid where tranbrkp_gid = 0);
 
           -- tranbrkp table
           update recon_trn_ttranbrkp set
-            theme_code = concat(if(theme_code is null,v_theme_desc,concat(theme_code,',',v_theme_desc)))
+            theme_code = concat(if(theme_code is null,v_theme_name,concat(theme_code,',',v_theme_name)))
           where (tran_gid,tranbrkp_gid) in (select tran_gid,tranbrkp_gid from recon_tmp_ttranwithbrkpgid
-                                            where tranbrkp_gid > 0);
+                                                      where tranbrkp_gid > 0);
           -- delete in index table
           delete from recon_tmp_tindex
           where table_name in ('recon_tmp_tsourceagg','recon_tmp_tcomparisonagg','recon_tmp_ttranagg');

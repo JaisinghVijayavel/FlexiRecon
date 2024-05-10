@@ -51,6 +51,9 @@ me:BEGIN
   declare v_source_tranbrkp_code varchar(32) default '';
   declare v_comparison_tranbrkp_code varchar(32) default '';
 
+  declare v_source_dataset_type varchar(32) default '';
+  declare v_comparison_dataset_type varchar(32) default '';
+
   declare v_source_field text default '';
   declare v_source_field_format text default '';
   declare v_extraction_criteria text default '';
@@ -539,19 +542,6 @@ me:BEGIN
       set v_txt = concat('Applying Rule - ',v_rule_name,v_group_desc);
       call pr_upd_job(in_job_gid,'P',v_txt,@msg,@result);
 
-      /*
-      -- get source dataset code
-      call pr_get_recondatasetcode(in_recon_code,v_source_dataset_code,@tran_dataset_code,@tranbrkp_dataset_code);
-
-      set v_source_dataset_code = @tran_dataset_code;
-      set v_source_tranbrkp_code = @tranbrkp_dataset_code;
-
-      -- get comparison dataset code
-      call pr_get_recondatasetcode(in_recon_code,v_comparison_dataset_code,@tran_dataset_code,@tranbrkp_dataset_code);
-
-      set v_comparison_dataset_code = @tran_dataset_code;
-      set v_comparison_tranbrkp_code = @tranbrkp_dataset_code;
-      */
 
       set v_rule_code = ifnull(v_rule_code,'');
 
@@ -598,6 +588,29 @@ me:BEGIN
         set v_comparison_acc_mode = 'V';
       end if;
 
+      -- v_source_dataset_type
+      select
+        dataset_type into v_source_dataset_type
+      from recon_mst_trecondataset
+      where recon_code = in_recon_code
+      and dataset_code = v_source_dataset_code
+      and active_status = 'Y'
+      and delete_flag = 'N';
+
+      set v_source_dataset_type = ifnull(v_source_dataset_type,'B');
+
+      -- v_comparison_dataset_type
+      select
+        dataset_type into v_comparison_dataset_type
+      from recon_mst_trecondataset
+      where recon_code = in_recon_code
+      and dataset_code = v_comparison_dataset_code
+      and active_status = 'Y'
+      and delete_flag = 'N';
+
+      set v_comparison_dataset_type = ifnull(v_comparison_dataset_type,'T');
+
+      -- source head for tran table
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
 
       if in_automatch_flag = 'Y' then
@@ -608,12 +621,19 @@ me:BEGIN
 
       set v_source_head_sql = concat(v_source_head_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
+      if v_source_dataset_type <> 'S' then
+        set v_source_head_sql = concat(v_source_head_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
+      else
+        set v_source_head_sql = concat(v_source_head_sql,' and tranbrkp_dataset_code = ',char(39),v_source_dataset_code,char(39));
+      end if;
+
       if v_recontype_code <> 'N' then
         set v_source_head_sql = concat(v_source_head_sql,' and excp_value <> 0 and mapped_value = 0 ');
       else
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
+      -- comparison head for tran table
       set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tran_fields,') ');
 
       if in_automatch_flag = 'Y' then
@@ -624,12 +644,19 @@ me:BEGIN
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
+      if v_comparison_dataset_type <> 'S' then
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
+      else
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' and tranbrkp_dataset_code = ',char(39),v_comparison_dataset_code,char(39));
+      end if;
+
       if v_recontype_code <> 'N' then
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value <> 0 and mapped_value = 0 ');
       else
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
 
+      -- source head for tranbrkp table
       set v_source_headbrkp_sql = concat('insert into recon_tmp_tsource (',v_tranbrkp_fields,') ');
 
       if in_automatch_flag = 'Y' then
@@ -640,12 +667,19 @@ me:BEGIN
 
       set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
+      if v_source_dataset_type <> 'S' then
+        set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
+      else
+        set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and tranbrkp_dataset_code = ',char(39),v_source_dataset_code,char(39));
+      end if;
+
       if v_recontype_code <> 'N' then
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and excp_value <> 0 and tran_gid > 0 ');
       else
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and ko_gid = 0 ');
       end if;
 
+      -- comparison head for tranbrkp table
       set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,') ');
 
       if in_automatch_flag = 'Y' then
@@ -655,6 +689,12 @@ me:BEGIN
       end if;
 
       set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
+
+      if v_comparison_dataset_type <> 'S' then
+        set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
+      else
+        set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and tranbrkp_dataset_code = ',char(39),v_comparison_dataset_code,char(39));
+      end if;
 
       if v_recontype_code <> 'N' then
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and excp_value <> 0 and tran_gid > 0 ');
@@ -959,8 +999,8 @@ me:BEGIN
             set v_rule_condition  = concat(v_rule_condition,' 1 = 1 ');
           end if;
 
+          -- source from tran table
           set v_source_sql = v_source_head_sql;
-          set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
 
           if v_recontype_code <> 'N' then
             set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
@@ -977,8 +1017,8 @@ me:BEGIN
 
           call pr_run_sql(v_source_sql,@result,@msg);
 
+          -- source from tranbrkp table
           set v_source_sql = v_source_headbrkp_sql;
-          set v_source_sql = concat(v_source_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39));
 
           if v_recontype_code <> 'N' then
             set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
@@ -995,8 +1035,8 @@ me:BEGIN
 
           call pr_run_sql(v_source_sql,@result,@msg);
 
+          -- comparison from tran table
           set v_comparison_sql = v_comparison_head_sql;
-          set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
 
           if v_recontype_code <> 'N' then
             set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
@@ -1013,8 +1053,8 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
+          -- comparison from tranbrkp table
           set v_comparison_sql = v_comparison_headbrkp_sql;
-          set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
 
           if v_recontype_code <> 'N' then
             set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39));
@@ -1033,8 +1073,8 @@ me:BEGIN
 
 					if v_comparison_acc_mode = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V'
             and v_source_dataset_code <> v_comparison_dataset_code then
+            -- comparison from tran table
 						set v_comparison_sql = v_comparison_head_sql;
-						set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
 
             if v_recontype_code <> 'N' then
 						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
@@ -1051,8 +1091,8 @@ me:BEGIN
 
 						call pr_run_sql(v_comparison_sql,@result,@msg);
 
+            -- comparison from tranbrkp table
 						set v_comparison_sql = v_comparison_headbrkp_sql;
-						set v_comparison_sql = concat(v_comparison_sql,' and dataset_code = ',char(39),v_comparison_dataset_code,char(39));
 
             if v_recontype_code <> 'N' then
 						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));

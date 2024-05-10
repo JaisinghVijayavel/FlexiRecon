@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_get_proof_rollback` $$
-CREATE PROCEDURE `pr_get_proof_rollback`
+DROP PROCEDURE IF EXISTS `pr_get_proof_current` $$
+CREATE PROCEDURE `pr_get_proof_current`
 (
   in in_recon_code varchar(32),
   in in_tran_date date,
@@ -23,11 +23,8 @@ me:begin
   declare v_tran_acc_mode varchar(32) default '';
   declare v_txt text default '';
   declare v_web_date_format text default '';
-
   declare v_threshold_value double(15,2) default 0;
   declare v_threshold_total double(15,2) default 0;
-
-  call pr_get_rollbacktran(in_recon_code,in_tran_date,@msg,@result);
 
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
@@ -202,9 +199,10 @@ me:begin
 
   -- insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Exception','','','');
 
-  select sum(excp_value),count(*) into v_value,v_count from recon_tmp_ttran
+  select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
   and excp_value <> 0
+  and (excp_value + roundoff_value) <> 0
   and tran_acc_mode = 'D'
   and tran_date <= in_tran_date
   and delete_flag = 'N';
@@ -234,9 +232,10 @@ me:begin
     ''
   );
 
-  select sum(excp_value),count(*) into v_value,v_count from recon_tmp_ttran
+  select sum(excp_value),count(*) into v_value,v_count from recon_trn_ttran
   where recon_code = in_recon_code
   and excp_value <> 0
+  and (excp_value + roundoff_value) <> 0
   and tran_acc_mode = 'C'
   and tran_date <= in_tran_date
   and delete_flag = 'N';
@@ -265,6 +264,7 @@ me:begin
     '',
     ''
   );
+
 
   insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 

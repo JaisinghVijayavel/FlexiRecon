@@ -217,13 +217,14 @@ me:begin
   end if;
 
   -- insert dummy record to retail auto_increment
-  set v_sql = concat('insert into ',v_target_table,' (scheduler_gid) select ',cast(in_scheduler_gid as nchar));
+  if v_target_table <> '' then
+    set v_sql = concat('insert into ',v_target_table,' (scheduler_gid) select ',cast(in_scheduler_gid as nchar));
 
-  set @v_sql = v_sql;
-  prepare _sql from @v_sql;
-  execute _sql;
-  deallocate prepare _sql;
-
+    set @v_sql = v_sql;
+    prepare _sql from @v_sql;
+    execute _sql;
+    deallocate prepare _sql;
+  end if;
 
   if (v_recontype_code = 'W' or v_recontype_code = 'B' or v_recontype_code = 'I')
     and (v_dataset_type = 'B' or v_dataset_type = 'T' or v_dataset_type = 'S') then

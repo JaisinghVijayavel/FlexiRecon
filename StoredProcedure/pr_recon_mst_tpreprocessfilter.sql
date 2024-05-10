@@ -3,8 +3,8 @@
 DROP PROCEDURE IF EXISTS `pr_recon_mst_tpreprocessfilter` $$
 CREATE PROCEDURE `pr_recon_mst_tpreprocessfilter`
 (
-	inout in_preprocessfilter_gid int,
-	in in_preprocess_code varchar(32),	
+	inout in_preprocessfilter_gid int(10),
+	in in_preprocess_code varchar(32),
   in in_recon_code varchar(32),
 	in in_filter_seqno double,
 	in in_filter_field varchar(255),
@@ -20,7 +20,7 @@ CREATE PROCEDURE `pr_recon_mst_tpreprocessfilter`
 	in in_role_code varchar(32),
 	in in_lang_code varchar(32),
 	out out_msg text,
-	out out_result int
+	out out_result int(10)
 )
 me:BEGIN
 
@@ -30,6 +30,8 @@ me:BEGIN
 	declare v_msg text default '';
   declare v_recon_code text default '';
   declare v_count int default 0;
+
+  set in_filter_value = ifnull(in_filter_value,'');
 	
 	if(in_action = 'INSERT' or in_action = 'UPDATE') then
 		if not exists(select in_preprocess_code from recon_mst_tpreprocess
@@ -38,22 +40,31 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Invalid preprocess code');
 			set err_flag := true;
 		end if;	
-				
+
 		if in_filter_criteria = '' or in_filter_criteria is null then
 			set err_msg := concat(err_msg,'Filter criteria on cannot be empty,');
 			set err_flag := true;
 		end if;
 
+    /*
 		if in_filter_value = '' or in_filter_value is null then
 			set err_msg := concat(err_msg,'Identifier value on cannot be empty,');
 			set err_flag := true;
 		end if;
+    */
 
 		if in_active_status <> 'Y' and in_active_status <> 'N' or in_active_status is null then
 			set err_msg := concat(err_msg,'Invalid active status value,');
 			set err_flag := true;
 		end if;
- 
+  if exists(select filter_seqno from recon_mst_tpreprocessfilter
+			where preprocess_code = in_preprocess_code
+      and filter_seqno=in_filter_seqno
+      and preprocessfilter_gid <> in_preprocessfilter_gid
+			and delete_flag = 'N') then
+			set err_msg := concat(err_msg,'Duplicate Sequence no.,');
+			set err_flag := true;
+		end if;
 
     -- recon field
     if not exists(select recon_field_name from recon_mst_treconfield
@@ -88,56 +99,52 @@ me:BEGIN
 	
 	if (in_action = 'INSERT') then
 		set in_preprocessfilter_gid = 0;
-		
-		select count(*)+1 into v_count from recon_mst_tpreprocessfilter 
-		where preprocess_code=in_preprocess_code;
-		
+		 	select count(*)+1 into v_count from recon_mst_tpreprocessfilter where preprocess_code=in_preprocess_code;
 		INSERT INTO recon_mst_tpreprocessfilter
-		(
-			preprocess_code,
-			filter_seqno,
-			filter_field,
-			filter_criteria,
-			filter_value,
-			open_parentheses_flag,
-			close_parentheses_flag,
-			join_condition,
-			active_status,
-			insert_date,
-			insert_by
-		)
-		VALUES
-		(
-			in_preprocess_code,
-			in_filter_seqno,
-			in_filter_field,
-			in_filter_criteria,
-			in_filter_value,
-			in_open_flag,
-			in_close_flag,
-			in_join_condition,
-			in_active_status,
-			sysdate(),
-			in_user_code
-		);
+(
+preprocess_code,
+filter_seqno,
+filter_field,
+filter_criteria,
+filter_value,
+open_parentheses_flag,
+close_parentheses_flag,
+join_condition,
+active_status,
+insert_date,
+insert_by)
+VALUES
+(
+in_preprocess_code,
+in_filter_seqno,
+in_filter_field,
+in_filter_criteria,
+in_filter_value,
+in_open_flag,
+in_close_flag,
+in_join_condition,
+in_active_status,
+sysdate(),
+in_user_code);
 		
 		select max(preprocessfilter_gid) into v_preprocessfilter_gid from recon_mst_tpreprocessfilter;
 		set in_preprocessfilter_gid = v_preprocessfilter_gid;
 		set v_msg = 'Record saved successfully.. !';  
 	elseif(in_action = 'UPDATE') then
-		UPDATE recon_mst_tpreprocessfilter SET
-			preprocess_code =in_preprocess_code,
-			filter_seqno =in_filter_seqno,
-			filter_field = in_filter_field,
-			filter_criteria = in_filter_criteria,
-			filter_value = in_filter_value,
-			open_parentheses_flag = in_open_flag,
-			close_parentheses_flag = in_close_flag,
-			join_condition = in_join_condition,
-			active_status = in_active_status,
-			update_date = sysdate(),
-			update_by = in_user_code
-		WHERE preprocessfilter_gid = in_preprocessfilter_gid
+UPDATE recon_mst_tpreprocessfilter
+SET
+preprocess_code =in_preprocess_code,
+filter_seqno =in_filter_seqno,
+filter_field = in_filter_field,
+filter_criteria = in_filter_criteria,
+filter_value = in_filter_value,
+open_parentheses_flag = in_open_flag,
+close_parentheses_flag = in_close_flag,
+join_condition = in_join_condition,
+active_status = in_active_status,
+update_date = sysdate(),
+update_by = in_user_code
+WHERE preprocessfilter_gid = in_preprocessfilter_gid
 		and delete_flag = 'N';     
 		
 		set in_preprocessfilter_gid = in_preprocessfilter_gid;
@@ -146,10 +153,9 @@ me:BEGIN
 		update recon_mst_tpreprocessfilter set
 			update_date = sysdate(),
 			update_by = in_action_by,
-			active_status='N'		
+              active_status='N'	,delete_flag = 'Y'	
 		where preprocessfilter_gid = in_preprocessfilter_gid
 		and delete_flag = 'N';   
-		
 		set in_preprocessfilter_gid = in_preprocessfilter_gid;
 		set v_msg = 'Record deleted successfully.. !';  
 	end if;
