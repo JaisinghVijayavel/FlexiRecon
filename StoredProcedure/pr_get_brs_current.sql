@@ -207,6 +207,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   /*
@@ -247,6 +248,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   /*
@@ -299,6 +301,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   /*
@@ -339,6 +342,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   /*
@@ -387,6 +391,7 @@ me:begin
   if v_threshold_value > 0 then
 		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_trn_ttran as a
 		where a.recon_code = in_recon_code
+    and a.tran_date <= in_tran_date
 		and a.excp_value <> 0
     and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value

@@ -91,6 +91,10 @@ me:BEGIN
     set v_recon_date_field = ifnull(v_recon_date_field,'');
 
     if v_recon_date_flag = 'Y' then
+      if v_recon_date_field <> 'tran_date' then
+        set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
+      end if;
+
       set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
       set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
       set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
@@ -326,7 +330,7 @@ me:BEGIN
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'Q' then
         set v_sql = v_process_query;
-        set v_sql = concat(v_sql,v_recon_date_condition);
+        -- set v_sql = concat(v_sql,v_recon_date_condition);
 
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);

@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_theme_comparisonagg` $$
 CREATE PROCEDURE `pr_run_theme_comparisonagg`
 (
   in in_recon_code text,
+  in in_job_gid int,
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
@@ -182,7 +183,14 @@ me:BEGIN
   ) ENGINE = MyISAM;
 
   insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_tran_date','Y';
+  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_excp_value','Y';
+  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_recon_code','Y';
+  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_dataset_date','Y';
+
   insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_tran_date','Y';
+  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_excp_value','Y';
+  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_recon_code','Y';
+  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_dataset_date','Y';
 
   CREATE temporary TABLE recon_tmp_tpseudorows(
     row int unsigned NOT NULL,
@@ -299,6 +307,8 @@ me:BEGIN
 
       set v_group_flag = 'Y';
       set v_manytomany_match_flag = 'Y';
+
+      call pr_upd_job(in_job_gid,'P',concat('Applying Theme - ',v_theme_name),@msg,@result);
 
       -- v_source_dataset_type
       select
@@ -522,7 +532,7 @@ me:BEGIN
           create index idx_rec_count on recon_tmp_ttranagg(rec_count);
 
           -- index table
-          delete from recon_tmp_tindex where index_name <> 'idx_tran_date';
+          delete from recon_tmp_tindex where sys_flag <> 'Y';
           truncate recon_tmp_tsql;
 
           condition_block:begin

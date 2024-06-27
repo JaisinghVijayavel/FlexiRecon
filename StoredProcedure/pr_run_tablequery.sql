@@ -18,7 +18,8 @@ CREATE PROCEDURE `pr_run_tablequery`
 me:BEGIN
   declare v_field_name varchar(128) default '';
   declare v_field_alias_name varchar(128) default '';
-  declare v_field_type varchar(32) default '';
+  declare v_field_type varchar(128) default '';
+  declare v_field_length varchar(128) default '';
   declare v_field text default '';
   declare v_sql_field text default '';
   declare v_sql text default '';
@@ -31,17 +32,24 @@ me:BEGIN
   declare v_rpt_table_name text default '';
   declare v_recon_field_prefix text default '';
 
+  declare v_report_exec_type text default '';
+  declare v_dataset_db_name text default '';
+  declare v_table_name text default '';
+
   set in_condition = ifnull(in_condition,'');
   set in_job_gid = ifnull(in_job_gid,0);
 
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;
 
+  -- drop table if exists recon_tmp_tfield;
+
   create temporary table recon_tmp_tfield
   (
     field_name varchar(255),
     field_alias_name text,
     field_type varchar(32),
+    field_length varchar(32),
     display_order decimal(7,3) not null default 0,
     primary key (field_name),
     key idx_display_order(display_order)
@@ -67,19 +75,25 @@ me:BEGIN
   where reporttemplate_code = in_reporttemplate_code
   and delete_flag = 'N';
 
-  set v_report_code = ifnull(v_report_code,'');
+  set v_report_code = ifnull(v_report_code,in_report_code);
   set v_report_name = ifnull(v_report_name,'');
 
   if v_report_name = '' then
     select
-      report_desc
+      report_desc,
+		  report_exec_type,
+		  table_name
     into
-      v_report_name
+      v_report_name,
+		  v_report_exec_type,
+		  v_table_name
     from recon_mst_treport
     where report_code = in_report_code
     and delete_flag = 'N';
 
     set v_report_name = ifnull(v_report_name,'');
+    set v_report_exec_type = ifnull(v_report_exec_type,'');
+    set v_table_name = ifnull(v_table_name,'');
   end if;
 
   set v_report_name = GET_ALPHANUM(v_report_name);
@@ -89,11 +103,12 @@ me:BEGIN
     and delete_flag = 'N') then
     set @sno := 0;
 
-    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order)
     select
       a.report_field,
       a.display_desc,
       ifnull(b.recon_field_type,'') as field_type,
+      ifnull(b.recon_field_length,'') as field_length,
       a.display_order
     from recon_mst_treporttemplatefield as a
     left join recon_mst_treconfield as b on a.report_field = b.recon_field_name
@@ -102,6 +117,28 @@ me:BEGIN
     where a.reporttemplate_code = in_reporttemplate_code
     and a.delete_flag = 'N'
     order by a.display_order;
+  elseif v_report_exec_type = 'D' then
+    set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+
+    if v_dataset_db_name <> '' then
+      set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+    else
+      set v_table_name = in_report_code;
+    end if;
+
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order)
+    select
+      dataset_table_field,
+      field_name,
+      field_type,
+      field_length,
+      dataset_field_sno
+    from recon_mst_tdatasetfield
+    where dataset_code = in_report_code
+    and delete_flag = 'N'
+    order by dataset_field_sno;
+
+    set in_table_name = v_table_name;
   elseif exists(select field_name from recon_mst_tsystemfield
     where table_name = in_table_name
     and delete_flag = 'N') then
@@ -111,7 +148,7 @@ me:BEGIN
     select
       field_name,
       fn_get_reconfieldname(in_recon_code,field_name),
-      '' as field_type,
+      fn_get_fieldtype(in_recon_code,field_name) as field_type,
       @sno := @sno + 1
     from recon_mst_tsystemfield
     where table_name = in_table_name
@@ -147,7 +184,7 @@ me:BEGIN
     select
       field_name,
       fn_get_reconfieldname(in_recon_code,field_name),
-      '' as field_type,
+      fn_get_fieldtype(in_recon_code,field_name) as field_type,
       @sno := @sno + 1
     from recon_mst_ttablestru
     where table_name = in_table_name
@@ -191,11 +228,12 @@ me:BEGIN
 
     set v_table_stru_flag := true;
   else
-    insert into recon_tmp_tfield (field_name,field_alias_name,field_type)
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length)
       SELECT
         t.COLUMN_NAME as field_name,
         ifnull(f.recon_field_name,t.COLUMN_NAME),
-        ifnull(f.recon_field_type,'')
+        ifnull(f.recon_field_type,''),
+        ifnull(f.recon_field_length,'')
       FROM information_schema.columns as t
       left join recon_mst_treconfield as f on t.COLUMN_NAME = f.recon_field_name
         and f.recon_code = in_recon_code
@@ -257,7 +295,7 @@ me:BEGIN
   field_block:begin
     declare field_done int default 0;
     declare field_cursor cursor for
-      select a.field_name,a.field_alias_name,a.field_type from recon_tmp_tfield as a
+      select a.field_name,a.field_alias_name,a.field_type,a.field_length from recon_tmp_tfield as a
       inner join recon_tmp_tfielddisplay as b on a.field_name = b.field_name
       where b.display_flag = 'Y'
       order by b.display_order;
@@ -267,10 +305,10 @@ me:BEGIN
     open field_cursor;
 
     field_loop: loop
-      fetch field_cursor into v_field_name,v_field_alias_name,v_field_type;
+      fetch field_cursor into v_field_name,v_field_alias_name,v_field_type,v_field_length;
       if field_done = 1 then leave field_loop; end if;
 
-      set v_field = concat(fn_get_fieldformat(in_recon_code,v_field_name),' as ',char(39),v_field_alias_name,char(39));
+      set v_field = concat(fn_get_fieldtypeformat(in_recon_code,v_field_name,v_field_type,v_field_length),' as ',char(39),v_field_alias_name,char(39));
 
       /*
       if v_field_type = 'NUMBER' then

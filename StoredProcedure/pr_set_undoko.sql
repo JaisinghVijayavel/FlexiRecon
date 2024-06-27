@@ -5,7 +5,7 @@ CREATE PROCEDURE `pr_set_undoko`
 (
   in in_ko_gid int,
   in in_undo_ko_reason varchar(255),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -26,6 +26,7 @@ me:begin
   create temporary table recon_tmp_ttranko(
     tran_gid int(10) unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
+    roundoff_value decimal(15,2) not null default 0,
     PRIMARY KEY (tran_gid)
   );
 
@@ -48,22 +49,37 @@ me:begin
     where ko_gid = in_ko_gid
     and delete_flag = 'N';
 
-    
+
     set v_txt = fn_get_configvalue('ko_undo_period');
     set v_ko_undo_period = cast(ifnull(v_txt,'0') as unsigned);
 
-    
+
     if curdate() > adddate(v_ko_date,interval v_ko_undo_period day) then
       set out_msg = concat('Undo ko failed ! It should be done with in ',cast(v_ko_undo_period as nchar),' day(s) !)');
       leave me;
     end if;
 
-    insert into recon_tmp_ttranko (tran_gid,ko_value)
+    insert into recon_tmp_ttranko (tran_gid,ko_value,roundoff_value)
+			select
+				b.tran_gid,
+				sum(b.ko_value*b.ko_mult) as ko_value,
+				sum(ifnull(c.roundoff_value,0)) as roundoff_value
+			from recon_trn_tko as a
+			inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+			left join recon_trn_tkoroundoff as c on b.ko_gid = c.ko_gid
+				and b.tran_gid = c.tran_gid
+				and b.tranbrkp_gid = c.tranbrkp_gid
+				and c.delete_flag = 'N'
+      where a.ko_gid = in_ko_gid
+			and a.delete_flag = 'N'
+			group by b.tran_gid;
+
+      /*
       select tran_gid,sum(ko_value*ko_mult) as ko_value from recon_trn_tkodtl
       where ko_gid = in_ko_gid
       and delete_flag = 'N'
       group by tran_gid;
-
+      */
     insert into recon_tmp_ttrangid
       select tran_gid from recon_tmp_ttranko;
 
@@ -96,6 +112,7 @@ me:begin
     and b.delete_flag = 'N'
     set
       b.excp_value = b.excp_value + a.ko_value*b.tran_mult,
+      b.roundoff_value = b.roundoff_value - a.roundoff_value,
       b.ko_gid = 0,
       b.ko_date = null;
 
@@ -126,6 +143,12 @@ me:begin
     and delete_flag = 'N';
 
     update recon_trn_tkodtl set
+      delete_flag = 'Y'
+    where ko_gid = in_ko_gid
+    and delete_flag = 'N';
+
+    -- set delete flag 'Y' in roundoff table
+    update recon_trn_tkoroundoff set
       delete_flag = 'Y'
     where ko_gid = in_ko_gid
     and delete_flag = 'N';

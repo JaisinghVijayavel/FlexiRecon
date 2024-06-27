@@ -19,6 +19,7 @@ me:BEGIN
 
   declare v_rptsession_gid int default 0;
   declare v_report_desc text default '';
+  declare v_report_exec_type text default '';
   declare v_sp_name text default '';
   declare v_table_name text default '';
   declare v_src_table_name text default '';
@@ -26,6 +27,7 @@ me:BEGIN
   declare v_recon_code_field text default '';
   declare v_report_default_condition text default '';
   declare v_sorting_order text default '';
+  declare v_dataset_db_name text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -82,6 +84,7 @@ me:BEGIN
     select
       report_code,
       report_desc,
+      report_exec_type,
       table_name,
       src_table_name,
       sp_name,
@@ -90,6 +93,7 @@ me:BEGIN
     into
       v_report_code,
       v_report_desc,
+      v_report_exec_type,
       v_table_name,
       v_src_table_name,
       v_sp_name,
@@ -107,13 +111,14 @@ me:BEGIN
 
   set v_report_code = ifnull(v_report_code,'');
   set v_report_desc = ifnull(v_report_desc,v_report_code);
+  set v_report_exec_type = ifnull(v_report_exec_type,'');
   set v_table_name = ifnull(v_table_name,'');
   set v_src_table_name = ifnull(v_src_table_name,'');
   set v_sp_name = ifnull(v_sp_name,'');
   set v_recon_code_field = ifnull(v_recon_code_field,'');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
 
-  if v_table_name = '' then
+  if v_table_name = '' and v_report_exec_type <> 'D' then
     set out_msg = 'Invalid table name';
     set out_result = 0;
 
@@ -163,22 +168,43 @@ me:BEGIN
 
   select last_insert_id() into v_rptsession_gid;
 
-  if v_rptsession_gid > 0 then
-    set v_sql = concat('delete from ',v_table_name,' where rptsession_gid in (');
-    set v_sql = concat(v_sql,'select rptsession_gid from recon_trn_treportsession ');
-    set v_sql = concat(v_sql,'where rptsession_gid < ',cast(v_rptsession_gid as nchar),') ');
-    set v_sql = concat(v_sql,'and rptsession_gid > 0 ');
-    set v_sql = concat(v_sql,'and user_code = ',char(39),in_user_code,char(39));
+  if v_report_exec_type = 'S' then
+    if v_rptsession_gid > 0 then
+      set v_sql = concat('delete from ',v_table_name,' where rptsession_gid in (');
+      set v_sql = concat(v_sql,'select rptsession_gid from recon_trn_treportsession ');
+      set v_sql = concat(v_sql,'where rptsession_gid < ',cast(v_rptsession_gid as nchar),') ');
+      set v_sql = concat(v_sql,'and rptsession_gid > 0 ');
+      set v_sql = concat(v_sql,'and user_code = ',char(39),in_user_code,char(39));
+
+      call pr_run_sql(v_sql,@msg,@result);
+    end if;
+
+    call pr_run_sp(v_recon_code,v_sp_name,0,v_rptsession_gid,in_report_condition,v_sorting_order,in_user_code,@msg,@result);
+
+    set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
+    set v_sql = concat(v_sql,'where rptsession_gid = ',cast(v_rptsession_gid as nchar),' ');
+
+    call pr_run_sql(v_sql,@msg,@result);
+  elseif v_report_exec_type = 'D' then
+    set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+
+    if v_dataset_db_name <> '' then
+      set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+    else
+      set v_table_name = in_report_code;
+    end if;
+
+    set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
+    set v_sql = concat(v_sql,'where true ',in_report_condition);
+
+    call pr_run_sql(v_sql,@msg,@result);
+  elseif v_report_exec_type = 'T' then
+    set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
+    set v_sql = concat(v_sql,'where true ',in_report_condition);
 
     call pr_run_sql(v_sql,@msg,@result);
   end if;
 
-  call pr_run_sp(v_recon_code,v_sp_name,0,v_rptsession_gid,in_report_condition,v_sorting_order,in_user_code,@msg,@result);
-
-  set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
-  set v_sql = concat(v_sql,'where rptsession_gid = ',cast(v_rptsession_gid as nchar),' ');
-
-  call pr_run_sql(v_sql,@msg,@result);
 
   set out_rec_count = @rec_count;
   set out_msg = concat(v_report_desc,' generation initiated in the report session id ',cast(v_rptsession_gid as nchar));

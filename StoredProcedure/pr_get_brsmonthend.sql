@@ -27,6 +27,7 @@ me:begin
   declare v_base_dataset_name varchar(255) default '';
   declare v_target_dataset_name varchar(255) default '';
   declare v_txt text default '';
+
   declare v_web_date_format text default '';
 
   declare v_recon_name varchar(255) default '';
@@ -50,9 +51,15 @@ me:begin
   declare v_tran_date text default '';
   declare v_condition text default '';
 
+  declare v_threshold_value double(15,2) default 0;
+  declare v_threshold_count int default 0;
+  declare v_threshold_total double(15,2) default 0;
+
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
   set v_web_date_format = ifnull(v_web_date_format,'%d-%m-%Y');
+
+  call pr_get_rollbacktran(in_recon_code,in_tran_date,@msg,@result);
 
   drop temporary table if exists tb_brs;
   drop temporary table if exists tb_dataset;
@@ -78,6 +85,38 @@ me:begin
     PRIMARY KEY (recon_code,dataset_code),
     key idx_recontype_code (recon_code,recontype_code)
   ) ENGINE = MyISAM;
+
+  -- get recon threshold value
+	select
+		(threshold_plus_value+abs(threshold_minus_value))
+	into
+		v_threshold_value
+	from recon_mst_trecon
+	where recon_code = in_recon_code
+	and delete_flag = 'N';
+
+	set v_threshold_value = ifnull(v_threshold_value,0);
+
+  -- rounding off
+  if v_threshold_value > 0 then
+		select
+      sum(a.excp_value*a.tran_mult),count(*)
+    into
+      v_value,v_count
+    from recon_tmp_ttran as a
+		where a.recon_code = in_recon_code
+		and a.excp_value <> 0
+    and a.roundoff_value <> 0
+		and a.tran_value <> a.excp_value
+    and (a.excp_value - a.roundoff_value * a.tran_mult) = 0
+		and a.delete_flag = 'N';
+
+    set v_value = ifnull(v_value,0);
+    set v_count = ifnull(v_count,0);
+
+    set v_threshold_count = v_count;
+    set v_threshold_total = v_value;
+  end if;
 
   insert into tb_dataset select
                             a.recon_code,a.dataset_code,c.dataset_name,a.dataset_type,b.recon_name,b.recontype_code
@@ -191,12 +230,13 @@ me:begin
     sum(a.excp_value),count(*)
   into
     v_base_cr_total,v_base_cr_count
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -209,12 +249,13 @@ me:begin
     sum(a.excp_value),count(*)
   into
     v_target_cr_total,v_target_cr_count
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -227,12 +268,13 @@ me:begin
     sum(a.excp_value),count(*)
   into
     v_base_dr_total,v_base_dr_count
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -245,12 +287,13 @@ me:begin
     sum(a.excp_value),count(*)
   into
     v_target_dr_total,v_target_dr_count
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -268,7 +311,6 @@ me:begin
 
   set v_target_bal_value = ifnull(v_target_bal_value,0);
   set v_target_bal_date = ifnull(v_target_bal_date,in_tran_date);
-
 
   set v_value = v_cr_total - v_dr_total + (v_base_bal_value * -1);
   set v_value = round(v_value,2);
@@ -291,7 +333,9 @@ me:begin
           v_target_dr_total as target_dr_total,
           v_target_cr_total as target_cr_total,
           v_target_dr_count as target_dr_count,
-          v_target_cr_count as target_cr_count;
+          v_target_cr_count as target_cr_count,
+          v_threshold_count as roundoff_count,
+          v_threshold_total as roundoff_total;
 
   -- get recon field
   select
@@ -335,13 +379,14 @@ me:begin
     if (datediff(curdate(),a.tran_date)>30 and datediff(curdate(),tran_date)<=60,5,null) as '31><=60',
     if (datediff(curdate(),a.tran_date)>60 and datediff(curdate(),tran_date)<=90,6,null) as '61><=90',
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
     and b.dataset_code = a.dataset_code
     and b.dataset_type = 'T'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_date <= '",v_tran_date,"'
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N'
@@ -382,13 +427,14 @@ me:begin
     if (datediff(curdate(),a.tran_date)>30 and datediff(curdate(),tran_date)<=60,5,null) as '31><=60',
     if (datediff(curdate(),a.tran_date)>60 and datediff(curdate(),tran_date)<=90,6,null) as '61><=90',
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
     and b.dataset_code = a.dataset_code
     and b.dataset_type = 'T'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_date <= '",v_tran_date,"'
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N'
@@ -397,9 +443,9 @@ me:begin
     null as 'Tran ID',
     null as 'Transaction Date',
     null as 'Tran Value',
-    null as 'Exception Value',",
+    null as 'Exception Value',
+    null as '-',",
     v_recon_field_desc,"
-    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -429,13 +475,14 @@ me:begin
     if (datediff(curdate(),a.tran_date)>30 and datediff(curdate(),tran_date)<=60,5,null) as '31><=60',
     if (datediff(curdate(),a.tran_date)>60 and datediff(curdate(),tran_date)<=90,6,null) as '61><=90',
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
     and b.dataset_code = a.dataset_code
     and b.dataset_type = 'B'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_date <= '",v_tran_date,"'
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N'
@@ -444,9 +491,9 @@ me:begin
     null as 'Tran ID',
     null as 'Transaction Date',
     null as 'Tran Value',
-    null as 'Exception Value',",
+    null as 'Exception Value',
+    null as '-',",
     v_recon_field_desc,"
-    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -476,13 +523,14 @@ me:begin
     if (datediff(curdate(),a.tran_date)>30 and datediff(curdate(),tran_date)<=60,5,null) as '31><=60',
     if (datediff(curdate(),a.tran_date)>60 and datediff(curdate(),tran_date)<=90,6,null) as '61><=90',
     if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
     and b.dataset_code = a.dataset_code
     and b.dataset_type = 'B'
     and b.delete_flag = 'N'
   where a.recon_code = '",in_recon_code,"'
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_date <= '",v_tran_date,"'
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N'
@@ -491,9 +539,9 @@ me:begin
     null as 'Tran ID',
     null as 'Transaction Date',
     null as 'Tran Value',
-    null as 'Exception Value',",
+    null as 'Exception Value',
+    null as '-',",
     v_recon_field_desc,"
-    null as '-',
     null as 'Pending Days',
     null as '0>=3',
     null as '4>=7',
@@ -517,47 +565,49 @@ me:begin
     sum(if(c.dataset_type = 'B' and a.tran_acc_mode = 'C',1,0)) as base_cr_count,
     sum(if(c.dataset_type = 'T' and a.tran_acc_mode = 'D',1,0)) as target_dr_count,
     sum(if(c.dataset_type = 'T' and a.tran_acc_mode = 'C',1,0)) as target_cr_count
-  from recon_trn_ttran as a
+  from recon_tmp_ttran as a
   inner join recon_mst_taging as b on datediff(curdate(),a.tran_date) between b.aging_from and b.aging_to and b.delete_flag = 'N'
   inner join recon_mst_trecondataset as c on a.recon_code = c.recon_code and c.delete_flag = 'N'
   where a.recon_code = in_recon_code
-  and a.excp_value > 0
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_date <= in_tran_date
   and a.delete_flag = 'N';
 
-  if exists(select tran_gid from recon_trn_ttran
+  if exists(select tran_gid from recon_tmp_ttran
     where recon_code = in_recon_code
     and tran_date <= in_tran_date
-    and excp_value > 0
+    and excp_value <> 0
+    and (excp_value - roundoff_value * tran_mult) <> 0
     and delete_flag = 'N') then
 
     set v_condition = concat(" and recon_code = '",in_recon_code,"' ",
                              " and tran_date <= '",v_tran_date,"' ",
-                             " and excp_value > 0 ",
+                             " and excp_value <> 0 ",
+                             " and (excp_value - roundoff_value * tran_mult) <> 0 ",
                              " and delete_flag = 'N' ");
   else
     set v_condition = concat(" and 1 = 2 ");
   end if;
 
+  call pr_get_tablequery(in_recon_code,'','recon_tmp_ttran',v_condition,0,in_user_code,@msg,@result);
 
-
-   call pr_get_tablequery(in_recon_code,'','recon_trn_ttran',v_condition,0,in_user_code,@msg,@result);
-
-
-  if exists(select tranbrkp_gid from recon_trn_ttranbrkp
+  if exists(select tranbrkp_gid from recon_tmp_ttranbrkp
     where tran_gid in
     (
-      select tran_gid from recon_trn_ttran
+      select tran_gid from recon_tmp_ttran
       where recon_code = in_recon_code
       and tran_date <= in_tran_date
-      and excp_value > 0
+      and excp_value <> 0
+      and (excp_value - roundoff_value * tran_mult) <> 0
       and delete_flag = 'N'
     )
     and excp_value > 0
     and delete_flag = 'N') then
     set v_condition = concat(" and recon_code = '",in_recon_code,"' ",
-                           " and excp_value > 0 ",
-                           " and tran_gid in (select tran_gid from recon_trn_ttran where true ",
+                           " and excp_value <> 0 ",
+                           "   and (excp_value - roundoff_value * tran_mult) <> 0 ",
+                           " and tran_gid in (select tran_gid from recon_tmp_ttran where true ",
                            v_condition,") ",
                            " and delete_flag = 'N' ");
 
@@ -565,7 +615,53 @@ me:begin
     set v_condition = concat(" and 1 = 2 ");
   end if;
 
-  call pr_get_tablequery(in_recon_code,'','recon_trn_ttranbrkp',v_condition,0,in_user_code,@msg,@result);
+  call pr_get_tablequery(in_recon_code,'','recon_tmp_ttranbrkp',v_condition,0,in_user_code,@msg,@result);
+
+  -- roundoff diff
+  set v_sql = concat("
+   select
+    a.tran_gid as 'Tran ID',
+    date_format(a.tran_date,'%d-%m-%Y') as 'Transaction Date',",
+    "a.tran_value as 'Value',
+    a.roundoff_value as 'Exception Value',
+    '' as '-',",
+    v_recon_field,"
+    datediff(curdate(),a.tran_date) as 'Pending Days',
+    if (datediff(curdate(),a.tran_date)<=3,1,null) as '0>=3',
+    if (datediff(curdate(),a.tran_date)>3 and datediff(curdate(),tran_date)<=7,2,null) as '4>=7',
+    if (datediff(curdate(),a.tran_date)>7 and datediff(curdate(),tran_date)<=15,3,null) as '8><=15',
+    if (datediff(curdate(),a.tran_date)>15 and datediff(curdate(),tran_date)<=30,4,null) as '16><=30',
+    if (datediff(curdate(),a.tran_date)>30 and datediff(curdate(),tran_date)<=60,5,null) as '31><=60',
+    if (datediff(curdate(),a.tran_date)>60 and datediff(curdate(),tran_date)<=90,6,null) as '61><=90',
+    if (datediff(curdate(),a.tran_date)>90,7,null) as '>91'
+  from recon_tmp_ttran as a
+  inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
+    and b.dataset_code = a.dataset_code
+    and b.delete_flag = 'N'
+  where a.recon_code = '",in_recon_code,"'
+  and a.excp_value <> 0
+  and (a.excp_value - a.roundoff_value * a.tran_mult) = 0
+  and a.tran_date <= '",v_tran_date,"'
+  and a.delete_flag = 'N'
+  union all
+  select
+    null as 'Tran ID',
+    null as 'Transaction Date',
+    null as 'Tran Value',
+    null as 'Exception Value',
+    null as '-',",
+    v_recon_field_desc,"
+    null as 'Pending Days',
+    null as '0>=3',
+    null as '4>=7',
+    null as '8><=15',
+    null as '16><=30',
+    null as '31><=60',
+    null as '61><=90',
+    null as '>91';
+  ");
+
+  call pr_run_sql(v_sql,@msg,@result);
 end $$
 
 DELIMITER ;

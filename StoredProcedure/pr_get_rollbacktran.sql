@@ -17,6 +17,7 @@ me:begin
   drop temporary table if exists recon_tmp_ttranbrkp;
   drop temporary table if exists recon_tmp_tko;
   drop temporary table if exists recon_tmp_tkodtl;
+  drop temporary table if exists recon_tmp_tkoroundoff;
   drop temporary table if exists recon_tmp_ttrangid;
 
   /*
@@ -53,9 +54,17 @@ me:begin
   create index idx_tranbrkp_gid on recon_tmp_tkodtl(tranbrkp_gid);
   alter table recon_tmp_tkodtl ENGINE = MyISAM;
 
+  create temporary table recon_tmp_tkoroundoff select * from recon_trn_tkoroundoff where 1 = 2;
+  alter table recon_tmp_tkoroundoff add primary key(koroundoff_gid);
+  create index idx_ko_gid on recon_tmp_tkoroundoff(ko_gid);
+  create index idx_tran_gid on recon_tmp_tkoroundoff(tran_gid);
+  create index idx_tranbrkp_gid on recon_tmp_tkoroundoff(tranbrkp_gid);
+  alter table recon_tmp_tkoroundoff ENGINE = MyISAM;
+
   CREATE temporary TABLE recon_tmp_ttrangid(
     tran_gid int unsigned NOT NULL,
     ko_value double(15,2) not null default 0,
+    roundoff_value double(15,2) not null default 0,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
@@ -90,9 +99,25 @@ me:begin
     and a.recon_code = in_recon_code
     and a.delete_flag = 'N';
 
-  insert into recon_tmp_ttrangid (tran_gid,ko_value)
-    select tran_gid,sum(ko_value*ko_mult) from recon_tmp_tkodtl
-    group by tran_gid;
+  -- koroundoff table
+  insert into recon_tmp_tkoroundoff
+    select b.* from recon_trn_tko as a
+    inner join recon_trn_tkoroundoff as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+    where a.ko_date >= v_next_tran_date
+    and a.recon_code = in_recon_code
+    and a.delete_flag = 'N';
+
+  insert into recon_tmp_ttrangid (tran_gid,ko_value,roundoff_value)
+    select
+      a.tran_gid,
+      sum(a.ko_value*a.ko_mult),
+      sum(ifnull(b.roundoff_value,0)) as roundoff_value
+    from recon_tmp_tkodtl as a
+		left join recon_trn_tkoroundoff as b on a.ko_gid = b.ko_gid
+			and a.tran_gid = b.tran_gid
+			and a.tranbrkp_gid = b.tranbrkp_gid
+			and b.delete_flag = 'N'
+    group by a.tran_gid;
 
   -- insert knockoff transactions
   insert into recon_tmp_ttran
@@ -110,7 +135,8 @@ me:begin
   set
     a.ko_gid = 0,
     a.ko_date = null,
-    a.excp_value = a.excp_value + (b.ko_value*a.tran_mult);
+    a.excp_value = a.excp_value + (b.ko_value*a.tran_mult),
+    a.roundoff_value = a.roundoff_value - b.roundoff_value;
 
   -- update in tranbrkp table
   update recon_tmp_ttranbrkp as a

@@ -1071,7 +1071,7 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
-					if v_comparison_acc_mode = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V'
+					if v_group_method_flag = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V'
             and v_source_dataset_code <> v_comparison_dataset_code then
             -- comparison from tran table
 						set v_comparison_sql = v_comparison_head_sql;

@@ -27,6 +27,7 @@ me:BEGIN
   declare v_recon_flag text default '';
   declare v_report_default_condition text default '';
   declare v_sorting_field text default '';
+  declare v_dataset_db_name text default '';
 
   declare v_sql text default '';
   declare v_txt text default '';
@@ -166,7 +167,7 @@ me:BEGIN
     set v_report_desc = concat(v_report_desc,' (',in_outputfile_type,')');
   end if;
 
-  if v_table_name = '' then
+  if v_table_name = '' and v_report_exec_type <> 'D' then
     set out_msg = 'Invalid table name';
     set out_result = 0;
 
@@ -252,6 +253,26 @@ me:BEGIN
       call pr_run_sql(v_sql,@msg,@result);
     end if;
     */
+  elseif v_report_exec_type = 'D' then    -- dataset
+    set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+
+    if v_dataset_db_name <> '' then
+      set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+    else
+      set v_table_name = in_report_code;
+    end if;
+
+    call pr_run_tablequery(in_reporttemplate_code,
+                           v_recon_code,
+                           v_report_code,
+                           v_table_name,
+                           in_report_condition,
+                           v_job_gid,
+                           in_outputfile_flag,
+                           in_outputfile_type,
+                           in_user_code,@msg,@result);
+  elseif v_report_exec_type = 'C' then
+    call pr_run_customsp(in_recon_code,in_report_code,v_sp_name,v_job_gid,in_user_code,@msg,@result);
   else
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,

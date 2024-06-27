@@ -1,7 +1,8 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_run_automatch_partial` $$
-CREATE PROCEDURE `pr_run_automatch_partial`(
+CREATE PROCEDURE `pr_run_automatch_partial`
+(
   in in_recon_code text,
   in in_rule_code text,
   in in_group_flag text,
@@ -129,8 +130,13 @@ me:BEGIN
   declare v_rule_name text default '';
   declare v_field_type text default '';
 
-  declare v_threshold_plus_value double(15,2) default 1;
-  declare v_threshold_minus_value double(15,2) default 1;
+  declare v_rule_automatch_partial text default '';
+  declare v_threshold_flag text default '';
+  declare v_threshold_plus_value double(15,2) default 0;
+  declare v_threshold_minus_value double(15,2) default 0;
+
+  declare v_rule_threshold_plus_value double(15,2) default 0;
+  declare v_rule_threshold_minus_value double(15,2) default 0;
 
   declare v_matched_value double(15,2) default 0;
   declare v_matched_count int default 0;
@@ -467,10 +473,16 @@ me:BEGIN
   and delete_flag = 'N'
   order by display_order;
 
+  -- get recon value
   select
-    recon_name,recontype_code,recon_date_flag,recon_value_flag,recon_automatch_partial
+    recon_name,recontype_code,recon_date_flag,
+    recon_value_flag,recon_automatch_partial,
+    abs(threshold_plus_value),abs(threshold_minus_value)
   into
-    v_recon_name,v_recontype_code,v_recon_date_flag,v_recon_value_flag,v_recon_automatch_partial
+    v_recon_name,v_recontype_code,v_recon_date_flag,
+    v_recon_value_flag,v_recon_automatch_partial,
+    v_threshold_plus_value,
+    v_threshold_minus_value
   from recon_mst_trecon
   where recon_code = in_recon_code
   and period_from <= curdate()
@@ -483,10 +495,22 @@ me:BEGIN
   -- set v_recon_value_flag = ifnull(v_recon_value_flag,'Y');
   set v_recon_automatch_partial = ifnull(v_recon_automatch_partial,'N');
 
+  if v_recon_automatch_partial = 'Y' then
+    set v_threshold_plus_value = ifnull(v_threshold_plus_value,0);
+    set v_threshold_minus_value = ifnull(v_threshold_minus_value,0);
+  else
+    set v_threshold_plus_value = 0;
+    set v_threshold_minus_value = 0;
+  end if;
+
   if v_recontype_code <> 'N' then
     set v_recon_value_flag = 'Y';
   else
     set v_recon_value_flag = 'N';
+  end if;
+
+  if v_recon_automatch_partial = 'N' then
+    leave me;
   end if;
 
   applyrule_block:begin
@@ -497,7 +521,12 @@ me:BEGIN
         a.source_dataset_code,a.source_acc_mode,
         a.comparison_dataset_code,a.comparison_acc_mode,
         a.reversal_flag,
-        a.group_method_flag,a.manytomany_match_flag
+        a.group_method_flag,
+        a.manytomany_match_flag,
+        a.rule_automatch_partial,
+        a.threshold_flag,
+        a.threshold_plus_value,
+        a.threshold_minus_value
       from recon_mst_trule as a
       where a.recon_code = in_recon_code
       and a.rule_code = ifnull(in_rule_code,a.rule_code)
@@ -519,9 +548,31 @@ me:BEGIN
                   v_source_dataset_code,v_source_acc_mode,
                   v_comparison_dataset_code,v_comparison_acc_mode,
                   v_reversal_flag,
-                  v_group_method_flag,v_manytomany_match_flag;
+                  v_group_method_flag,
+                  v_manytomany_match_flag,
+                  v_rule_automatch_partial,
+                  v_threshold_flag,
+                  v_rule_threshold_plus_value,
+                  v_rule_threshold_minus_value;
 
       if applyrule_done = 1 then leave applyrule_loop; end if;
+
+      -- check threshold at rule level
+      set v_rule_automatch_partial = ifnull(v_rule_automatch_partial,'N');
+      set v_threshold_flag = ifnull(v_threshold_flag,'N');
+
+      if v_rule_automatch_partial = 'Y' then
+        if v_threshold_flag = 'Y' then
+          set v_rule_threshold_plus_value = ifnull(v_rule_threshold_plus_value,0);
+          set v_rule_threshold_minus_value = ifnull(v_rule_threshold_minus_value,0);
+        else
+          set v_rule_threshold_plus_value = 0;
+          set v_rule_threshold_minus_value = 0;
+        end if;
+      else
+        set v_rule_threshold_plus_value = v_threshold_plus_value;
+        set v_rule_threshold_minus_value = v_threshold_minus_value;
+      end if;
 
       -- update job
       set v_txt = concat('Applying Rule - ',v_rule_name,v_group_desc);
@@ -1152,7 +1203,7 @@ me:BEGIN
             set v_grp_field_condition = replace(v_grp_field_condition,',','and');
 
             -- comparison contra and mirror
-            if v_comparison_acc_mode = 'B' and v_source_dataset_code <> v_comparison_dataset_code then
+            if v_group_method_flag = 'B' and v_source_dataset_code <> v_comparison_dataset_code then
               -- comparison from tran table
               set v_comparison_sql = v_comparison_head_sql;
 
@@ -1342,7 +1393,7 @@ me:BEGIN
           set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
           set v_match_sql = concat(v_match_sql,'and (a.excp_value - b.excp_value) > 0 ');
-          set v_match_sql = concat(v_match_sql,'and (a.excp_value - b.excp_value) <=  ',cast(v_threshold_plus_value as nchar),' ');
+          set v_match_sql = concat(v_match_sql,'and (a.excp_value - b.excp_value) <=  ',cast(v_rule_threshold_plus_value as nchar),' ');
 
           set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
@@ -1384,7 +1435,7 @@ me:BEGIN
           set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
           set v_match_sql = concat(v_match_sql,'and (b.excp_value - a.excp_value) > 0 ');
-          set v_match_sql = concat(v_match_sql,'and (b.excp_value - a.excp_value) <=  ',cast(v_threshold_minus_value as nchar),' ');
+          set v_match_sql = concat(v_match_sql,'and (b.excp_value - a.excp_value) <=  ',cast(v_rule_threshold_minus_value as nchar),' ');
 
           set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
@@ -1460,7 +1511,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
 
             set v_match_sql = concat(v_match_sql,'and (abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) > 0 ');
-            set v_match_sql = concat(v_match_sql,'and (abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) <= ',cast(v_threshold_plus_value as nchar),' ');
+            set v_match_sql = concat(v_match_sql,'and (abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) <= ',cast(v_rule_threshold_plus_value  as nchar),' ');
 
             call pr_run_sql(v_match_sql,@msg,@result);
 
@@ -1509,7 +1560,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
 
             set v_match_sql = concat(v_match_sql,'and (abs(sum(b.excp_value*b.tran_mult)) - abs(a.excp_value*a.tran_mult)) > 0 ');
-            set v_match_sql = concat(v_match_sql,'and (abs(sum(b.excp_value*b.tran_mult)) - abs(a.excp_value*a.tran_mult)) <= ',cast(v_threshold_minus_value as nchar),' ');
+            set v_match_sql = concat(v_match_sql,'and (abs(sum(b.excp_value*b.tran_mult)) - abs(a.excp_value*a.tran_mult)) <= ',cast(v_rule_threshold_minus_value as nchar),' ');
 
             call pr_run_sql(v_match_sql,@msg,@result);
 

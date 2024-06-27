@@ -67,6 +67,7 @@ me:BEGIN
     tran_value double(15,2) not null default 0,
     excp_value double(15,2) not null default 0,
     roundoff_value double(15,2) not null default 0,
+    tran_mult tinyint not null default 0,
     PRIMARY KEY (tran_gid),
     key idx_tran_date(tran_date),
     key idx_excp_value(excp_value)
@@ -120,9 +121,9 @@ me:BEGIN
   -- insert in trangid table
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value,roundoff_value
+    tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
@@ -130,9 +131,9 @@ me:BEGIN
 
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value,roundoff_value
+    tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
@@ -141,24 +142,24 @@ me:BEGIN
   -- insert old excption
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value,roundoff_value
+    tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
     and t.excp_value <> 0
-    and (t.excp_value + t.roundoff_value) <> 0
+    and (t.excp_value - t.roundoff_value * t.tran_mult) <> 0
     and t.delete_flag = 'N';
 
   insert into recon_tmp_ttrangid
   (
-    tran_gid,tran_date,tran_value,excp_value,roundoff_value
+    tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,t.tran_date,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
+  select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
     and t.excp_value <> 0
-    and (t.excp_value + t.roundoff_value) <> 0
+    and (t.excp_value - t.roundoff_value * t.tran_mult) <> 0
     and t.delete_flag = 'N';
 
   -- insert in kodtlgid table
@@ -188,14 +189,14 @@ me:BEGIN
   -- get exception count
   select count(*) into v_excp_count from recon_tmp_ttrangid
   where excp_value <> 0
-  and (excp_value + roundoff_value) <> 0;
+  and (excp_value - roundoff_value * tran_mult) <> 0;
 
   set v_excp_count = ifnull(v_excp_count,0);
 
   -- get opening exception count
   select count(*) into v_openingexcp_count from recon_tmp_ttrangid
   where excp_value <> 0
-  and (excp_value + roundoff_value) <> 0
+  and (excp_value - roundoff_value * tran_mult) <> 0
   and tran_date < in_period_from;
 
   set v_openingexcp_count = ifnull(v_openingexcp_count,0);
@@ -273,7 +274,7 @@ me:BEGIN
     right join recon_mst_taging as c on datediff(curdate(),t.tran_date) between c.aging_from and c.aging_to
       and c.delete_flag = 'N'
     where t.excp_value <> 0
-    and (t.excp_value + t.roundoff_value) <> 0
+    and (t.excp_value - t.roundoff_value * tran_mult) <> 0
     group by c.aging_gid,c.aging_desc
   ) as ex on ag.aging_gid = ex.aging_gid;
 

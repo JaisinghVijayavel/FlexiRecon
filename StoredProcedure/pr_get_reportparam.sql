@@ -82,6 +82,27 @@ BEGIN
       and active_status = 'Y'
       and delete_flag = 'N'
       order by display_order;
+    elseif exists(select recon_flag from recon_mst_treport
+      where report_code = in_report_code
+      and report_exec_type = 'D'
+      and delete_flag = 'N') then
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        dataset_table_field,
+        field_name,
+        @sno := @sno + 1
+      FROM recon_mst_tdatasetfield
+      WHERE dataset_code = in_report_code
+      and active_status = 'Y'
+      and delete_flag = 'N'
+      order by dataset_seqno;
     else
       insert into recon_tmp_treportparam
       (

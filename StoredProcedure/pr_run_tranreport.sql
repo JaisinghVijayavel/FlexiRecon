@@ -17,9 +17,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 06-04-2024
+    updated Date : 10-06-2024
 
-    Version : 3
+    Version : 4
   */
 
   declare v_count int default 0;
@@ -77,6 +77,7 @@ me:BEGIN
 		  @rec_slno:=@rec_slno+1,
       '", in_user_code ,"',
       b.dataset_name,
+      null as match_gid,
       a.*
 		from recon_tmp_ttran as a
     left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N' ",in_sorting_order);

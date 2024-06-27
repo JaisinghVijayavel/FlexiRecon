@@ -15,53 +15,49 @@ me:BEGIN
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
 
 	if in_jobtype_code = '0' then
-	select 
-		a.job_gid,
-		a.jobtype_code,
-		a.job_name, 
-    a.recon_code,
-		d.recon_name,
-		date_format(a.start_date,v_app_datetime_format) as start_date,
-		date_format(a.end_date,v_app_datetime_format) as end_date,
-		a.job_status,
-		a.job_remark,
-		b.jobstatus_desc,
-		c.jobtype_desc
-	from recon_trn_tjob a
-	left join recon_mst_tjobstatus b on a.job_status = b.job_status
-	left join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code
-    left join recon_mst_trecon d on a.recon_code = d.recon_code
-	where a.start_date >= in_start_date
-
-	and a.delete_flag = 'N'
-
-   and a.job_status IN ('I', 'P')
-    order by a.job_gid desc;
-else
-	select
-		a.job_gid,
-		a.jobtype_code,
-		a.job_name,
-		a.recon_code,
-		d.recon_name,
-		date_format(a.start_date,v_app_datetime_format) as start_date,
-		date_format(a.end_date,v_app_datetime_format) as end_date,
-		a.job_status,
-		a.job_remark,
-		b.jobstatus_desc,
-		c.jobtype_desc
-	from recon_trn_tjob a
-	inner join recon_mst_tjobstatus b on a.job_status = b.job_status
-	inner join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code
-    left join recon_mst_trecon d on a.recon_code = d.recon_code
-	where a.start_date >= in_start_date
-	
-	and a.jobtype_code = in_jobtype_code
-	and a.delete_flag = 'N'
-	
+		select 
+			a.job_gid,
+			a.jobtype_code,
+			a.job_name, 
+			a.recon_code,
+			d.recon_name,
+			date_format(a.start_date,v_app_datetime_format) as start_date,
+			date_format(a.end_date,v_app_datetime_format) as end_date,
+			a.job_status,
+			a.job_remark,
+			b.jobstatus_desc,
+			c.jobtype_desc
+		from recon_trn_tjob a
+		left join recon_mst_tjobstatus b on a.job_status = b.job_status
+		left join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code
+		left join recon_mst_trecon d on a.recon_code = d.recon_code
+		where 1 = 1 
+		and a.job_status IN ('I', 'P')    
+		and a.delete_flag = 'N'
+		order by a.job_gid desc;
+	else
+		select
+			a.job_gid,
+			a.jobtype_code,
+			a.job_name,
+			a.recon_code,
+			d.recon_name,
+			date_format(a.start_date,v_app_datetime_format) as start_date,
+			date_format(a.end_date,v_app_datetime_format) as end_date,
+			a.job_status,
+			a.job_remark,
+			b.jobstatus_desc,
+			c.jobtype_desc
+		from recon_trn_tjob a
+		inner join recon_mst_tjobstatus b on a.job_status = b.job_status
+		inner join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code
+		left join recon_mst_trecon d on a.recon_code = d.recon_code
+		where 1 = 1
+		and a.jobtype_code = in_jobtype_code
+		and a.delete_flag = 'N'
     and a.job_status IN ('I', 'P')
     order by a.job_gid desc;
-end if;
+	end if;
 END $$
 
 DELIMITER ;

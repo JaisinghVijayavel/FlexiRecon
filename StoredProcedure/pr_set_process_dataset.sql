@@ -51,6 +51,12 @@ me:begin
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N';
 
+    -- set last job_gid
+    update recon_mst_tdataset set
+      last_job_gid = v_job_gid
+    where dataset_code = v_dataset_code
+    and delete_flag = 'N';
+
     set out_msg = @full_error;
     set out_result = 0;
 

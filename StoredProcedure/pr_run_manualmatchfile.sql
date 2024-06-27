@@ -119,6 +119,9 @@ me:BEGIN
   and a.delete_flag = 'N'
   limit 0,1;
 
+  set v_recon_code = ifnull(v_recon_code,'');
+  set v_recontype_code = ifnull(v_recontype_code,'');
+
   select
     count(distinct match_gid) into v_tot_count
   from recon_trn_tmanualtran
@@ -156,6 +159,17 @@ me:BEGIN
 	end if;
 
   set v_job_gid = @out_job_gid;
+
+  -- Wiith in A/C, Between A/C Validation
+  if v_recontype_code = 'W' or v_recontype_code = 'B' then
+    if fn_get_chkbalance(v_recon_code,curdate()) = false then
+      set out_msg = 'Recon was not tallied !';
+      set out_result = 0;
+
+      SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = 'Recon was not tallied';
+      leave me;
+    end if;
+  end if;
 
   -- update ko_mult in manualtran table
   update recon_trn_tmanualtran

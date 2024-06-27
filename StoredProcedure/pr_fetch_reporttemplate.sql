@@ -96,7 +96,7 @@ BEGIN
 			fn_get_reconfieldname(v_recon_code,a.report_field) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
-			a.filter_value,
+			fn_get_reportfiltervalue(in_recon_code,in_user_code,a.filter_value) as filter_value,
 			a.open_parentheses_flag,
 			a.close_parentheses_flag,
 			a.join_condition,
@@ -108,7 +108,10 @@ BEGIN
 		and a.active_status = 'Y'
 		and a.delete_flag = 'N'
 		order by a.filter_seqno;
-  else
+  elseif exists (select * from recon_mst_treportfilter
+                  where report_code = v_report_code
+                  and active_status = 'Y'
+                  and delete_flag = 'N') then
 		select
 			1 as reporttemplatefilter_gid,
 			a.filter_seqno,
@@ -116,7 +119,7 @@ BEGIN
 			fn_get_reconfieldname(v_recon_code,a.report_field) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
-			a.filter_value,
+			fn_get_reportfiltervalue(in_recon_code,in_user_code,a.filter_value) as filter_value,
 			a.open_parentheses_flag,
 			a.close_parentheses_flag,
 			a.join_condition,
@@ -128,6 +131,21 @@ BEGIN
 		and a.active_status = 'Y'
 		and a.delete_flag = 'N'
 		order by a.filter_seqno;
+  else
+		select
+			1 as reporttemplatefilter_gid,
+			1 as filter_seqno,
+			'scheduler_gid' as report_field,
+			'Scheduler Id' as reportparam_value,
+			'QCD_IS_GREATER_THAN' as filter_criteria,
+			fn_get_mastername('QCD_IS_GREATER_THAN', 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
+			0 as filter_value,
+			'N' as open_parentheses_flag,
+			'N' as close_parentheses_flag,
+			'' as join_condition,
+      'Y' as system_flag,
+			'Y' as active_status,
+			fn_get_mastername('Y', 'QCD_STATUS') as active_status_desc;
   end if;
 
   call pr_get_reporttemplatefield(in_reporttemplate_code,v_recon_code,v_report_code);

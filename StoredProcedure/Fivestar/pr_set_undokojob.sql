@@ -56,11 +56,11 @@ me:begin
     and job_status = 'C'
     and delete_flag = 'N';
 
-    
+    -- get undo job threshold
     set v_txt = fn_get_configvalue('job_undo_period');
     set v_job_undo_period = cast(ifnull(v_txt,'0') as unsigned);
 
-    
+    -- validate
     if curdate() > adddate(v_job_date,interval v_job_undo_period day) then
       set out_msg = ('Undo job failed ! It should be done with in ',cast(v_job_undo_period as nchar),' day(s) !)');
       leave me;
@@ -68,7 +68,7 @@ me:begin
 
 
     if v_job_type = 'A' or v_job_type = 'M' then
-
+			-- update job status
       if v_job_type = 'A' then
         call pr_ins_job('U',in_job_gid,concat('Undo auto match ',ifnull(in_undo_job_reason,'')),in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
       else
@@ -109,7 +109,7 @@ me:begin
         select tranbrkp_gid from recon_tmp_ttranbrkpgid)
         and delete_flag = 'N';
 
-      
+      -- add ko amount in exception amount
       update recon_tmp_ttranko as a
       inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
       and b.delete_flag = 'N'

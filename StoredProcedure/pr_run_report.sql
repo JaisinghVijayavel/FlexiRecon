@@ -159,6 +159,8 @@ me:BEGIN
       call pr_run_sql(v_sql,@msg,@result);
     end if;
     */
+  elseif v_report_exec_type = 'C' then
+    call pr_run_customsp(in_recon_code,in_report_code,v_sp_name,v_job_gid,in_user_code,@msg,@result);
   else
     call pr_get_tablequery(in_recon_code,v_table_name,in_report_condition,v_job_gid,in_user_code,@msg,@result);
   end if;

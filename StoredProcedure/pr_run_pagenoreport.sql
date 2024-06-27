@@ -6,6 +6,7 @@ CREATE PROCEDURE `pr_run_pagenoreport`(
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
   in in_rptsession_gid int,
+  in in_condition text,
   in in_page_no int,
   in in_page_size int,
   in in_tot_records int,
@@ -20,6 +21,9 @@ me:BEGIN
   declare v_start_rec_no int default 0;
   declare v_sortby_code varchar(32);
   declare v_sorting_field text default '';
+
+  declare v_report_exec_type text default '';
+  declare v_dataset_db_name text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -66,9 +70,21 @@ me:BEGIN
     set v_sortby_code = '';
   end if;
 
+  -- get report code
+	select
+		report_exec_type,
+		table_name
+	into
+		v_report_exec_type,
+		v_table_name
+	from recon_mst_treport
+	where report_code = in_report_code
+	and delete_flag = 'N';
+
+  -- session
   if exists(select rptsession_gid from recon_trn_treportsession
      where rptsession_gid = in_rptsession_gid
-     and delete_flag = 'N') then
+     and delete_flag = 'N') and v_report_exec_type = 'S' then
     select
       b.table_name
     into
@@ -112,6 +128,16 @@ me:BEGIN
 		if v_sorting_field <> '' then
 			set v_sorting_field = concat('order by ',v_sorting_field);
 		end if;
+  elseif v_report_exec_type = 'T' or v_report_exec_type = 'D' then
+    if v_report_exec_type = 'D' then
+      set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+
+      if v_dataset_db_name <> '' then
+        set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+      else
+        set v_table_name = in_report_code;
+      end if;
+    end if;
   else
     set out_msg = 'Invalid session';
     set out_result = 0;
@@ -130,7 +156,12 @@ me:BEGIN
 
   set v_start_rec_no = (in_page_no - 1)*in_page_size;
 
-  set v_condition = concat('and rptsession_gid = ',cast(in_rptsession_gid as nchar) ,' ');
+  if v_report_exec_type = 'S' then
+    set v_condition = concat('and rptsession_gid = ',cast(in_rptsession_gid as nchar) ,' ');
+  else
+    set v_condition = ifnull(in_condition,'');
+  end if;
+
   set v_condition = concat(v_condition,' ',v_sorting_field,' limit ',cast(v_start_rec_no as nchar),',',cast(in_page_size as nchar),' ');
 
   call pr_run_tablequery(in_reporttemplate_code,

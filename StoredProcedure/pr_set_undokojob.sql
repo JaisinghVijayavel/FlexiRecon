@@ -6,7 +6,7 @@ CREATE PROCEDURE `pr_set_undokojob`(
   in in_job_gid int,
   in in_undo_job_reason varchar(255),
   in in_ip_addr varchar(128),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -194,19 +194,28 @@ me:begin
       where k.job_gid = in_job_gid
       and k.delete_flag = 'N';
 
+      -- set delete flag 'Y' in roundoff table
+      update recon_trn_tko as k
+      inner join recon_trn_tkoroundoff as a on k.ko_gid = a.ko_gid and a.delete_flag = 'N'
+      set
+        a.delete_flag = 'Y'
+      where k.job_gid = in_job_gid
+      and k.delete_flag = 'Y';
+
       if not exists(select tranbrkp_gid from recon_trn_ttranbrkpko
                          where posted_job_gid = in_job_gid
                          and delete_flag = 'N') then
-        update recon_trn_ttran
-        set mapped_value = 0
+        update recon_trn_ttran set
+          mapped_value = 0
         where tran_gid in (select distinct tran_gid from recon_trn_ttranbrkp
                          where posted_job_gid = in_job_gid
                          and delete_flag = 'N')
         and mapped_value = tran_value
         and delete_flag = 'N';
 
-        update recon_trn_ttranbrkp
-        set tran_gid = 0,posted_job_gid = 0
+        update recon_trn_ttranbrkp set
+          tran_gid = 0,
+          posted_job_gid = 0
         where posted_job_gid = in_job_gid
         and delete_flag = 'N';
       end if;

@@ -1,7 +1,6 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_get_ruleagainstrecon` $$
-
 CREATE PROCEDURE `pr_get_ruleagainstrecon`
 (
 	in in_recon_code varchar(32)
@@ -24,8 +23,7 @@ BEGIN
 		fn_get_mastername(a.rule_apply_on, 'QCD_RS_RULE_APPLLIED') as rule_apply_on_desc,
 		a.rule_order,
 		a.group_flag,
-    fn_get_mastername(group_flag,'QCD_RULE_GRP') as group_flag_desc,
-		-- case group_flag when 'Y' then 'Yes' else 'No' end as group_flag_desc,
+		fn_get_mastername(a.group_flag, 'QCD_RULE_GRP') as  group_flag_desc,
 		a.rule_order as ruleorder,
     a.recon_rule_version,
 		a.source_dataset_code,
@@ -33,12 +31,10 @@ BEGIN
 		a.parent_acc_mode,
 		fn_get_mastername(a.parent_acc_mode, 'QCD_RS_ACC_MODE') as parent_acc_mode_desc,
 		a.active_status,
-		concat(fn_get_mastername(a.active_status, 'QCD_STATUS'),
-      if(a.hold_flag = 'Y',' (HOLD)',''))as active_status_desc,
+		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
 		b.dataset_name as source_dataset_desc,
 		c.dataset_name as comparison_dataset_desc,
-		b.dataset_name as dataset_name,
-    a.recon_rule_version
+		b.dataset_name as dataset_name
 	from recon_mst_trule a
 	inner join recon_mst_tdataset b on a.source_dataset_code = b.dataset_code
 		and b.delete_flag = 'N'
@@ -46,7 +42,6 @@ BEGIN
 		and c.delete_flag = 'N'
 	where a.recon_code = in_recon_code
   and a.active_status='Y'
-	-- and a.rule_apply_on = in_rule_apply_on
 	and a.delete_flag = 'N'
 	ORDER BY a.rule_order;
 
@@ -56,8 +51,7 @@ BEGIN
 		a.dataset_code,
 		b.dataset_name,
 		a.dataset_type,
-		-- date_format(d.start_date,v_app_datetime_format) as last_sync_date,
-    d.start_date as last_sync_date,
+    date_format(d.start_date,v_app_datetime_format) as last_sync_date,
 		fn_get_mastername(d.job_status, 'QCD_JOB_STATUS') as last_sync_status,
 		fn_get_mastername(a.dataset_type, 'QCD_DS_TYPE') as dataset_type_desc,
 		a.parent_dataset_code,

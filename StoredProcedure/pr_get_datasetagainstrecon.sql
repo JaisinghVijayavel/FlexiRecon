@@ -9,22 +9,31 @@ CREATE PROCEDURE `pr_get_datasetagainstrecon`
 	in in_lang_code varchar(32)
 )
 BEGIN
-	select 
+  declare v_app_datetime_format text default '';
+
+  set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
+
+  if v_app_datetime_format = '' then
+    set v_app_datetime_format = '%d-%m-%Y %H:%i:%s';
+  end if;
+
+	select
 		a.recondataset_gid,
 		a.recon_code,
 		a.dataset_code,
-        b.dataset_category,
+    b.dataset_category,
 		b.dataset_name,
 		a.dataset_type,
-		-- d.start_date as last_sync_date,
-        date_format(str_to_date(d.start_date,'%Y-%m-%d %H:%i:%s') ,fn_get_configvalue('app_datetime_format')) as last_sync_date,
+    date_format(d.start_date, v_app_datetime_format) as last_sync_date,
 		fn_get_mastername(a.dataset_type, 'QCD_DS_TYPE') as dataset_type_desc,
 		fn_get_mastername(d.job_status, 'QCD_JOB_STATUS') as last_sync_status,
 		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
 		a.parent_dataset_code,
 		ifnull(c.dataset_name,'') as parent_dataset_name,
 		a.active_status,
-		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
+		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
+    d.job_initiated_by as in_user_code,
+    d.job_remark
 	from recon_mst_trecondataset a
 	inner join recon_mst_tdataset b on a.dataset_code = b.dataset_code
 	left join recon_mst_tdataset c on a.parent_dataset_code = c.dataset_code and a.dataset_type='S'

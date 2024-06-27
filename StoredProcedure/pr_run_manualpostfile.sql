@@ -11,6 +11,7 @@ CREATE PROCEDURE `pr_run_manualpostfile`
 )
 me:BEGIN
   declare v_recon_code text default '';
+  declare v_recontype_code text default '';
   declare v_dataset_code text default '';
   declare v_rec_count int default 0;
   declare v_tot_count int default 0;
@@ -56,22 +57,31 @@ me:BEGIN
   end if;
 
   select
-    recon_code,
-    dataset_code
+    a.recon_code,
+    b.recontype_code,
+    a.dataset_code
   into
     v_recon_code,
+    v_recontype_code,
     v_dataset_code
-  from recon_trn_tmanualtranbrkp
-  where scheduler_gid = in_scheduler_gid
-  and delete_flag = 'N'
+  from recon_trn_tmanualtranbrkp as a
+  inner join recon_mst_trecon as b on a.recon_code = b.recon_code
+    and b.delete_flag = 'N'
+  where a.scheduler_gid = in_scheduler_gid
+  and a.delete_flag = 'N'
   limit 0,1;
 
+  set v_recon_code = ifnull(v_recon_code,'');
+  set v_recontype_code = ifnull(v_recontype_code,'');
+
+  -- get file name
   select
     file_name into v_file_name
   from con_trn_tscheduler
   where scheduler_gid = in_scheduler_gid
   and delete_flag = 'N';
 
+  -- get record count
   select
     count(*),
     count(distinct tran_gid)
@@ -113,6 +123,17 @@ me:BEGIN
 	end if;
 
   set v_job_gid = @out_job_gid;
+
+  -- Wiith in A/C, Between A/C Validation
+  if v_recontype_code = 'W' or v_recontype_code = 'B' then
+    if fn_get_chkbalance(v_recon_code,curdate()) = false then
+      set out_msg = 'Recon was not tallied !';
+      set out_result = 0;
+
+      SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = 'Recon was not tallied';
+      leave me;
+    end if;
+  end if;
 
   truncate recon_tmp_ttrangid;
 

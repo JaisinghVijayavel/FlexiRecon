@@ -7,7 +7,7 @@ CREATE PROCEDURE `pr_set_undokojobrule`(
   in in_rule_code varchar(32),
   in in_undo_job_reason varchar(255),
   in in_ip_addr varchar(128),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -47,6 +47,7 @@ me:begin
   create temporary table recon_tmp_ttranko(
     tran_gid int(10) unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
+    roundoff_value decimal(15,2) not null default 0,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
@@ -112,9 +113,17 @@ me:begin
 
       set v_undo_job_gid = @out_job_gid;
 
-      insert into recon_tmp_ttranko (tran_gid,ko_value)
-        select b.tran_gid,sum(b.ko_value*.b.ko_mult) as ko_value from recon_trn_tko as a
+      insert into recon_tmp_ttranko (tran_gid,ko_value,roundoff_value)
+        select
+          b.tran_gid,
+          sum(b.ko_value*b.ko_mult) as ko_value,
+          sum(ifnull(c.roundoff_value,0)) as roundoff_value
+        from recon_trn_tko as a
         inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+        left join recon_trn_tkoroundoff as c on b.ko_gid = c.ko_gid
+          and b.tran_gid = c.tran_gid
+          and b.tranbrkp_gid = c.tranbrkp_gid
+          and c.delete_flag = 'N'
         where a.job_gid = in_job_gid
         and a.rule_code = in_rule_code
         and a.delete_flag = 'N'
@@ -159,6 +168,7 @@ me:begin
       and b.delete_flag = 'N'
       set
         b.excp_value = b.excp_value + a.ko_value*b.tran_mult,
+        b.roundoff_value = b.roundoff_value - a.roundoff_value,
         b.ko_gid = 0,
         b.ko_date = null;
 
@@ -208,6 +218,12 @@ me:begin
       and k.rule_code = in_rule_code
       and k.delete_flag = 'N';
 
+      update recon_trn_tko as k
+      inner join recon_trn_tkoroundoff as a on k.ko_gid = a.ko_gid and a.delete_flag = 'N'
+      set
+        a.delete_flag = 'Y'
+      where k.job_gid = in_job_gid
+      and k.delete_flag = 'Y';
     elseif v_rule_apply_on = 'S' then
       if exists(select tranbrkp_gid from recon_trn_ttranbrkpko
                          where posted_job_gid = in_job_gid

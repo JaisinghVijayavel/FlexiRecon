@@ -201,7 +201,6 @@ me:begin
 
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Add','','','');
 
-
   select
     sum(a.excp_value),count(*)
   into
@@ -211,6 +210,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'C'
@@ -246,6 +246,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'C'
@@ -293,6 +294,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'D'
@@ -328,6 +330,7 @@ me:begin
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
   where a.recon_code = in_recon_code
+  and a.tran_date <= in_tran_date
   and a.excp_value <> 0
   and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
   and a.tran_acc_mode = 'D'
@@ -370,8 +373,9 @@ me:begin
 
   -- rounding off
   if v_threshold_value > 0 then
-		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_trn_ttran as a
+		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_tmp_ttran as a
 		where a.recon_code = in_recon_code
+    and a.tran_date <= in_tran_date
 		and a.excp_value <> 0
     and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value

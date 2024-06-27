@@ -14,9 +14,9 @@ me:begin
     Created Date : 06-10-2023
 
     Updated By : Vijayavel
-    Updated Date : 11-12-2023
+    Updated Date : 16-05-2024
 
-    Version : 3
+    Version : 4
   */
 
   declare v_pipeline_code text default '';
@@ -209,7 +209,7 @@ me:begin
   set v_sql = concat(v_target_sql,v_source_sql);
 
   -- transfer data only for recon mapped fields
-  if @out_dataset_field_all <> '' then
+  if @out_dataset_field_all <> '' and v_target_table <> '' then
     set @v_sql = v_sql;
     prepare _sql from @v_sql;
     execute _sql;

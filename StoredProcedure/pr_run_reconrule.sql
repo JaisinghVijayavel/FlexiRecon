@@ -26,6 +26,7 @@ me:BEGIN
 
   declare v_txt_recon_code text default '';
   declare v_recon_code text default '';
+  declare v_recontype_code text default '';
   declare v_recon_rule_version text default '';
   declare v_recon_gid int default 0;
 
@@ -91,9 +92,11 @@ me:BEGIN
   -- get recon details
   select
     recon_name,
+    recontype_code,
     recon_date_flag
   into
     v_recon_name,
+    v_recontype_code,
     v_recon_date_flag
   from recon_mst_trecon
   where recon_code = in_recon_code
@@ -103,6 +106,7 @@ me:BEGIN
   and delete_flag = 'N';
 
   set v_recon_name = ifnull(v_recon_name,'');
+  set v_recontype_code = ifnull(v_recontype_code,'');
 
   if in_automatch_flag = 'Y' then
     if exists(select job_gid from recon_trn_tjob
@@ -122,7 +126,7 @@ me:BEGIN
 
       leave me;
     else
-      call pr_ins_job(v_recon_code,'A',0,'Auto match','',in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+      call pr_ins_job(v_recon_code,'A',0,'Auto/Probable match','',in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
     end if;
   else
     call pr_ins_job(v_recon_code,'P',0,'Preview Auto Match','',in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
@@ -136,6 +140,17 @@ me:BEGIN
   end if;
 
   set v_job_gid = @out_job_gid;
+
+  -- within A/C or Between A/C recon validation
+  if v_recontype_code = 'W' or v_recontype_code = 'B' then
+    if fn_get_chkbalance(in_recon_code,in_period_to) = false then
+      set out_msg = 'Recon was not tallied !';
+      set out_result = 0;
+
+      SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = 'Recon was not tallied';
+      leave me;
+    end if;
+  end if;
 
   -- delete dataset job record
   delete from recon_trn_tdatasetjob
@@ -435,9 +450,7 @@ me:BEGIN
 
     -- update theme
     if in_automatch_flag = 'Y' then
-      call pr_run_theme(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-      call pr_run_theme_comparison(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-      call pr_run_theme_comparisonagg(v_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
     end if;
   end if;
 
