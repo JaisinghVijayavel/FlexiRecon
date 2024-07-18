@@ -1194,12 +1194,12 @@ me:BEGIN
           -- update theme
           -- tran table
           update recon_trn_ttran set
-            theme_code = concat(if(theme_code is null,v_theme_name,concat(theme_code,',',v_theme_name)))
+            theme_code = concat(if(theme_code = '',v_theme_name,concat(theme_code,',',v_theme_name)))
           where tran_gid in (select tran_gid from recon_tmp_ttranwithbrkpgid where tranbrkp_gid = 0);
 
           -- tranbrkp table
           update recon_trn_ttranbrkp set
-            theme_code = concat(if(theme_code is null,v_theme_name,concat(theme_code,',',v_theme_name)))
+            theme_code = concat(if(theme_code = '',v_theme_name,concat(theme_code,',',v_theme_name)))
           where (tran_gid,tranbrkp_gid) in (select tran_gid,tranbrkp_gid from recon_tmp_ttranwithbrkpgid
                                                       where tranbrkp_gid > 0);
           -- delete in index table

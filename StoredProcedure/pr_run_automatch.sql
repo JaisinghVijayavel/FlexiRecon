@@ -733,6 +733,7 @@ me:BEGIN
               set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
               set v_join_condition = ifnull(v_join_condition,'');
+              set v_ident_value = ifnull(v_ident_value,'');
 
               if v_join_condition = '' then
                 set v_join_condition = 'and';

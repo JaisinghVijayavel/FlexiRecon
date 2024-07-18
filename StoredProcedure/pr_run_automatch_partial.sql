@@ -130,11 +130,12 @@ me:BEGIN
   declare v_rule_name text default '';
   declare v_field_type text default '';
 
-  declare v_rule_automatch_partial text default '';
+  declare v_threshold_code text default '';
   declare v_threshold_flag text default '';
   declare v_threshold_plus_value double(15,2) default 0;
   declare v_threshold_minus_value double(15,2) default 0;
 
+  declare v_rule_automatch_partial text default '';
   declare v_rule_threshold_plus_value double(15,2) default 0;
   declare v_rule_threshold_minus_value double(15,2) default 0;
 
@@ -174,7 +175,6 @@ me:BEGIN
 
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
-    and recon_automatch_partial = 'Y'
     and period_from <= curdate()
     and (until_active_flag = 'Y'
           or period_to >= curdate())
@@ -476,11 +476,12 @@ me:BEGIN
   -- get recon value
   select
     recon_name,recontype_code,recon_date_flag,
-    recon_value_flag,recon_automatch_partial,
+    recon_value_flag,recon_automatch_partial,threshold_code,
     abs(threshold_plus_value),abs(threshold_minus_value)
   into
     v_recon_name,v_recontype_code,v_recon_date_flag,
     v_recon_value_flag,v_recon_automatch_partial,
+    v_threshold_code,
     v_threshold_plus_value,
     v_threshold_minus_value
   from recon_mst_trecon
@@ -492,12 +493,19 @@ me:BEGIN
 
   set v_recontype_code = ifnull(v_recontype_code,'');
   set v_recon_name = ifnull(v_recon_name,'');
+  set v_threshold_code = ifnull(v_threshold_code,'');
   -- set v_recon_value_flag = ifnull(v_recon_value_flag,'Y');
   set v_recon_automatch_partial = ifnull(v_recon_automatch_partial,'N');
 
   if v_recon_automatch_partial = 'Y' then
     set v_threshold_plus_value = ifnull(v_threshold_plus_value,0);
     set v_threshold_minus_value = ifnull(v_threshold_minus_value,0);
+
+    if v_threshold_code = 'P' then
+      set v_threshold_minus_value = 0;
+    elseif v_threshold_code = 'M' then
+      set v_threshold_plus_value = 0;
+    end if;
   else
     set v_threshold_plus_value = 0;
     set v_threshold_minus_value = 0;
@@ -509,9 +517,11 @@ me:BEGIN
     set v_recon_value_flag = 'N';
   end if;
 
+ /*
   if v_recon_automatch_partial = 'N' then
     leave me;
   end if;
+  */
 
   applyrule_block:begin
     declare applyrule_done int default 0;
@@ -525,8 +535,9 @@ me:BEGIN
         a.manytomany_match_flag,
         a.rule_automatch_partial,
         a.threshold_flag,
-        a.threshold_plus_value,
-        a.threshold_minus_value
+        a.threshold_code,
+        abs(a.threshold_plus_value) as threshold_plus_value,
+        abs(a.threshold_minus_value) as threshold_minus_value
       from recon_mst_trule as a
       where a.recon_code = in_recon_code
       and a.rule_code = ifnull(in_rule_code,a.rule_code)
@@ -552,6 +563,7 @@ me:BEGIN
                   v_manytomany_match_flag,
                   v_rule_automatch_partial,
                   v_threshold_flag,
+                  v_threshold_code,
                   v_rule_threshold_plus_value,
                   v_rule_threshold_minus_value;
 
@@ -560,11 +572,18 @@ me:BEGIN
       -- check threshold at rule level
       set v_rule_automatch_partial = ifnull(v_rule_automatch_partial,'N');
       set v_threshold_flag = ifnull(v_threshold_flag,'N');
+      set v_threshold_code = ifnull(v_threshold_code,'');
 
       if v_rule_automatch_partial = 'Y' then
         if v_threshold_flag = 'Y' then
           set v_rule_threshold_plus_value = ifnull(v_rule_threshold_plus_value,0);
           set v_rule_threshold_minus_value = ifnull(v_rule_threshold_minus_value,0);
+
+          if v_threshold_code = 'P' then
+            set v_rule_threshold_minus_value = 0;
+          elseif v_threshold_code = 'M' then
+            set v_rule_threshold_plus_value = 0;
+          end if;
         else
           set v_rule_threshold_plus_value = 0;
           set v_rule_threshold_minus_value = 0;
@@ -774,6 +793,7 @@ me:BEGIN
                 set v_join_condition = 'and';
               end if;
 
+              set v_ident_value = ifnull(v_ident_value,'');
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 

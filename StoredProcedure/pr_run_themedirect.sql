@@ -90,7 +90,7 @@ me:BEGIN
 
   -- blank the theme code
 	set v_sql = 'update $TABLENAME$ set ';
-	set v_sql = concat(v_sql,'theme_code = null ');
+	set v_sql = concat(v_sql,'theme_code = '''' ');
 	set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
 	set v_sql = concat(v_sql,v_recon_date_condition);
 	set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -197,7 +197,7 @@ me:BEGIN
         end if;
 
         set v_sql = 'update $TABLENAME$ set ';
-        set v_sql = concat(v_sql,'theme_code = concat(if(theme_code is null,',char(39),v_theme_desc,char(39),',');
+        set v_sql = concat(v_sql,'theme_code = concat(if(theme_code = '''',',char(39),v_theme_desc,char(39),',');
         set v_sql = concat(v_sql,'concat(theme_code,',char(39),',',char(39),',');
         set v_sql = concat(v_sql,char(39),v_theme_desc,char(39),'))) ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');

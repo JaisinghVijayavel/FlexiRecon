@@ -17,6 +17,9 @@ me:BEGIN
   declare v_process_query text default '';
 
   declare v_dataset_db_name text default '';
+  declare v_table_name text default '';
+  declare v_index_name text default '';
+  declare v_index_field text default '';
 
   declare v_process_function text default '';
   declare v_lookup_dataset_code text default '';
@@ -128,7 +131,7 @@ me:BEGIN
         lookup_return_field
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
-      and hold_flag = 'N' 
+      and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'
       order by preprocess_order;
@@ -209,6 +212,10 @@ me:BEGIN
 
 						if filter_done = 1 then leave filter_loop; end if;
 
+            set v_filter_field = ifnull(v_filter_field,'');
+            set v_filter_criteria = ifnull(v_filter_criteria,'');
+            set v_filter_value = ifnull(v_filter_value,'');
+
             set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
             set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
             set v_join_condition = ifnull(v_join_condition,'');
@@ -284,6 +291,7 @@ me:BEGIN
 
             set v_recon_field = concat('a.',ifnull(v_recon_field,''));
             set v_extraction_criteria = ifnull(v_extraction_criteria,'');
+            set v_index_field = ifnull(v_lookup_field,'');
             set v_lookup_field = concat('b.',ifnull(v_lookup_field,''));
             set v_comparison_criteria = ifnull(v_comparison_criteria,'');
             set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
@@ -305,6 +313,27 @@ me:BEGIN
                                            v_join_condition);
 
             set v_lookup_condition = concat(v_lookup_condition,v_build_condition,' ');
+
+            -- index lookup field
+            set v_index_name = concat('idx_',v_index_field);
+
+            -- table name
+            if instr(v_lookup_dataset_code,'.') > 0 then
+              set v_table_name = split(v_lookup_dataset_code,'.',2);
+            else
+              set v_table_name = v_lookup_dataset_code;
+            end if;
+
+            if not exists (select table_schema, table_name, index_name, column_name
+              FROM information_schema.statistics
+              WHERE table_schema = v_dataset_db_name
+              and table_name = v_table_name
+              and index_name = v_index_name) and v_index_field <> '' then
+
+              set v_sql = concat('create index idx_',v_index_field,' on ',
+                                 v_lookup_dataset_code,'(',v_index_field,')');
+              call pr_run_sql(v_sql,@msg,@result);
+            end if;
 					end loop condition_loop;
 
 					close condition_cursor;

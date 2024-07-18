@@ -17,6 +17,9 @@ begin
   declare v_reportparam_value text default '';
   declare v_sql text default '';
 
+  -- return job info
+  select in_job_gid as result, concat('Report initiated in job id ',cast(in_job_gid as nchar)) as msg;
+
   -- return resultset sheet name
   select
     resultset_name,resultset_order,sheet_name
@@ -24,9 +27,6 @@ begin
   where report_code = in_report_code
   and active_status = 'Y'
   and delete_flag = 'N';
-
-  -- return job info
-  select in_job_gid as result, concat('Report initiated in job id ',cast(in_job_gid as nchar)) as msg;
 
   -- include sp name
   set v_sql = concat('call ',in_sp_name,'( ');

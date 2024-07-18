@@ -183,7 +183,7 @@ me:BEGIN
     )
     select
       field_name,
-      fn_get_reconfieldname(in_recon_code,field_name),
+      ifnull(display_desc,fn_get_reconfieldname(in_recon_code,field_name)),
       fn_get_fieldtype(in_recon_code,field_name) as field_type,
       @sno := @sno + 1
     from recon_mst_ttablestru

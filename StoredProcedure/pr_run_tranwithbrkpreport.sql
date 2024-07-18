@@ -61,8 +61,10 @@ me:BEGIN
   set v_sql = concat(v_sql,'b.dataset_name,');
   set v_sql = concat(v_sql,concat('a.',replace(v_tran_field,',',',a.')),' from recon_trn_ttran as a ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code ');
-  set v_sql = concat(v_sql,'left join recon_trn_ttranbrkp as s on a.tran_gid = s.tran_gid and 1 = 2 ');
-  set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on a.dataset_code = c.dataset_code and 1 = 2 ');
+  /*
+  set v_sql = concat(v_sql,'left join recon_trn_ttranbrkp as s on 1 = 2 ');
+  set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on 1 = 2 ');
+  */
   set v_sql = concat(v_sql,'where true ');
 
   set v_sql = concat(v_sql,in_condition,' ');

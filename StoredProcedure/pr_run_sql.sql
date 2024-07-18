@@ -17,7 +17,7 @@ begin
 
     ROLLBACK;
 
-    call pr_ins_errorlog('system','localhost','sp','pr_run_tablequery',in_sql,@msg,@result);
+    call pr_ins_errorlog('system','localhost','sp','pr_run_sql',in_sql,@msg,@result);
 
     set out_msg = @full_error;
     set out_result = 0;

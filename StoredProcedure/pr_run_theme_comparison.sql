@@ -1288,7 +1288,7 @@ me:BEGIN
           update recon_trn_ttran as a
           inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0
           set
-            a.theme_code = concat(if(a.theme_code is null,v_theme_name,concat(a.theme_code,',',v_theme_name)))
+            a.theme_code = concat(if(a.theme_code = '',v_theme_name,concat(a.theme_code,',',v_theme_name)))
           where a.excp_value <> 0
           and a.delete_flag = 'N';
 
@@ -1296,7 +1296,7 @@ me:BEGIN
           update recon_trn_ttranbrkp as a
           inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = a.tranbrkp_gid
           set
-            a.theme_code = concat(if(a.theme_code is null,v_theme_name,concat(a.theme_code,',',v_theme_name)))
+            a.theme_code = concat(if(a.theme_code = '',v_theme_name,concat(a.theme_code,',',v_theme_name)))
           where a.excp_value <> 0
           and a.delete_flag = 'N';
 

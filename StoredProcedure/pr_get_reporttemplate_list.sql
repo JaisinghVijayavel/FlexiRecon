@@ -18,8 +18,8 @@ BEGIN
       a.recon_code,
 			a.report_code,
 			b.report_desc,
-      a.report_exec_type,
-      a.resultset_count,
+      b.report_exec_type,
+      b.resultset_count,
 			a.system_flag,
 			case
 				a.system_flag when 'Y' then 'Standard'
