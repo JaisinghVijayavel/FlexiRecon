@@ -28,9 +28,17 @@ me:BEGIN
   declare v_recon_code text default '';
   declare v_recontype_code text default '';
   declare v_recon_rule_version text default '';
+  declare v_recon_date_field text default '';
   declare v_recon_gid int default 0;
 
+  declare v_tran_table text default '';
+  declare v_tranbrkp_table text default '';
+
   declare v_txt text default '';
+  declare v_sql text default '';
+
+  declare v_recon_date_condition text default '';
+
   declare v_total_count int default 0;
   declare v_count int default 0;
   declare v_job_gid int default 0;
@@ -47,9 +55,7 @@ me:BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
     @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
 
-    set @text = concat(@text,' ',err_msg);
-
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text,' ',err_msg);
 
     ROLLBACK;
 
@@ -93,10 +99,12 @@ me:BEGIN
   select
     recon_name,
     recontype_code,
+    recon_date_field,
     recon_date_flag
   into
     v_recon_name,
     v_recontype_code,
+    v_recon_date_field,
     v_recon_date_flag
   from recon_mst_trecon
   where recon_code = in_recon_code
@@ -107,6 +115,15 @@ me:BEGIN
 
   set v_recon_name = ifnull(v_recon_name,'');
   set v_recontype_code = ifnull(v_recontype_code,'');
+  set v_recon_date_field = ifnull(v_recon_date_field,'');
+  set v_recon_date_flag = ifnull(v_recon_date_flag,'N');
+
+  if v_recon_date_flag = 'Y' then
+    set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
+    set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
+    set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
+    set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
+  end if;
 
   if in_automatch_flag = 'Y' then
     if exists(select job_gid from recon_trn_tjob
@@ -353,8 +370,26 @@ me:BEGIN
     group by recon_code,dataset_code;
   end if;
 
+  if in_automatch_flag = 'Y' then
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  else
+    set v_tran_table = 'recon_tmp_ttran';
+    set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
+  end if;
+
+  -- blank the theme code
+	set v_sql = 'update $TABLENAME$ set ';
+	set v_sql = concat(v_sql,'theme_code = '''' ');
+	set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+	set v_sql = concat(v_sql,v_recon_date_condition);
+	set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
   -- preprocess
-  call pr_run_preprocess(in_recon_code,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+  call pr_run_preprocess(in_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
 
   -- rule
   rule_block:begin

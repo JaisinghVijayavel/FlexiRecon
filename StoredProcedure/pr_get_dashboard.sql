@@ -12,14 +12,15 @@ CREATE PROCEDURE `pr_get_dashboard`(
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 18-12-2023
+    Created Date : 22-07-2024
 
     Updated By :
     updated Date :
 
-    Version : 1
+    Version : 2
   */
 
+  declare v_recontype_code text default '';
   declare v_recon_count int default 0;
   declare v_dataset_count int default 0;
   declare v_tran_count int default 0;
@@ -124,6 +125,9 @@ me:BEGIN
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
   select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
+  inner join recon_mst_trecon as c on r.recon_code = c.recon_code
+    and c.recontype_code in ('W','B','I')
+    and c.delete_flag = 'N'
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
@@ -133,11 +137,43 @@ me:BEGIN
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
+  select t.tran_gid,cast(s.insert_date as date),1,1,1,t.roundoff_value from recon_tmp_trecon as r
+  inner join recon_mst_trecon as c on r.recon_code = c.recon_code
+    and c.recontype_code in ('V','N')
+    and c.delete_flag = 'N'
+  inner join recon_trn_ttran as t on r.recon_code = t.recon_code
+    and t.delete_flag = 'N'
+  inner join recon_trn_tscheduler as s on t.scheduler_gid = s.scheduler_gid
+    and s.insert_date >= in_period_from
+    and s.insert_date < date_add(in_period_to,interval 1 day);
+
+  -- get knockoff cases
+  insert into recon_tmp_ttrangid
+  (
+    tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
+  )
   select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
+  inner join recon_mst_trecon as c on r.recon_code = c.recon_code
+    and c.recontype_code in ('W','B','I')
+    and c.delete_flag = 'N'
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
     and t.delete_flag = 'N';
+
+  insert into recon_tmp_ttrangid
+  (
+    tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
+  )
+  select t.tran_gid,cast(s.insert_date as date),1,0,0,0 from recon_tmp_trecon as r
+  inner join recon_mst_trecon as c on r.recon_code = c.recon_code
+    and c.recontype_code in ('V','N')
+    and c.delete_flag = 'N'
+  inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
+    and t.delete_flag = 'N'
+  inner join recon_trn_tscheduler as s on t.scheduler_gid = s.scheduler_gid
+    and s.insert_date >= in_period_from
+    and s.insert_date < date_add(in_period_to,interval 1 day);
 
   -- insert old excption
   insert into recon_tmp_ttrangid

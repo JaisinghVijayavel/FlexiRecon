@@ -456,6 +456,8 @@ me:begin
   -- update job status
   call pr_upd_job(v_job_gid,'C',out_msg,@msg,@result);
 
+  insert into recon_trn_treconscheduler (recon_code,scheduler_gid) select in_recon_code,in_scheduler_gid;
+
   -- write the ourput status in the file
   set v_sql = 'select ''Status'' as job_status union ';
   set v_sql = concat(v_sql,'select ''',out_msg,''' as job_status ');

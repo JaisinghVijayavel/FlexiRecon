@@ -23,6 +23,7 @@ me:BEGIN
   declare v_theme_filter text default '';
 
   declare v_filter_criteria text default '';
+  declare v_filter_value_flag text default '';
   declare v_filter_value text default '';
 
   declare v_open_parentheses_flag text default '';
@@ -88,16 +89,6 @@ me:BEGIN
     leave me;
   end if;
 
-  -- blank the theme code
-	set v_sql = 'update $TABLENAME$ set ';
-	set v_sql = concat(v_sql,'theme_code = '''' ');
-	set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-	set v_sql = concat(v_sql,v_recon_date_condition);
-	set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
-
-	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
-	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
-
   -- process
   theme_block:begin
     declare theme_done int default 0;
@@ -137,6 +128,7 @@ me:BEGIN
 					  select
               filter_field,
               filter_criteria,
+              filter_value_flag,
               filter_value,
               open_parentheses_flag,
               close_parentheses_flag,
@@ -155,6 +147,7 @@ me:BEGIN
 						fetch filter_cursor into
               v_filter_field,
               v_filter_criteria,
+              v_filter_value_flag,
               v_filter_value,
               v_open_parentheses_flag,
               v_close_parentheses_flag,
@@ -164,6 +157,7 @@ me:BEGIN
 
             set v_filter_field = ifnull(v_filter_field,'');
             set v_filter_criteria = ifnull(v_filter_criteria,'');
+            set v_filter_value_flag = ifnull(v_filter_value_flag,'Y');
             set v_filter_value = ifnull(v_filter_value,'');
 
             set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
@@ -180,10 +174,9 @@ me:BEGIN
 
             set v_theme_filter = concat(v_theme_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value),
+                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
-
 					end loop filter_loop;
 
 					close filter_cursor;

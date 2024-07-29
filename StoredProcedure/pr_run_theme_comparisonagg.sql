@@ -109,6 +109,7 @@ me:BEGIN
   declare v_filter_applied_on char(1) default '';
   declare v_filter_field text default '';
   declare v_filter_criteria text default '';
+  declare v_filter_value_flag text default '';
   declare v_filter_value text default '';
 
   declare v_open_parentheses_flag text default '';
@@ -391,6 +392,7 @@ me:BEGIN
               filter_applied_on,
               filter_field,
               filter_criteria,
+              filter_value_flag,
               filter_value,
               open_parentheses_flag,
               close_parentheses_flag,
@@ -412,12 +414,16 @@ me:BEGIN
               fetch themefilter_cursor into v_filter_applied_on,
                                             v_filter_field,
                                             v_filter_criteria,
+                                            v_filter_value_flag,
                                             v_filter_value,
                                             v_open_parentheses_flag,
                                             v_close_parentheses_flag,
                                             v_join_condition;
 
               if themefilter_done = 1 then leave themefilter_loop; end if;
+
+              set v_filter_value_flag = ifnull(v_filter_value_flag,'Y');
+              set v_filter_value = ifnull(v_filter_value,'');
 
               set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
@@ -431,7 +437,7 @@ me:BEGIN
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
               set v_themefilter_condition = concat(v_open_parentheses_flag,
-                                                  fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value),
+                                                  fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                                   v_close_parentheses_flag,' ',
                                                   v_join_condition,' ');
 
@@ -566,7 +572,12 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_tsource'
                             and index_name = v_index_name) then
 
-                set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,')');
+                if substr(v_source_field,1,3) = 'col' then
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,'(255))');
+                else
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,')');
+                end if;
+
                 call pr_run_sql(v_index_sql,@msg,@result);
 
                 insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tsource',v_index_name;
@@ -578,7 +589,8 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_tsourceagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsourceagg(',v_source_field,')');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsourceagg(',v_source_field,'(255))');
+
                   call pr_run_sql(v_index_sql,@msg,@result);
 
                   insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tsourceagg',v_index_name;
@@ -589,7 +601,12 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_ttranagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_ttranagg(',v_source_field,')');
+                  if substr(v_source_field,1,3) = 'col' then
+                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_ttranagg(',v_source_field,'(255))');
+                  else
+                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_ttranagg(',v_source_field,')');
+                  end if;
+
                   call pr_run_sql(v_index_sql,@msg,@result);
 
                   insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_ttranagg',v_index_name;
@@ -603,7 +620,11 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_tcomparison'
                             and index_name = v_index_name) then
 
-                set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,')');
+                if substr(v_comparison_field,1,3) = 'col' then
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,'(255))');
+                else
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,')');
+                end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
@@ -616,7 +637,8 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_tcomparisonagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparisonagg(',v_comparison_field,')');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparisonagg(',v_comparison_field,'(255))');
+
                   call pr_run_sql(v_index_sql,@msg,@result);
 
                   insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tcomparisonagg',v_index_name;
@@ -627,7 +649,12 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_ttranagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_ttranagg(',v_comparison_field,')');
+                  if substr(v_comparison_field,1,3) = 'col' then
+                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_ttranagg(',v_comparison_field,'(255))');
+                  else
+                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_ttranagg(',v_comparison_field,')');
+                  end if;
+
                   call pr_run_sql(v_index_sql,@msg,@result);
 
                   insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_ttranagg',v_index_name;

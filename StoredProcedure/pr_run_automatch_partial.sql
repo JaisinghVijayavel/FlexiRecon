@@ -103,6 +103,7 @@ me:BEGIN
   declare v_filter_criteria text default '';
   declare v_add_filter int default 0;
   declare v_ident_criteria text default '';
+  declare v_ident_value_flag text default '';
   declare v_ident_value text default '';
 
   declare v_open_parentheses_flag text default '';
@@ -762,7 +763,8 @@ me:BEGIN
             declare basefilter_done int default 0;
             declare basefilter_cursor cursor for
             select
-              filter_applied_on,filter_field,filter_criteria,add_filter,ident_criteria,ident_value,
+              filter_applied_on,filter_field,filter_criteria,add_filter,ident_criteria,
+              ident_value_flag,ident_value,
               open_parentheses_flag,close_parentheses_flag,join_condition
             from recon_mst_truleselefilter
             where rule_code = v_rule_code
@@ -780,7 +782,7 @@ me:BEGIN
             basefilter_loop: loop
               fetch basefilter_cursor into v_filter_applied_on,v_filter_field,
                                     v_filter_criteria,v_add_filter,
-                                    v_ident_criteria,v_ident_value,
+                                    v_ident_criteria,v_ident_value_flag,v_ident_value,
                                     v_open_parentheses_flag,v_close_parentheses_flag,
                                     v_join_condition;
               if basefilter_done = 1 then leave basefilter_loop; end if;
@@ -793,12 +795,14 @@ me:BEGIN
                 set v_join_condition = 'and';
               end if;
 
+              set v_ident_value_flag = ifnull(v_ident_value_flag,'Y');
               set v_ident_value = ifnull(v_ident_value,'');
+
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
               set v_basefilter_condition = concat(v_open_parentheses_flag,
-                                                  fn_get_basefilterformat(v_filter_field,v_filter_criteria,v_add_filter,v_ident_criteria,v_ident_value),
+                                                  fn_get_basefilterformat(v_filter_field,v_filter_criteria,v_add_filter,v_ident_criteria,v_ident_value_flag,v_ident_value),
                                                   v_close_parentheses_flag,' ',
                                                   v_join_condition,' ');
 
@@ -891,7 +895,12 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_tsource'
                             and index_name = v_index_name) then
 
-                set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,')');
+                if substr(v_source_field,1,3) = 'col' then
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,'(255))');
+                else
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,')');
+                end if;
+
                 call pr_run_sql(v_index_sql,@msg,@result);
 
                 insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tsource',v_index_name;
@@ -903,7 +912,11 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_tcomparison'
                             and index_name = v_index_name) then
 
-                set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,')');
+                if substr(v_comparison_field,1,3) = 'col' then
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,'(255))');
+                else
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,')');
+                end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 

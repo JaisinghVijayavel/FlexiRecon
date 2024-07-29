@@ -63,6 +63,8 @@ me:begin
     SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = @text, MYSQL_ERRNO = @errno;
   END;
 
+  set out_msg = '';
+
   -- scheduler_gid validation in connector
   if not exists(select scheduler_gid from con_trn_tscheduler
      where scheduler_gid = in_scheduler_gid and delete_flag = 'N') then

@@ -1,9 +1,9 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_preprocess` $$
-CREATE PROCEDURE `pr_run_preprocess`(
+DROP PROCEDURE IF EXISTS `pr_run_preprocesscode` $$
+CREATE PROCEDURE `pr_run_preprocesscode`(
   in in_recon_code text,
-  in in_job_gid int,
+  in in_preprocess_code text,
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
@@ -14,7 +14,6 @@ me:BEGIN
   declare v_get_recon_field text default '';
   declare v_set_recon_field text default '';
   declare v_preprocess_code text default '';
-  declare v_preprocess_desc text default '';
   declare v_process_method text default '';
   declare v_process_query text default '';
 
@@ -74,8 +73,6 @@ me:BEGIN
 
   drop temporary table if exists recon_tmp_tlookup;
 
-  set in_job_gid = ifnull(in_job_gid,0);
-
   -- recon validation
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -132,7 +129,6 @@ me:BEGIN
     declare process_cursor cursor for
       select
         preprocess_code,
-        preprocess_desc,
         get_recon_field,
         set_recon_field,
         process_method,
@@ -143,6 +139,7 @@ me:BEGIN
         lookup_group_flag
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
+      and preprocess_code = in_preprocess_code
       and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'
@@ -154,7 +151,6 @@ me:BEGIN
     process_loop: loop
       fetch process_cursor into
         v_preprocess_code,
-        v_preprocess_desc,
         v_get_recon_field,
         v_set_recon_field,
         v_process_method,
@@ -167,7 +163,6 @@ me:BEGIN
       if process_done = 1 then leave process_loop; end if;
 
       set v_preprocess_code = ifnull(v_preprocess_code,'');
-      set v_preprocess_desc = ifnull(v_preprocess_desc,'');
       set v_get_recon_field = ifnull(v_get_recon_field,'');
       set v_set_recon_field = ifnull(v_set_recon_field,'');
       set v_process_method = ifnull(v_process_method,'');
@@ -192,8 +187,6 @@ me:BEGIN
       else
         set v_process_method = '';
       end if;
-
-      call pr_upd_job(in_job_gid,'P',concat('Applying Preprocess - ',v_preprocess_desc),@msg,@result);
 
       -- filter condition
       if v_process_method <> 'Q' then
@@ -483,14 +476,14 @@ me:BEGIN
         set v_sql = concat(v_sql,'inner join ',v_lookup_table,' as b ');
         set v_sql = concat(v_sql,'on 1 = 1 ');
         set v_sql = concat(v_sql,v_lookup_condition);
-        set v_sql = concat(v_sql,'and b.delete_flag = ',char(39),'N',char(39),' ');
         set v_sql = concat(v_sql,'set a.',v_set_recon_field,'=b.',v_lookup_return_field,' ');
         set v_sql = concat(v_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
-        -- select v_sql,v_preprocess_code,v_tran_table,v_tranbrkp_table;
+        select v_sql,v_preprocess_code,v_tran_table,v_tranbrkp_table;
+        leave me;
 
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);

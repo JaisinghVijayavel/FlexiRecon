@@ -32,6 +32,8 @@ me:BEGIN
   declare v_rpt_table_name text default '';
   declare v_recon_field_prefix text default '';
 
+  declare v_recontype_code text default '';
+
   declare v_report_exec_type text default '';
   declare v_dataset_db_name text default '';
   declare v_table_name text default '';
@@ -142,18 +144,55 @@ me:BEGIN
   elseif exists(select field_name from recon_mst_tsystemfield
     where table_name = in_table_name
     and delete_flag = 'N') then
+    -- get recontype code
+    select
+      recontype_code into v_recontype_code
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_recontype_code = ifnull(v_recontype_code,'');
+
     set @sno := 0;
 
-    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
-    select
-      field_name,
-      fn_get_reconfieldname(in_recon_code,field_name),
-      fn_get_fieldtype(in_recon_code,field_name) as field_type,
-      @sno := @sno + 1
-    from recon_mst_tsystemfield
-    where table_name = in_table_name
-    and delete_flag = 'N'
-    order by display_order;
+    if v_recontype_code = 'W' or v_recontype_code = 'B' or v_recontype_code = 'I' then
+      insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+      select
+        field_name,
+        fn_get_reconfieldname(in_recon_code,field_name),
+        fn_get_fieldtype(in_recon_code,field_name) as field_type,
+        @sno := @sno + 1
+      from recon_mst_tsystemfield
+      where table_name = in_table_name
+      and acc_field_flag = 'Y'
+      and delete_flag = 'N'
+      order by display_order;
+    elseif v_recontype_code = 'V' then
+      insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+      select
+        field_name,
+        fn_get_reconfieldname(in_recon_code,field_name),
+        fn_get_fieldtype(in_recon_code,field_name) as field_type,
+        @sno := @sno + 1
+      from recon_mst_tsystemfield
+      where table_name = in_table_name
+      and value_field_flag = 'Y'
+      and delete_flag = 'N'
+      order by display_order;
+    else
+      insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+      select
+        field_name,
+        fn_get_reconfieldname(in_recon_code,field_name),
+        fn_get_fieldtype(in_recon_code,field_name) as field_type,
+        @sno := @sno + 1
+      from recon_mst_tsystemfield
+      where table_name = in_table_name
+      and acc_field_flag = 'N'
+      and value_field_flag = 'N'
+      and delete_flag = 'N'
+      order by display_order;
+    end if;
 
     insert ignore into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
     select
