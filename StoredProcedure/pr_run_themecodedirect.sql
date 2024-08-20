@@ -1,9 +1,9 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_themedirect` $$
-CREATE PROCEDURE `pr_run_themedirect`
-(
+DROP PROCEDURE IF EXISTS `pr_run_themecodedirect` $$
+CREATE PROCEDURE `pr_run_themecodedirect`(
   in in_recon_code varchar(32),
+  in in_theme_code varchar(32),
   in in_job_gid int,
   in in_period_from date,
   in in_period_to date,
@@ -98,6 +98,7 @@ me:BEGIN
         theme_code,theme_desc
       from recon_mst_ttheme
       where recon_code = in_recon_code
+      and theme_code = in_theme_code
       and theme_type_code = 'QCD_THEME_DIRECT'
       and hold_flag = 'N'
       and active_status = 'Y'
@@ -198,6 +199,9 @@ me:BEGIN
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql, v_theme_filter);
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+        select v_sql;
+        leave me;
 
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);

@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_sql` $$
-CREATE PROCEDURE `pr_run_sql`
+DROP PROCEDURE IF EXISTS `pr_run_sql2` $$
+CREATE PROCEDURE `pr_run_sql2`
 (
   in in_sql text,
   out out_msg text,
@@ -17,8 +17,8 @@ begin
 
     ROLLBACK;
 
-    call pr_ins_errorlog('system','localhost','sp','pr_run_sql',in_sql,@msg,@result);
-    call pr_ins_errorlog('system','localhost','sp','pr_run_sql',@text,@msg,@result);
+    call pr_ins_errorlog('system','localhost','sp','pr_run_sql2',in_sql,@msg,@result);
+    call pr_ins_errorlog('system','localhost','sp','pr_run_sql2',@text,@msg,@result);
 
     set out_msg = @full_error;
     set out_result = 0;
@@ -28,10 +28,10 @@ begin
     MESSAGE_TEXT = @text;
   END;
 
-  set @sql = in_sql;
-  prepare sql_stmt from @sql;
-  execute sql_stmt;
-  deallocate prepare sql_stmt;
+  set @sql2 = in_sql;
+  prepare sql2_stmt from @sql2;
+  execute sql2_stmt;
+  deallocate prepare sql2_stmt;
 
   set out_msg = 'Success';
   set out_result = 1;

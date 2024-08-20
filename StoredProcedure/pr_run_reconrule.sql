@@ -181,6 +181,27 @@ me:BEGIN
   and automatch_flag = in_automatch_flag
   and delete_flag = 'N';
 
+  if in_automatch_flag = 'Y' then
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  else
+    set v_tran_table = 'recon_tmp_ttran';
+    set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
+  end if;
+
+  -- blank the theme code
+	set v_sql = 'update $TABLENAME$ set ';
+	set v_sql = concat(v_sql,'theme_code = '''' ');
+	set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+	set v_sql = concat(v_sql,v_recon_date_condition);
+	set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+  -- preprocess
+  call pr_run_preprocess(in_recon_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+
   -- create temporary
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttranbrkp;
@@ -370,27 +391,6 @@ me:BEGIN
     group by recon_code,dataset_code;
   end if;
 
-  if in_automatch_flag = 'Y' then
-    set v_tran_table = 'recon_trn_ttran';
-    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-  else
-    set v_tran_table = 'recon_tmp_ttran';
-    set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
-  end if;
-
-  -- blank the theme code
-	set v_sql = 'update $TABLENAME$ set ';
-	set v_sql = concat(v_sql,'theme_code = '''' ');
-	set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-	set v_sql = concat(v_sql,v_recon_date_condition);
-	set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
-
-	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
-	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
-
-  -- preprocess
-  call pr_run_preprocess(in_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-
   -- rule
   rule_block:begin
     declare rule_done int default 0;
@@ -483,16 +483,7 @@ me:BEGIN
     call pr_get_tablequery(v_recon_code,v_file_name,'recon_rpt_tpreview',concat('and job_gid = ',cast(v_job_gid as nchar),' '),v_job_gid,
                                  in_user_code,@msg,@result);
 
-    -- update theme
-    if in_automatch_flag = 'Y' then
-      call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
-    end if;
   end if;
-
-  -- job remark
-  set v_txt = concat('Rule version applied : ',v_recon_rule_version);
-
-  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
 
   -- update the count
   if in_automatch_flag = 'Y' then
@@ -623,6 +614,19 @@ me:BEGIN
   -- drop tempoaray table
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttranbrkp;
+
+  -- update theme
+  if in_automatch_flag = 'Y' then
+    -- postprocess
+    -- call pr_run_preprocess(in_recon_code,v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+
+    call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
+  end if;
+
+  -- job remark
+  set v_txt = concat('Rule version applied : ',v_recon_rule_version);
+
+  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
 end $$
 
 DELIMITER ;

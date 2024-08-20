@@ -1,17 +1,11 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_tablequery` $$
-CREATE PROCEDURE `pr_run_tablequery`
+DROP PROCEDURE IF EXISTS `pr_get_reportfieldtype` $$
+CREATE PROCEDURE `pr_get_reportfieldtype`
 (
   in_reporttemplate_code varchar(32),
   in_recon_code varchar(32),
   in_report_code varchar(32),
-  in_table_name varchar(128),
-  in_condition text,
-  in_job_gid int,
-  in_outputfile_flag boolean,
-  in_outputfile_type varchar(32),
-  in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -37,9 +31,6 @@ me:BEGIN
   declare v_report_exec_type text default '';
   declare v_dataset_db_name text default '';
   declare v_table_name text default '';
-
-  set in_condition = ifnull(in_condition,'');
-  set in_job_gid = ifnull(in_job_gid,0);
 
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;
@@ -139,10 +130,8 @@ me:BEGIN
     where dataset_code = in_report_code
     and delete_flag = 'N'
     order by dataset_field_sno;
-
-    set in_table_name = v_table_name;
   elseif exists(select field_name from recon_mst_tsystemfield
-    where table_name = in_table_name
+    where table_name = v_table_name
     and delete_flag = 'N') then
     -- get recontype code
     select
@@ -163,7 +152,7 @@ me:BEGIN
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
         @sno := @sno + 1
       from recon_mst_tsystemfield
-      where table_name = in_table_name
+      where table_name = v_table_name
       -- and acc_field_flag = 'Y'
       and delete_flag = 'N'
       order by display_order;
@@ -175,7 +164,7 @@ me:BEGIN
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
         @sno := @sno + 1
       from recon_mst_tsystemfield
-      where table_name = in_table_name
+      where table_name = v_table_name
       -- and value_field_flag = 'Y'
       and delete_flag = 'N'
       order by display_order;
@@ -187,7 +176,7 @@ me:BEGIN
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
         @sno := @sno + 1
       from recon_mst_tsystemfield
-      where table_name = in_table_name
+      where table_name = v_table_name
       and acc_field_flag = 'N'
       and value_field_flag = 'N'
       and delete_flag = 'N'
@@ -202,13 +191,13 @@ me:BEGIN
       @sno := @sno + 1
     from recon_mst_treconfield as a
     inner join recon_mst_ttablestru as b on a.recon_field_name = b.field_name
-      and b.table_name = in_table_name
+      and b.table_name = v_table_name
       and b.delete_flag = 'N'
     where a.recon_code = in_recon_code
     and a.delete_flag = 'N'
     order by a.display_order;
   elseif exists(select field_name from recon_mst_ttablestru
-    where table_name = in_table_name
+    where table_name = v_table_name
     and delete_flag = 'N') then
 
     set @sno := 0;
@@ -226,7 +215,7 @@ me:BEGIN
       fn_get_fieldtype(in_recon_code,field_name) as field_type,
       @sno := @sno + 1
     from recon_mst_ttablestru
-    where table_name = in_table_name
+    where table_name = v_table_name
     and display_flag = 'Y'
     and delete_flag = 'N'
     order by display_order;
@@ -239,7 +228,7 @@ me:BEGIN
       @sno := @sno + 1
     from recon_mst_treconfield as a
     inner join recon_mst_ttablestru as b on a.recon_field_name = b.field_name
-      and b.table_name = in_table_name
+      and b.table_name = v_table_name
       and b.display_flag = 'N'
       and b.delete_flag = 'N'
     where a.recon_code = in_recon_code
@@ -280,7 +269,7 @@ me:BEGIN
         and f.recon_field_name like 'col%'
         and f.delete_flag = 'N'
       WHERE t.table_schema=database()
-      AND t.table_name = in_table_name;
+      AND t.table_name = v_table_name;
 
     set v_table_stru_flag := false;
   end if;
@@ -314,7 +303,7 @@ me:BEGIN
       a.display_order
     from recon_mst_treporttemplatefield as a
     left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
-      and b.table_name = in_table_name
+      and b.table_name = v_table_name
       and b.delete_flag = 'N'
     where a.reporttemplate_code = in_reporttemplate_code
     and a.active_status = 'Y'
@@ -331,96 +320,13 @@ me:BEGIN
     select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
   end if;
 
-  field_block:begin
-    declare field_done int default 0;
-    declare field_cursor cursor for
-      select a.field_name,a.field_alias_name,a.field_type,a.field_length from recon_tmp_tfield as a
-      inner join recon_tmp_tfielddisplay as b on a.field_name = b.field_name
-      where b.display_flag = 'Y'
-      order by b.display_order;
+  select * from recon_tmp_tfield;
 
-    declare continue handler for not found set field_done=1;
+  drop temporary table if exists recon_tmp_tfield;
+  drop temporary table if exists recon_tmp_tfielddisplay;
 
-    open field_cursor;
-
-    field_loop: loop
-      fetch field_cursor into v_field_name,v_field_alias_name,v_field_type,v_field_length;
-      if field_done = 1 then leave field_loop; end if;
-
-      set v_field = concat(fn_get_fieldtypeformat(in_recon_code,v_field_name,v_field_type,v_field_length),' as ',char(39),v_field_alias_name,char(39));
-
-      /*
-      if v_field_type = 'NUMBER' then
-        set v_field = concat('ifnull(',fn_get_fieldformat(in_recon_code,v_field_name),',0) as ',char(39),v_field_alias_name,char(39));
-      else
-        set v_field = concat('ifnull(cast(',fn_get_fieldformat(in_recon_code,v_field_name),' as nchar),',char(39),char(39),') as ',char(39),v_field_alias_name,char(39));
-      end if;
-      */
-
-      if v_sql_field = '' then
-        set v_sql_field = v_field;
-      else
-        set v_sql_field = concat(v_sql_field,',',v_field);
-      end if;
-
-      if v_static_fields = '' then
-        set v_static_fields = concat('"',v_field_alias_name,'"');
-      else
-        set v_static_fields = concat(v_static_fields,',"',v_field_alias_name,'"');
-      end if;
-    end loop field_loop;
-
-    if (v_sql_field = '') then
-      set v_static_fields := '';
-      set v_sql_field = '*';
-    else
-      if in_job_gid > 0 and in_outputfile_flag = true and in_outputfile_type = 'csv' then
-        set v_static_fields= concat('Select ',v_static_fields,' union all ');
-      else
-        set v_static_fields := '';
-      end if;
-    end if;
-
-    set v_sql = concat(v_static_fields,'select a.* from (');
-    set v_sql = concat(v_sql,'select ',v_sql_field,' from ',in_table_name,' where 1=1 ',in_condition);
-
-    set v_sql = concat(v_sql,') as a ');
-
-    if in_job_gid > 0 and in_outputfile_flag = true and in_outputfile_type = 'csv' then
-      set v_rpt_path = fn_get_configvalue('mysql_rpt_path');
-      set v_file_name = concat(cast(in_job_gid as nchar),"_",v_report_name,".csv");
-
-      set @outfile_qry = concat(" INTO outfile '",v_rpt_path,v_file_name,"'
-						  FIELDS TERMINATED BY ','
-              OPTIONALLY ENCLOSED BY '""'
-						  LINES TERMINATED BY '\n' ;");
-
-      set v_sql = concat(v_sql,@outfile_qry);
-
-      -- update in job table
-      update recon_trn_tjob set
-        job_status = 'P',
-        job_remark = 'Inprogress',
-        file_name = v_file_name
-      where job_gid = in_job_gid
-      and delete_flag = 'N';
-    end if;
-
-    -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_tablequery',v_sql,@msg,@result);
-
-	  call pr_run_sql(v_sql,@msg,@result);
-
-    if in_job_gid > 0 then
-      call pr_upd_job(in_job_gid,'C','Completed',@msg,@result);
-    end if;
-
-    drop temporary table if exists recon_tmp_tfield;
-    drop temporary table if exists recon_tmp_tfielddisplay;
-
-    set out_msg = @msg;
-    set out_result = @result;
-
-  end field_block;
+  set out_msg = @msg;
+  set out_result = @result;
 end $$
 
 DELIMITER ;

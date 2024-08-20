@@ -1,7 +1,8 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_run_posttranbrkprule` $$
-CREATE PROCEDURE `pr_run_posttranbrkprule`(
+CREATE PROCEDURE `pr_run_posttranbrkprule`
+(
   in in_recon_code text,
   in in_rule_code text,
   in in_job_gid int,
@@ -116,8 +117,20 @@ me:BEGIN
   declare v_system_matchoff char(1) default null;
   declare v_manual_matchoff char(1) default null;
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
+
+	-- set tran table
+  /*
+	set v_tran_table = concat(in_recon_code,'_tran');
+	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  */
+
+	set v_tran_table = concat('recon_trn_ttran');
+	set v_tranbrkp_table = concat('recon_trn_ttranbrkp');
 
   if in_automatch_flag = 'Y' then
     set v_system_matchoff = 'Y';
@@ -312,24 +325,24 @@ me:BEGIN
 
       call pr_upd_job(in_job_gid,'P',v_txt,@msg,@result);
 
-      set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,',excp_mult_value) ');
+      set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,',scheduler_gid,excp_mult_value) ');
 
       if in_automatch_flag = 'Y' then
-        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_trn_ttran ');
+        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',scheduler_gid,excp_value*tran_mult from ',v_tran_table,' ');
       else
-        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',excp_value*tran_mult from recon_tmp_ttran ');
+        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,',scheduler_gid,excp_value*tran_mult from recon_tmp_ttran ');
       end if;
 
       set v_source_head_sql = concat(v_source_head_sql,' where recon_code = ',char(39),in_recon_code,char(39));
       set v_source_head_sql = concat(v_source_head_sql,' and dataset_code = ',char(39),v_source_dataset_code,char(39),' ');
       set v_source_head_sql = concat(v_source_head_sql,' and excp_value > 0 and excp_value = tran_value and mapped_value = 0 ');
 
-      set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,',excp_mult_value) ');
+      set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,',scheduler_gid,excp_mult_value) ');
 
       if in_automatch_flag = 'Y' then
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_trn_ttranbrkp ');
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',scheduler_gid,excp_value*tran_mult from ',v_tranbrkp_table,' ');
       else
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',excp_value*tran_mult from recon_tmp_ttranbrkp ');
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tranbrkp_fields ,',scheduler_gid,excp_value*tran_mult from recon_tmp_ttranbrkp ');
       end if;
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' where recon_code = ',char(39),in_recon_code,char(39));
@@ -770,6 +783,12 @@ me:BEGIN
 
             truncate recon_tmp_ttranbrkpgid;
 
+            truncate recon_tmp_tpseudorows;
+            select max(matched_count) into v_count from recon_tmp_tmatch;
+            set v_count = ifnull(v_count,0);
+
+            insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+
             -- remove the matched tranbrkp_gid from the comparison
             insert into recon_tmp_ttranbrkpgid
               select
@@ -831,6 +850,12 @@ me:BEGIN
 
             -- remove the matched tranbrkp_gid from the comparison
             truncate recon_tmp_ttranbrkpgid;
+
+            truncate recon_tmp_tpseudorows;
+            select max(matched_count) into v_count from recon_tmp_tmatch;
+            set v_count = ifnull(v_count,0);
+
+            insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
 
             insert into recon_tmp_ttranbrkpgid
               select
@@ -927,21 +952,27 @@ me:BEGIN
           truncate recon_tmp_ttranbrkpgid;
 
           if in_automatch_flag = 'Y' then
-            update recon_trn_ttran as a
-            inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and a.excp_value= b.excp_value and b.tranbrkp_gid = 0
-            set a.mapped_value = a.excp_value
-            where a.excp_value > 0
-            and a.mapped_value = 0
-            and a.delete_flag = 'N';
+						set v_sql = concat("
+							update ",v_tran_table," as a
+							inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and a.excp_value= b.excp_value and b.tranbrkp_gid = 0
+							set a.mapped_value = a.excp_value
+							where a.excp_value > 0
+							and a.mapped_value = 0
+							and a.delete_flag = 'N'");
+							
+						call pr_run_sql(v_sql,@msg,@result);
 
-            update recon_trn_ttranbrkp as a
-            inner join recon_tmp_tmatchdtl as b on a.tranbrkp_gid = b.tranbrkp_gid and a.excp_value= b.excp_value and b.tran_gid > 0
-            set a.tran_gid = b.tran_gid,
-                a.posted_job_gid = in_job_gid,
-                a.mapped_value = a.tran_value 
-            where a.excp_value > 0
-            and a.tran_gid = 0
-            and a.delete_flag = 'N';
+						set v_sql = concat("
+							update ",v_tranbrkp_table," as a
+							inner join recon_tmp_tmatchdtl as b on a.tranbrkp_gid = b.tranbrkp_gid and a.excp_value= b.excp_value and b.tran_gid > 0
+							set a.tran_gid = b.tran_gid,
+									a.posted_job_gid = ",cast(in_job_gid as nchar),",
+									a.mapped_value = a.tran_value 
+							where a.excp_value > 0
+							and a.tran_gid = 0
+							and a.delete_flag = 'N'");
+							
+						call pr_run_sql(v_sql,@msg,@result);
           else
             -- update in temporary table
             update recon_tmp_ttran as a

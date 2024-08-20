@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_sql` $$
-CREATE PROCEDURE `pr_run_sql`
+DROP PROCEDURE IF EXISTS `pr_run_sql1` $$
+CREATE PROCEDURE `pr_run_sql1`
 (
   in in_sql text,
   out out_msg text,
@@ -29,9 +29,9 @@ begin
   END;
 
   set @sql = in_sql;
-  prepare sql_stmt from @sql;
-  execute sql_stmt;
-  deallocate prepare sql_stmt;
+  prepare sql1_stmt from @sql;
+  execute sql1_stmt;
+  deallocate prepare sql1_stmt;
 
   set out_msg = 'Success';
   set out_result = 1;

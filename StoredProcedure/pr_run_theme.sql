@@ -86,11 +86,8 @@ me:BEGIN
   end if;
 
   if in_automatch_flag = 'Y' then
-    set v_tran_table = 'recon_trn_ttran';
-    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-  else
-    set v_tran_table = 'recon_tmp_ttran';
-    set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
+    -- postprocess
+    call pr_run_preprocess(in_recon_code,v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
   end if;
 
   -- set theme

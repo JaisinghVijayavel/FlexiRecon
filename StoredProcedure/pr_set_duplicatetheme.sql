@@ -20,21 +20,27 @@ begin
 	  having count(*) > 1");
 
   set @sql = v_sql;
-  prepare sql_stmt from @sql;
-  execute sql_stmt;
-  deallocate prepare sql_stmt;
+  prepare sql_stmt1 from @sql;
+  execute sql_stmt1;
+  deallocate prepare sql_stmt1;
 
   -- update theme
-  set v_sql = concat("update recon_trn_ttran set theme_code = 'Duplicate vendor code'
+  /*set v_sql = concat("update recon_trn_ttran set theme_code = 'Duplicate vendor code'
+	  where recon_code = '",in_recon_code,"'
+	  and (",in_duplicate_col,") in (select ",in_duplicate_col,"
+	from recon_tmp_ttran)
+	and delete_flag = 'N'");*/
+    
+    set v_sql = concat("update recon_trn_ttran set delete_flag = 'D'
 	  where recon_code = '",in_recon_code,"'
 	  and (",in_duplicate_col,") in (select ",in_duplicate_col,"
 	from recon_tmp_ttran)
 	and delete_flag = 'N'");
 
   set @sql = v_sql;
-  prepare sql_stmt from @sql;
-  execute sql_stmt;
-  deallocate prepare sql_stmt;
+  prepare sql_stmt2 from @sql;
+  execute sql_stmt2;
+  deallocate prepare sql_stmt2;
 
 	drop temporary table recon_tmp_ttran;
 end $$

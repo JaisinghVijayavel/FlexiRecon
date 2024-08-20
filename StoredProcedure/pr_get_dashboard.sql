@@ -12,12 +12,12 @@ CREATE PROCEDURE `pr_get_dashboard`(
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 22-07-2024
+    Created Date : 20-08-2024
 
     Updated By :
     updated Date :
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recontype_code text default '';
@@ -215,8 +215,12 @@ me:BEGIN
   select count(*) into v_recon_count from recon_tmp_trecon;
 
   -- get a/c count
-  select count(distinct b.dataset_code) into v_dataset_count from recon_tmp_trecon as r
-  inner join recon_mst_trecondataset as b on r.recon_code = b.recon_code and b.delete_flag = 'N';
+  select
+    count(distinct b.dataset_code) into v_dataset_count
+  from recon_tmp_trecon as r
+  inner join recon_mst_trecondataset as b on r.recon_code = b.recon_code
+    and b.active_status = 'Y'
+    and b.delete_flag = 'N';
 
   -- get count from tran table
   select count(*) into v_tran_count from recon_tmp_ttrangid
@@ -267,6 +271,7 @@ me:BEGIN
   select count(distinct tran_gid) into v_ko_partialexcp_count from recon_tmp_ttrangid
   where excp_value <> 0
   and tran_value <> excp_value
+  and (excp_value - roundoff_value * tran_mult) <> 0
   and tran_date >= in_period_from;
 
   -- get count

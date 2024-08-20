@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_preprocess` $$
 CREATE PROCEDURE `pr_run_preprocess`(
   in in_recon_code text,
   in in_job_gid int,
+  in in_postprocess_flag varchar(32),
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
@@ -36,6 +37,8 @@ me:BEGIN
   declare v_recon_field text default '';
   declare v_lookup_field text default '';
   declare v_lookup_grp_field text default '';
+  declare v_lookup_multi_return_flag text default '';
+  declare v_lookup_update_fields text default '';
 
   declare v_filter_field text default '';
   declare v_filter_criteria text default '';
@@ -119,6 +122,11 @@ me:BEGIN
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
   if in_automatch_flag = 'Y' then
+    /*
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+    */
+
     set v_tran_table = 'recon_trn_ttran';
     set v_tranbrkp_table = 'recon_trn_ttranbrkp';
   else
@@ -140,9 +148,11 @@ me:BEGIN
         process_function,
         lookup_dataset_code,
         lookup_return_field,
-        lookup_group_flag
+        lookup_group_flag,
+        lookup_multi_return_flag
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
+      and postprocess_flag = in_postprocess_flag
       and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'
@@ -162,7 +172,8 @@ me:BEGIN
         v_process_function,
         v_lookup_dataset_code,
         v_lookup_return_field,
-        v_lookup_group_flag;
+        v_lookup_group_flag,
+        v_lookup_multi_return_flag;
 
       if process_done = 1 then leave process_loop; end if;
 
@@ -176,6 +187,7 @@ me:BEGIN
       set v_lookup_dataset_code = ifnull(v_lookup_dataset_code,'');
       set v_lookup_return_field = ifnull(v_lookup_return_field,'');
       set v_lookup_group_flag = ifnull(v_lookup_group_flag,'N');
+      set v_lookup_multi_return_flag = ifnull(v_lookup_multi_return_flag,'N');
 
       if v_dataset_db_name <> '' then
         set v_lookup_dataset_code = concat(v_dataset_db_name,'.',v_lookup_dataset_code);
@@ -274,8 +286,52 @@ me:BEGIN
         end if;
       end if;
 
-      -- lookup condition
+      -- lookup method
       if v_process_method = 'L' then
+        -- lookup update fields
+        if v_lookup_multi_return_flag = 'Y' then
+          set v_lookup_update_fields = '';
+
+					-- group field block
+					updfield_block:begin
+						declare updfield_done int default 0;
+
+						declare updfield_cursor cursor for
+							select
+								set_recon_field,
+								lookup_return_field
+							from recon_mst_tpreprocesslookup
+							where preprocess_code = v_preprocess_code
+							and active_status = 'Y'
+							and delete_flag = 'N'
+							order by lookup_seqno;
+
+						declare continue handler for not found set updfield_done=1;
+
+						open updfield_cursor;
+
+						updfield_loop: loop
+							fetch updfield_cursor into v_set_recon_field,v_lookup_return_field;
+
+							if updfield_done = 1 then leave updfield_loop; end if;
+
+							set v_set_recon_field = ifnull(v_set_recon_field,'');
+							set v_lookup_return_field = ifnull(v_lookup_return_field,'');
+
+							if v_set_recon_field <> '' and v_lookup_return_field <> '' then
+								set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field,',');
+							end if;
+						end loop updfield_loop;
+
+						close updfield_cursor;
+					end updfield_block;
+
+          set v_lookup_update_fields = substr(v_lookup_update_fields,2);
+        else
+          set v_lookup_update_fields = concat('a.',v_set_recon_field,'=b.',v_lookup_return_field,' ');
+        end if;
+
+        -- lookup condition
         set v_lookup_condition = ' and ';
 
 				-- condition block
@@ -376,7 +432,7 @@ me:BEGIN
         end if;
 
         -- group field
-        if v_lookup_group_flag = 'Y' then
+        if v_lookup_group_flag = 'Y' and v_lookup_multi_return_flag <> 'Y' then
 					-- create temporary table
           drop temporary table if exists recon_tmp_tlookup;
 
@@ -436,6 +492,7 @@ me:BEGIN
 					set v_sql = concat(v_sql,'replace(group_concat(distinct cast(',v_lookup_return_field,' as nchar)),'','','';'')     ');
 					set v_sql = concat(v_sql,'from ',v_lookup_dataset_code,' ');
 					set v_sql = concat(v_sql,'where ',v_lookup_return_field,' <> '''' ');
+					set v_sql = concat(v_sql,'and delete_flag = ''N'' ');
 					set v_sql = concat(v_sql,'group by ',v_lookup_grp_field);
 
 					call pr_run_sql(v_sql,@msg,@result);
@@ -468,8 +525,8 @@ me:BEGIN
         set v_sql = v_process_query;
         -- set v_sql = concat(v_sql,v_recon_date_condition);
 
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        call pr_run_sql1(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+        call pr_run_sql1(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'L' then
         if v_recon_date_flag = 'Y' then
           set v_recon_date_condition = '';
@@ -484,7 +541,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'on 1 = 1 ');
         set v_sql = concat(v_sql,v_lookup_condition);
         set v_sql = concat(v_sql,'and b.delete_flag = ',char(39),'N',char(39),' ');
-        set v_sql = concat(v_sql,'set a.',v_set_recon_field,'=b.',v_lookup_return_field,' ');
+        set v_sql = concat(v_sql,'set ',v_lookup_update_fields,' ');
         set v_sql = concat(v_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
