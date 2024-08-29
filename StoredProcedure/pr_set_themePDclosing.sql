@@ -108,6 +108,12 @@ me:begin
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
     and tran_gid > 0
+
+    and col1 <> 'DIGITAL  TESTING'
+    and col5 <> 'CREDIT NOTE REFUND'
+    and col5 <> 'DEBIT NOTE'
+    and col5 <> 'BILL REALIZATION'
+
     and theme_code = ''
     and delete_flag = 'N'");
 
@@ -196,7 +202,7 @@ me:begin
   set v_sql = concat("
     update ",v_tran_table," set
       theme_code = 'Unreconciled',
-      col13 = 'Unreconcilied OB'
+      col13 = 'Unreconciled OB'
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
     and col1 = 'Opening Balance Unreconciled'
@@ -231,6 +237,18 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  set v_sql = concat("
+    update ",v_tran_table," set
+      theme_code = 'Manual',
+      col13 = 'Not Related to PD'
+    where recon_code = '",in_recon_code,"'
+    and excp_value <> 0
+    and col1 = 'Opening Balance CMH Manual'
+    and theme_code = ''
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
   -- update in tranbrkp table
   set v_sql = concat("
     update ",v_tranbrkp_table," set
@@ -243,11 +261,11 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
-  -- Misc Receipts - Manual
+  -- Entry to be Passed in OF
   -- update in tran table
   set v_sql = concat("
     update ",v_tran_table," set
-      theme_code = 'Manual',
+      theme_code = 'Entry to be Passed in OF',
       col13 = 'Entry to be Passed in OF'
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
@@ -324,8 +342,30 @@ me:begin
     set theme_code = 'Bill Realization'
     where recon_code = '",in_recon_code,"'
     and col5 = 'BILL REALIZATION'
-    and (instr(col2,'-ICR-') > 0
-    or instr(col2,'-OCR-') > 0)
+    and tran_gid > 0
+    and theme_code = ''
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  -- Credit note refund
+  set v_sql = concat("
+    update ",v_tranbrkp_table,"
+    set theme_code = 'Credit Note Refund'
+    where recon_code = '",in_recon_code,"'
+    and col5 = 'CREDIT NOTE REFUND'
+    and tran_gid > 0
+    and theme_code = ''
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  -- Debit Note
+  set v_sql = concat("
+    update ",v_tranbrkp_table,"
+    set theme_code = 'Debit Note'
+    where recon_code = '",in_recon_code,"'
+    and col5 = 'DEBIT NOTE'
     and tran_gid > 0
     and theme_code = ''
     and delete_flag = 'N'");
@@ -355,9 +395,18 @@ me:begin
   -- Memos
   set v_sql = concat("
     update ",v_tran_table,"
-    set col13 = 'Credit / Debit Memos'
+    set col13 = 'Credit Memos'
     where recon_code = '",in_recon_code,"'
-    and col1 in ('Credit Memos','Debit Memos')
+    and col1 = 'Credit Memos'
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("
+    update ",v_tran_table,"
+    set col13 = 'Debit Memos'
+    where recon_code = '",in_recon_code,"'
+    and col1 = 'Debit Memos'
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -377,7 +426,7 @@ me:begin
     update ",v_tran_table,"
     set col13 = 'Misc Receipts'
     where recon_code = '",in_recon_code,"'
-    and col1 in ('Misc Receipts','Opening Balance -IP Deposits','Opening Balance -Refund','Opening Balance -UHID Deposits')
+    and col1 in ('Misc Receipts','Opening Balance IP Deposits','Opening Balance IP Refund','Opening Balance UHID Deposits')
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);

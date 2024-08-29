@@ -1132,8 +1132,9 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
-					if v_group_method_flag = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V'
-            and v_source_dataset_code <> v_comparison_dataset_code then
+					if v_group_method_flag = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
+            -- and v_source_dataset_code <> v_comparison_dataset_code
+
             -- comparison from tran table
 						set v_comparison_sql = v_comparison_head_sql;
 
@@ -1642,7 +1643,7 @@ me:BEGIN
 								from recon_tmp_tmatch as m
 								inner join recon_tmp_tmatchdtl as a on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
 								inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
-									and b.excp_value <> 0
+									and b.excp_value > 0
 									and b.delete_flag = 'N'
 								where m.dup_flag = 'N'
 								and m.ko_flag = 'Y'

@@ -100,7 +100,8 @@ me:BEGIN
     select
       a.report_field,
       a.display_desc,
-      ifnull(b.recon_field_type,'') as field_type,
+      fn_get_fieldtype(b.recon_code,a.report_field) as field_type,
+      -- ifnull(b.recon_field_type,'') as field_type,
       ifnull(b.recon_field_length,'') as field_length,
       a.display_order
     from recon_mst_treporttemplatefield as a
@@ -110,6 +111,11 @@ me:BEGIN
     where a.reporttemplate_code = in_reporttemplate_code
     and a.delete_flag = 'N'
     order by a.display_order;
+
+    update recon_tmp_tfield set
+      field_length = '15,2'
+    where field_type = 'NUMERIC'
+    and field_length = '';
   elseif v_report_exec_type = 'D' then
     set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 

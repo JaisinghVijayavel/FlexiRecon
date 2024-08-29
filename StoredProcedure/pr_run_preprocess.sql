@@ -105,17 +105,6 @@ me:BEGIN
 
     set v_recon_date_flag = ifnull(v_recon_date_flag,'');
     set v_recon_date_field = ifnull(v_recon_date_field,'');
-
-    if v_recon_date_flag = 'Y' then
-      if v_recon_date_field <> 'tran_date' then
-        set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
-      end if;
-
-      set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
-      set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
-      set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
-      set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
-    end if;
   end if;
 
   -- get dataset db name
@@ -502,15 +491,17 @@ me:BEGIN
       end if;
 
       if v_process_method = 'F' then
-        /*
-        set v_sql = 'update $TABLENAME$ set ';
-        set v_sql = concat(v_sql,v_set_recon_field,' = ifnull(');
-        set v_sql = concat(v_sql,replace(v_process_function,'$FIELD$',v_get_recon_field),',',v_set_recon_field,') ');
-        set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-        set v_sql = concat(v_sql,v_recon_date_condition);
-        set v_sql = concat(v_sql,v_preprocess_filter);
-        set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
-        */
+        if v_recon_date_flag = 'Y' then
+          if v_recon_date_field <> 'tran_date' then
+            set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
+          end if;
+
+          set v_recon_date_condition = '';
+          set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
+          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
+          set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
+          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
+        end if;
 
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');

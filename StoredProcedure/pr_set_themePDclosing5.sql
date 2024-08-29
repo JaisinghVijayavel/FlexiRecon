@@ -73,6 +73,12 @@ me:begin
     and tran_gid = 0
     and col4 <> ''
     and col3 <> ''
+
+    and col1 <> 'DIGITAL  TESTING'
+    and col5 <> 'CREDIT NOTE REFUND'
+    and col5 <> 'DEBIT NOTE'
+    and col5 <> 'BILL REALIZATION'
+
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -99,6 +105,12 @@ me:begin
     and excp_value <> 0
     and tran_gid > 0
     and (col3,col4) in (select uhid_no,ipop_no from recon_tmp_tnotposted)
+
+    and col1 <> 'DIGITAL  TESTING'
+    and col5 <> 'CREDIT NOTE REFUND'
+    and col5 <> 'DEBIT NOTE'
+    and col5 <> 'BILL REALIZATION'
+
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);

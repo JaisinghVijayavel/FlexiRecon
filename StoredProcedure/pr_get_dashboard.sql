@@ -220,7 +220,9 @@ me:BEGIN
   from recon_tmp_trecon as r
   inner join recon_mst_trecondataset as b on r.recon_code = b.recon_code
     and b.active_status = 'Y'
-    and b.delete_flag = 'N';
+    and b.delete_flag = 'N'
+  inner join recon_mst_tdataset as d on b.dataset_code = d.dataset_code
+    and d.delete_flag = 'N';
 
   -- get count from tran table
   select count(*) into v_tran_count from recon_tmp_ttrangid
@@ -278,10 +280,10 @@ me:BEGIN
   select  v_recon_count          as recon_count,
           v_dataset_count        as dataset_count,
           v_tran_count           as tran_count,
-          v_ko_count             as ko_count,
+          v_ko_count - v_ko_partialexcp_count as ko_count,
           v_ko_system_count      as ko_system_count,
           v_ko_manual_count      as ko_manual_count,
-          v_excp_count           as excp_count,
+          v_excp_count - v_ko_partialexcp_count as excp_count,
           v_openingexcp_count    as opening_excp_count,
           v_ko_zeroexcp_count    as ko_zeroexcp_count,
           v_ko_partialexcp_count as ko_partialexcp_count;

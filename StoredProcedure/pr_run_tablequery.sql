@@ -109,7 +109,8 @@ me:BEGIN
     select
       a.report_field,
       a.display_desc,
-      ifnull(b.recon_field_type,'') as field_type,
+      fn_get_fieldtype(b.recon_code,a.report_field) as field_type,
+      -- ifnull(b.recon_field_type,'') as field_type,
       ifnull(b.recon_field_length,'') as field_length,
       a.display_order
     from recon_mst_treporttemplatefield as a
