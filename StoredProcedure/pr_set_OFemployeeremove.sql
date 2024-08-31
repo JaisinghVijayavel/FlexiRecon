@@ -126,6 +126,17 @@ begin
   prepare sql_stmt1 from @sql;
   execute sql_stmt1;
   deallocate prepare sql_stmt1;
+
+  -- Pharmacy Transactions
+  set v_sql = concat("update ",v_OF_tb_name," as a
+    inner join ",v_dataset_db_name,".DS257 as b on b.col1 = a.col1 and b.col2 = a.col2
+    set a.col32 = b.col1,a.delete_flag = 'H'
+    where a.delete_flag = 'N'");
+
+  set @sql = v_sql;
+  prepare sql_stmt1 from @sql;
+  execute sql_stmt1;
+  deallocate prepare sql_stmt1;
 end $$
 
 DELIMITER ;

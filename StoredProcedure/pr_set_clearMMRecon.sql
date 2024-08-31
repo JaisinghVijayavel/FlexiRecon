@@ -34,7 +34,21 @@ begin
     select database() into v_dataset_db_name;
   end if;
 
-  set v_sql = concat("update ",v_dataset_db_name,".DS180 set delete_flag = 'N'
+  -- OF Base Dataset
+  set v_sql = concat("update ",v_dataset_db_name,".DS180 set
+    col31 = '',
+    col32 = '',
+    delete_flag = 'N'
+    where delete_flag <> 'Y'");
+
+  set @sql = v_sql;
+  prepare sql_stmt1 from @sql;
+  execute sql_stmt1;
+  deallocate prepare sql_stmt1;
+
+  -- NG Base Dataset
+  set v_sql = concat("update ",v_dataset_db_name,".DS183 set
+    delete_flag = 'N'
     where delete_flag <> 'Y'");
 
   set @sql = v_sql;

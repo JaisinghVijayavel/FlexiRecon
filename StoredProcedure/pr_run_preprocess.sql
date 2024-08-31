@@ -35,6 +35,7 @@ me:BEGIN
   declare v_recon_date_condition text default '';
 
   declare v_recon_field text default '';
+  declare v_source_field_type text default '';
   declare v_lookup_field text default '';
   declare v_lookup_grp_field text default '';
   declare v_lookup_multi_return_flag text default '';
@@ -58,6 +59,7 @@ me:BEGIN
   declare v_join_condition text default '';
 
   declare v_recon_field_format text default '';
+  declare v_lookup_field_format text default '';
   declare v_build_condition text default '';
 
   declare v_tran_table text default '';
@@ -69,6 +71,8 @@ me:BEGIN
   declare v_sql text default '';
   declare v_tran_sql text default '';
   declare v_tranbrkp_sql text default '';
+
+  declare v_count_sql text default '';
 
   declare i int default 0;
 
@@ -308,7 +312,7 @@ me:BEGIN
 							set v_lookup_return_field = ifnull(v_lookup_return_field,'');
 
 							if v_set_recon_field <> '' and v_lookup_return_field <> '' then
-								set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field,',');
+								set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field);
 							end if;
 						end loop updfield_loop;
 
@@ -329,6 +333,7 @@ me:BEGIN
 
 					declare condition_cursor cursor for
 					  select
+              source_field_type,
               recon_field,
               extraction_criteria,
               lookup_field,
@@ -348,6 +353,7 @@ me:BEGIN
 
 					condition_loop: loop
 						fetch condition_cursor into
+              v_source_field_type,
               v_recon_field,
               v_extraction_criteria,
               v_lookup_field,
@@ -358,6 +364,7 @@ me:BEGIN
 
 						if condition_done = 1 then leave condition_loop; end if;
 
+            set v_source_field_type = ifnull(v_source_field_type,'RECON');
             set v_recon_field = concat('a.',ifnull(v_recon_field,''));
             set v_extraction_criteria = ifnull(v_extraction_criteria,'');
             set v_index_field = ifnull(v_lookup_field,'');
@@ -374,12 +381,21 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-            set v_recon_field_format = fn_get_fieldfilterformat(v_recon_field,v_extraction_criteria,0);
+            if v_source_field_type = 'RECON' then
+              set v_recon_field_format = fn_get_fieldfilterformat(v_recon_field,v_extraction_criteria,0);
 
-            set v_build_condition = concat(v_open_parentheses_flag,
+              set v_build_condition = concat(v_open_parentheses_flag,
                                            fn_get_comparisoncondition(in_recon_code,v_recon_field_format,v_lookup_field,v_comparison_criteria,0),
                                            v_close_parentheses_flag,' ',
                                            v_join_condition);
+            else
+              set v_lookup_field_format = fn_get_fieldfilterformat(v_lookup_field,v_extraction_criteria,0);
+
+              set v_build_condition = concat(v_open_parentheses_flag,
+                                           fn_get_comparisoncondition(in_recon_code,v_lookup_field_format,v_recon_field,v_comparison_criteria,0),
+                                           v_close_parentheses_flag,' ',
+                                           v_join_condition);
+            end if;
 
             set v_lookup_condition = concat(v_lookup_condition,v_build_condition,' ');
 
@@ -538,10 +554,27 @@ me:BEGIN
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
-        -- select v_sql,v_preprocess_code,v_tran_table,v_tranbrkp_table;
+        set v_count_sql = 'select count(*) into @base_count from $TABLENAME$ as a ';
+        set v_count_sql = concat(v_count_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
+        set v_count_sql = concat(v_count_sql,v_recon_date_condition);
+        set v_count_sql = concat(v_count_sql,v_preprocess_filter);
+        set v_count_sql = concat(v_count_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        call pr_run_sql(replace(v_count_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+        set @base_count = ifnull(@base_count,0);
+
+        if @base_count > 0 then
+          call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+        end if;
+
+        call pr_run_sql(replace(v_count_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        set @base_count = ifnull(@base_count,0);
+
+        if @base_count > 0 then
+          call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
+
+        set @base_count = 0;
       end if;
     end loop process_loop;
 
