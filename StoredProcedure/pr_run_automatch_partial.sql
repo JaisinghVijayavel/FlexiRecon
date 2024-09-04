@@ -1911,16 +1911,24 @@ me:BEGIN
 						insert into recon_tmp_ttrangid
 							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete from recon_tmp_tsource where tran_gid in (select tran_gid from recon_tmp_ttrangid);
-						delete from recon_tmp_tcomparison where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+						delete a.* from recon_tmp_tsource as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
 						truncate recon_tmp_ttranbrkpgid;
 
 						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
 							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
 
-						delete from recon_tmp_tsource where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
-						delete from recon_tmp_tcomparison where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+						delete a.* from recon_tmp_tsource as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+              where a.tranbrkp_gid = b.tranbrkp_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+              where a.tranbrkp_gid = b.tranbrkp_gid);
 
 						truncate recon_tmp_ttrangid;
 						truncate recon_tmp_ttranbrkpgid;
@@ -2031,16 +2039,24 @@ me:BEGIN
 						insert into recon_tmp_ttrangid
 							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete from recon_tmp_tsource where tran_gid in (select tran_gid from recon_tmp_ttrangid);
-						delete from recon_tmp_tcomparison where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+						delete a.* from recon_tmp_tsource as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
 						truncate recon_tmp_ttranbrkpgid;
 
 						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
 							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
 
-						delete from recon_tmp_tsource where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
-						delete from recon_tmp_tcomparison where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+						delete a.* from recon_tmp_tsource as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+              where a.tranbrkp_gid = b.tranbrkp_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+              where a.tranbrkp_gid = b.tranbrkp_gid);
 
 						truncate recon_tmp_ttrangid;
 						truncate recon_tmp_ttranbrkpgid;
@@ -2480,9 +2496,9 @@ me:BEGIN
 								
 						call pr_run_sql(v_sql,@msg,@result);
 
-						set v_sql = concat("delete from ",v_tran_table," 
-							where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
-							
+						set v_sql = concat("delete a.* from ",v_tran_table," as a
+							where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- move tranbrkp table
@@ -2494,11 +2510,11 @@ me:BEGIN
 							insert into ",v_tranbrkpko_table,"
 								select b.* from recon_tmp_ttranbrkpgid as g
 								inner join ",v_tranbrkp_table," as b on g.tranbrkp_gid = b.tranbrkp_gid");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
-						set v_sql = concat("delete from ",v_tranbrkp_table," 
-							where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid)");
+						set v_sql = concat("delete a.* from ",v_tranbrkp_table," as a
+							where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid)");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
@@ -2548,25 +2564,26 @@ me:BEGIN
             truncate recon_tmp_tgid;
 
 						set v_sql = concat("
-							insert into recon_tmp_tgid(tran_gid) select tran_gid from ",v_tran_table,"
-								where tran_gid in (select tran_gid from recon_tmp_ttrangid)
-								and excp_value <> 0
-								and delete_flag = 'N'");
-								
+							insert into recon_tmp_tgid(tran_gid) select tran_gid from ",v_tran_table," as a
+								where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)
+								and a.excp_value <> 0
+								and a.delete_flag = 'N'");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
-            delete from recon_tmp_ttrangid where tran_gid in (select tran_gid from recon_tmp_tgid);
+            delete a.* from recon_tmp_ttrangid as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_tgid as b where a.tran_gid = b.tran_gid);
 
 						set v_sql = concat("
 							insert into ",v_tranko_table,"
 								select t.* from recon_tmp_ttrangid as g
 								inner join ",v_tran_table," as t on g.tran_gid = t.tran_gid");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
-						set v_sql = concat("delete from ",v_tran_table," 
-							where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
-							
+						set v_sql = concat("delete a.* from ",v_tran_table," as a
+							where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
@@ -2575,7 +2592,7 @@ me:BEGIN
 							where job_gid = ",cast(in_job_gid as nchar),"
 							and kodtl_post_flag = 'N'
 							and delete_flag = 'N'");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
           else
             select max(preview_gid) into v_preview_gid from recon_trn_tpreview

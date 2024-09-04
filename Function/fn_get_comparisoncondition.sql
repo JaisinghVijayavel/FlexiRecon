@@ -81,13 +81,29 @@ begin
     set in_comparison_field = substr(in_comparison_field,1,length(in_comparison_field)-1);
 
     set v_txt = concat(' ',in_comparison_field,',',in_source_field,') > 0 ');
-  elseif instr(in_comparison_criteria,'$FIELD$') > 0 then
+  elseif instr(in_comparison_criteria,'$FIELD$') > 0
+    and instr(in_comparison_criteria,'$COMPARISON_FIELD$') = 0 then
     set v_txt = trim(in_comparison_criteria);
+
     set in_comparison_field = v_org_target_field;
     set in_comparison_field = replace(v_txt,'$FIELD$',in_comparison_field);
     set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
 
     set v_txt = concat(' ',in_source_field,' = ',in_comparison_field,' ');
+  elseif instr(in_comparison_criteria,'$COMPARISON_FIELD$') > 0 then
+    -- comparison criteria condition type added with function
+    set v_txt = trim(in_comparison_criteria);
+
+    set in_comparison_field = v_org_target_field;
+    set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
+
+    set in_comparison_field = replace(v_txt,'$COMPARISON_FIELD$',in_comparison_field);
+
+    if instr(in_comparison_criteria,'$SOURCE_FIELD$') > 0 then
+      set v_txt = replace(in_comparison_field,'$SOURCE_FIELD$',in_source_field);
+    else
+      set v_txt = concat(' ',in_source_field,' ',in_comparison_field,' ');
+    end if;
   else
     set in_comparison_field = v_org_target_field;
     set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);

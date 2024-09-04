@@ -24,7 +24,8 @@ update recon_trn_ttran set
     col18 = null,
     col19 = null,
     col20 = null,
-    col21 = null
+    col21 = null,
+    col22 = null
  where recon_code = 'RE149' 
  and delete_flag = 'N';
 

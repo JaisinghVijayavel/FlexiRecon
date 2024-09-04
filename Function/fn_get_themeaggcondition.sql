@@ -42,7 +42,9 @@ begin
         return v_txt;
       end if;
     else
-      set v_themeagg_value = concat(char(39),v_themeagg_value,char(39));
+      if trim(lower(v_themeagg_value)) <> 'null' then
+        set v_themeagg_value = concat(char(39),v_themeagg_value,char(39));
+      end if;
     end if;
   end if;
 
@@ -63,7 +65,11 @@ begin
   end if;
 
   if in_themeagg_criteria = 'EXACT' then
-    set v_txt = concat(' ',v_themeagg_field,' = ',v_themeagg_value,' ');
+    if trim(lower(v_themeagg_value)) <> 'null' then
+      set v_txt = concat(' ',v_themeagg_field,' = ',v_themeagg_value,' ');
+    else
+      set v_txt = concat(' ',v_themeagg_field,' is null ');
+    end if;
   else
     set v_txt = concat(' ',v_themeagg_field,' ',in_themeagg_criteria,' ',v_themeagg_value,' ');
   end if;

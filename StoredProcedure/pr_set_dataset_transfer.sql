@@ -153,6 +153,7 @@ me:begin
   from recon_mst_trecon as a
   inner join recon_mst_trecondataset as b on a.recon_code = b.recon_code
     and b.dataset_code = v_dataset_code
+    and b.dataset_type in ('B','T','S')
     and b.active_status = 'Y'
     and b.delete_flag = 'N'
   where a.recon_code = in_recon_code

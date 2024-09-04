@@ -779,7 +779,8 @@ me:BEGIN
                 distinct tran_gid
               FROM recon_tmp_tmatch;
 
-            delete from recon_tmp_tsource where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+            delete a.* from recon_tmp_tsource as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
             truncate recon_tmp_ttranbrkpgid;
 
@@ -797,7 +798,8 @@ me:BEGIN
               JOIN recon_tmp_tpseudorows
               having tranbrkp_gid IS NOT NULL;
 
-            delete from recon_tmp_tcomparison where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+            delete a.* from recon_tmp_tcomparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
 
             -- match the record(s) removed scheduler_gid
             set v_match_sql = 'insert into recon_tmp_tmatch (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
@@ -844,7 +846,8 @@ me:BEGIN
                 distinct tran_gid
               FROM recon_tmp_tmatch;
 
-            delete from recon_tmp_tsource where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+            delete a.* from recon_tmp_tsource as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
             truncate recon_tmp_ttrangid;
 
@@ -864,7 +867,8 @@ me:BEGIN
               JOIN recon_tmp_tpseudorows
               having tranbrkp_gid IS NOT NULL;
 
-            delete from recon_tmp_tcomparison where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+            delete a.* from recon_tmp_tcomparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
 
             truncate recon_tmp_ttranbrkpgid;
 
@@ -916,7 +920,8 @@ me:BEGIN
             group by tran_gid
             having count(*) > 1;
 
-          delete from recon_tmp_tmatch where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+          delete a.* from recon_tmp_tmatch as a
+          where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
           truncate recon_tmp_ttrangid;
 
@@ -942,11 +947,15 @@ me:BEGIN
             having count(*) > 1;
 
           insert into recon_tmp_ttrangid
-            select distinct tran_gid FROM recon_tmp_tmatchdtl
-            where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+            select distinct tran_gid FROM recon_tmp_tmatchdtl as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+              where a.tranbrkp_gid = b.tranbrkp_gid);
 
-          delete from recon_tmp_tmatch where tran_gid in (select tran_gid from recon_tmp_ttrangid);
-          delete from recon_tmp_tmatchdtl where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+          delete a.* from recon_tmp_tmatch as a
+          where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+
+          delete a.* from recon_tmp_tmatchdtl as a
+          where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
           truncate recon_tmp_ttrangid;
           truncate recon_tmp_ttranbrkpgid;

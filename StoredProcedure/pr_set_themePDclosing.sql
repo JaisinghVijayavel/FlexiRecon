@@ -348,6 +348,18 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  -- Remark field Opening Balance Bill Realisation
+  set v_sql = concat("
+    update ",v_tranbrkp_table,"
+    set theme_code = 'Bill Realization'
+    where recon_code = '",in_recon_code,"'
+    and col9 = 'Opening Balance Bill Realisation'
+    and tran_gid > 0
+    and theme_code = ''
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
   -- Credit note refund
   set v_sql = concat("
     update ",v_tranbrkp_table,"

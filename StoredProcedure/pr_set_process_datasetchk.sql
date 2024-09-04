@@ -1,6 +1,6 @@
 ﻿DELIMITER $$
-DROP PROCEDURE IF EXISTS `pr_set_process_dataset` $$
-CREATE procedure `pr_set_process_dataset`
+DROP PROCEDURE IF EXISTS `pr_set_process_datasetchk` $$
+CREATE procedure `pr_set_process_datasetchk`
 (
   in in_scheduler_gid int,
   in in_ip_addr varchar (255),
@@ -34,6 +34,7 @@ me:begin
   declare v_sql text default '';
   declare v_result int default 0;
 
+  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -62,6 +63,7 @@ me:begin
 
     SIGNAL SQLSTATE '99999' SET MESSAGE_TEXT = @text, MYSQL_ERRNO = @errno;
   END;
+  */
 
   set out_msg = '';
 
@@ -77,7 +79,7 @@ me:begin
   -- scheduler_gid validation in recon_trn_tscheduler
   if not exists(select scheduler_gid from recon_trn_tscheduler
      where scheduler_gid = in_scheduler_gid
-     and scheduler_status = 'S'
+     and scheduler_status = 'F'
      and delete_flag = 'N') then
     set out_msg = concat(out_msg,'Invalid recon scheduler !,');
     set out_result = 0;
@@ -203,7 +205,6 @@ me:begin
           and b.active_status = 'Y'
           and b.delete_flag = 'N'
         where a.dataset_code = v_dataset_code
-        and a.dataset_type in ('B','T','S')
         and a.active_status = 'Y'
         and a.delete_flag = 'N';
       declare continue handler for not found set recon_done=1;

@@ -198,7 +198,11 @@ me:BEGIN
         set v_process_method = '';
       end if;
 
-      call pr_upd_job(in_job_gid,'P',concat('Applying Preprocess - ',v_preprocess_desc),@msg,@result);
+      if in_postprocess_flag = 'Y' then
+        call pr_upd_job(in_job_gid,'P',concat('Applying Postprocess - ',v_preprocess_desc),@msg,@result);
+      else
+        call pr_upd_job(in_job_gid,'P',concat('Applying Preprocess - ',v_preprocess_desc),@msg,@result);
+      end if;
 
       -- filter condition
       if v_process_method <> 'Q' then

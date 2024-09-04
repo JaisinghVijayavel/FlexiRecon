@@ -143,7 +143,7 @@ me:BEGIN
 	
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
-	
+
 	declare v_tranko_table text default '';
 	declare v_tranbrkpko_table text default '';
 
@@ -1385,16 +1385,24 @@ me:BEGIN
 						insert into recon_tmp_ttrangid
 							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete from recon_tmp_tsource where tran_gid in (select tran_gid from recon_tmp_ttrangid);
-						delete from recon_tmp_tcomparison where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+						delete a.* from recon_tmp_tsource as a
+              where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+              where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
 						truncate recon_tmp_ttranbrkpgid;
 
 						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
 							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
 
-						delete from recon_tmp_tsource where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
-						delete from recon_tmp_tcomparison where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+						delete a.* from recon_tmp_tsource as a
+              where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+                                       where a.tranbrkp_gid = b.tranbrkp_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+              where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+                                       where a.tranbrkp_gid = b.tranbrkp_gid);
 
 						truncate recon_tmp_ttrangid;
 						truncate recon_tmp_ttranbrkpgid;
@@ -1505,16 +1513,22 @@ me:BEGIN
 						insert into recon_tmp_ttrangid
 							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete from recon_tmp_tsource where tran_gid in (select tran_gid from recon_tmp_ttrangid);
-						delete from recon_tmp_tcomparison where tran_gid in (select tran_gid from recon_tmp_ttrangid);
+						delete a.* from recon_tmp_tsource as a
+              where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+              where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
 
 						truncate recon_tmp_ttranbrkpgid;
 
 						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
 							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
 
-						delete from recon_tmp_tsource where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
-						delete from recon_tmp_tcomparison where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid);
+						delete a.* from recon_tmp_tsource as a
+              where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
+
+						delete a.* from recon_tmp_tcomparison as a
+              where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
 
 						truncate recon_tmp_ttrangid;
 						truncate recon_tmp_ttranbrkpgid;
@@ -1688,6 +1702,39 @@ me:BEGIN
 
                       set v_count = ifnull(v_count,0);
                       set v_excp_value = ifnull(v_excp_value,0);
+
+                      -- if not able to locate the diff with in source and comparison
+                      --   then directly check it with tranbrkp
+                      if v_count = 0 or v_excp_value <> v_diff_value then
+                        set v_sql = concat("
+													select
+														count(*),
+														sum(a.excp_value*a.tran_mult)
+													into
+														@v_count,
+														@v_excp_value
+													from
+													(
+														select b.tranbrkp_gid,b.excp_value,b.tran_mult
+														from ",v_tranbrkp_table," as b
+														where b.tran_gid = ",cast(v_tran_gid as nchar),"
+														and b.tranbrkp_gid not in
+														(
+															select
+																a.tranbrkp_gid
+															from recon_tmp_tmatchdtl as a
+															inner join recon_tmp_tmatch as m on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
+															where a.tran_gid = ",cast(v_tran_gid as nchar),"
+															and m.dup_flag = 'N'
+															and m.ko_flag = 'Y'
+														)
+													) as a");
+
+							          call pr_run_sql(v_sql,@msg,@result);
+
+												set v_count = ifnull(@v_count,0);
+												set v_excp_value = ifnull(@v_excp_value,0);
+                      end if;
 
                       if v_count = 0 or v_excp_value <> v_diff_value then
 												select
@@ -1900,9 +1947,9 @@ me:BEGIN
 								
 						call pr_run_sql(v_sql,@msg,@result);
 
-						set v_sql = concat("delete from ",v_tran_table," 
-							where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
-							
+						set v_sql = concat("delete a.* from ",v_tran_table," as a
+							where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- move tranbrkp
@@ -1914,11 +1961,11 @@ me:BEGIN
             insert into ",v_tranbrkpko_table,"
               select b.* from recon_tmp_ttranbrkpgid as g
               inner join ",v_tranbrkp_table," as b on g.tranbrkp_gid = b.tranbrkp_gid");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
 
-						set v_sql = concat("delete from ",v_tranbrkp_table," 
-							where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid)");
+						set v_sql = concat("delete a.* from ",v_tranbrkp_table," as a
+							where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid)");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
@@ -1970,25 +2017,27 @@ me:BEGIN
             truncate recon_tmp_tgid;
 
 						set v_sql = concat("
-							insert into recon_tmp_tgid select tran_gid from ",v_tran_table,"
-								where tran_gid in (select tran_gid from recon_tmp_ttrangid)
-								and excp_value <> 0
-								and delete_flag = 'N'");
-								
+							insert into recon_tmp_tgid select tran_gid from ",v_tran_table," as a
+								where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b
+                  where a.tran_gid = b.tran_gid)
+								  and excp_value <> 0
+								  and delete_flag = 'N'");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
-            delete from recon_tmp_ttrangid where tran_gid in (select gid from recon_tmp_tgid);
+            delete a.* from recon_tmp_ttrangid as a
+              where a.tran_gid in (select b.gid from recon_tmp_tgid as b where a.tran_gid = b.gid);
 
 						set v_sql = concat("
 							insert into ",v_tranko_table,"
 								select t.* from recon_tmp_ttrangid as g
 								inner join ",v_tran_table," as t on g.tran_gid = t.tran_gid");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
-						set v_sql = concat("delete from ",v_tran_table," 
-							where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
-							
+						set v_sql = concat("delete a.* from ",v_tran_table," as a
+							where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
@@ -1997,7 +2046,7 @@ me:BEGIN
 							where job_gid = ",cast(in_job_gid as nchar),"
 							and kodtl_post_flag = 'N'
 							and delete_flag = 'N'");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
           else
             select max(preview_gid) into v_preview_gid from recon_trn_tpreview

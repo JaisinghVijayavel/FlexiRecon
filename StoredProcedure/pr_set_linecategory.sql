@@ -68,7 +68,7 @@ me:begin
     update ",v_tran_table,"
     set col13 = 'Misc Receipts'
     where recon_code = '",in_recon_code,"'
-    and col1 in ('Misc Receipts','Opening Balance IP Deposits','Opening Balance IP Refund','Opening Balance UHID Deposits')
+    and col1 in ('Misc Receipts','Opening Balance IP Deposits','Opening Balance IP Refund','Opening Balance UHID Deposits','Opening Balance Bill Realisation')
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);

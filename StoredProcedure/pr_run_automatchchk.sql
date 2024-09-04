@@ -1470,6 +1470,8 @@ me:BEGIN
             -- run match sql one to many
             call pr_run_sql(v_match_sql,@msg,@result);
 
+            select v_match_sql;
+
             select max(matched_count) into v_count from recon_tmp_tmatch;
             set v_count = ifnull(v_count,0);
 
@@ -1674,6 +1676,21 @@ me:BEGIN
                         v_excp_value
                       from
                       (
+								        select b.tranbrkp_gid,b.excp_value,b.tran_mult
+                        from recon_trn_ttranbrkp as b
+                        where b.tran_gid = v_tran_gid
+                        and b.tranbrkp_gid not in
+                        (
+								          select
+                            a.tranbrkp_gid
+								          from recon_tmp_tmatchdtl as a
+								          inner join recon_tmp_tmatch as m on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
+								          where a.tran_gid = v_tran_gid
+                          and m.dup_flag = 'N'
+								          and m.ko_flag = 'Y'
+                        )
+
+                        /*
                         select tranbrkp_gid,excp_value,tran_mult from recon_tmp_tsource
                         where tran_gid = v_tran_gid
                         and tranbrkp_gid > 0
@@ -1683,6 +1700,7 @@ me:BEGIN
                         select tranbrkp_gid,excp_value,tran_mult from recon_tmp_tcomparison
                         where tran_gid = v_tran_gid
                         and tranbrkp_gid > 0
+                        */
                       ) as a;
 
                       set v_count = ifnull(v_count,0);

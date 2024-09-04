@@ -149,8 +149,20 @@ me:BEGIN
 
   declare v_preview_gid int default 0;
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
+
+	-- set tran table
+  /*
+	set v_tran_table = concat(in_recon_code,'_tran');
+	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  */
+
+	set v_tran_table = 'recon_trn_ttran';
+	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -273,7 +285,6 @@ me:BEGIN
     set v_recon_value_flag = 'Y';
   else
     set v_recon_value_flag = 'N';
-    leave me;
   end if;
 
   theme_block:begin
@@ -317,6 +328,7 @@ me:BEGIN
       from recon_mst_trecondataset
       where recon_code = in_recon_code
       and dataset_code = v_source_dataset_code
+      and dataset_type in ('B','T','S')
       and active_status = 'Y'
       and delete_flag = 'N';
 
@@ -328,6 +340,7 @@ me:BEGIN
       from recon_mst_trecondataset
       where recon_code = in_recon_code
       and dataset_code = v_comparison_dataset_code
+      and dataset_type in ('B','T','S')
       and active_status = 'Y'
       and delete_flag = 'N';
 
@@ -336,7 +349,7 @@ me:BEGIN
       -- source from tran table
       set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
 
-      set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from recon_trn_ttran ');
+      set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
 
       set v_source_head_sql = concat(v_source_head_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
@@ -349,7 +362,7 @@ me:BEGIN
       -- comparison from tran table
       set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tran_fields,') ');
 
-      set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from recon_trn_ttran ');
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
@@ -362,7 +375,7 @@ me:BEGIN
       -- source from tranbrkp table
       set v_source_headbrkp_sql = concat('insert into recon_tmp_tsource (',v_tranbrkp_fields,') ');
 
-      set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_trn_ttranbrkp ');
+      set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
 
       set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
@@ -375,7 +388,7 @@ me:BEGIN
       -- comparison from tranbrkp table
       set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,') ');
 
-      set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_trn_ttranbrkp ');
+      set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
 
       set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
 
@@ -1220,15 +1233,27 @@ me:BEGIN
 
           -- update theme
           -- tran table
-          update recon_trn_ttran set
-            theme_code = concat(if(theme_code = '',v_theme_name,concat(theme_code,',',v_theme_name)))
-          where tran_gid in (select tran_gid from recon_tmp_ttranwithbrkpgid where tranbrkp_gid = 0);
+					set v_sql = concat("
+						update ",v_tran_table," as a set
+							a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
+							concat(a.theme_code,',','",v_theme_name,"')))
+						where a.tran_gid in (select b.tran_gid from recon_tmp_ttranwithbrkpgid as b
+              where a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0)");
+
+					call pr_run_sql(v_sql,@msg,@result);
 
           -- tranbrkp table
-          update recon_trn_ttranbrkp set
-            theme_code = concat(if(theme_code = '',v_theme_name,concat(theme_code,',',v_theme_name)))
-          where (tran_gid,tranbrkp_gid) in (select tran_gid,tranbrkp_gid from recon_tmp_ttranwithbrkpgid
-                                                      where tranbrkp_gid > 0);
+					set v_sql = concat("
+						update ",v_tranbrkp_table," as a set
+							a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
+							concat(a.theme_code,',','",v_theme_name,"')))
+						where (a.tran_gid,a.tranbrkp_gid) in (select b.tran_gid,b.tranbrkp_gid from recon_tmp_ttranwithbrkpgid as b
+              where a.tran_gid = b.tran_gid
+              and a.tranbrkp_gid = b.tranbrkp_gid
+              and b.tranbrkp_gid > 0)");
+
+					call pr_run_sql(v_sql,@msg,@result);
+
           -- delete in index table
           delete from recon_tmp_tindex
           where table_name in ('recon_tmp_tsourceagg','recon_tmp_tcomparisonagg','recon_tmp_ttranagg');

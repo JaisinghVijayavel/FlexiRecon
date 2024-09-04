@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_manualpostfile` $$
 CREATE PROCEDURE `pr_run_manualpostfile`
 (
   in in_scheduler_gid int,
+	in in_recon_code varchar(32),
   in in_ip_addr varchar(255),
   in in_user_code varchar(16),
   out out_msg text,
@@ -17,8 +18,12 @@ me:BEGIN
   declare v_tot_count int default 0;
   declare v_succ_count int default 0;
   declare v_txt text default '';
+  declare v_sql text default '';
   declare v_job_gid int default 0;
   declare v_file_name text default '';
+	
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -38,6 +43,15 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
+
+	-- set tran table
+  /*
+	set v_tran_table = concat(in_recon_code,'_tran');
+	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  */
+
+	set v_tran_table = 'recon_trn_ttran';
+	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
   drop temporary table if exists recon_tmp_ttrangid;
 
@@ -137,58 +151,67 @@ me:BEGIN
 
   truncate recon_tmp_ttrangid;
 
-  insert into recon_tmp_ttrangid
-    select
-      a.tran_gid,
-      b.excp_value,
-      sum(a.tranbrkp_value*c.tran_mult) as match_value,
-      b.tran_mult
-    from recon_trn_tmanualtranbrkp as a
-    inner join recon_trn_ttran as b
-      on a.tran_gid = b.tran_gid
-      and b.recon_code = a.recon_code
-      and b.excp_value >= a.tranbrkp_value
-      and b.excp_value = b.tran_value
-      and b.mapped_value = 0
-      and b.delete_flag = 'N'
-    inner join recon_trn_ttranbrkp as c
-      on a.tranbrkp_gid = c.tranbrkp_gid
-      and c.excp_value > 0
-      and c.excp_value = a.tranbrkp_value
-      and c.tran_gid = 0
-      and c.delete_flag = 'N'
-    where a.scheduler_gid = in_scheduler_gid
-    and a.dataset_code = v_dataset_code
-    and a.delete_flag = 'N'
-    group by a.tran_gid,b.excp_value,b.tran_mult
-    having sum(a.tranbrkp_value*c.tran_mult) = (b.excp_value*b.tran_mult);
+	set v_sql = concat("
+		insert into recon_tmp_ttrangid
+			select
+				a.tran_gid,
+				b.excp_value,
+				sum(a.tranbrkp_value*c.tran_mult) as match_value,
+				b.tran_mult
+			from recon_trn_tmanualtranbrkp as a
+			inner join ",v_tran_table," as b
+				on a.tran_gid = b.tran_gid
+				and b.recon_code = a.recon_code
+				and b.excp_value >= a.tranbrkp_value
+				and b.excp_value = b.tran_value
+				and b.mapped_value = 0
+				and b.delete_flag = 'N'
+			inner join ",v_tranbrkp_table," as c
+				on a.tranbrkp_gid = c.tranbrkp_gid
+				and c.excp_value > 0
+				and c.excp_value = a.tranbrkp_value
+				and c.tran_gid = 0
+				and c.delete_flag = 'N'
+			where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+			and a.dataset_code = '",v_dataset_code,"'
+			and a.delete_flag = 'N'
+			group by a.tran_gid,b.excp_value,b.tran_mult
+			having sum(a.tranbrkp_value*c.tran_mult) = (b.excp_value*b.tran_mult)");
+	
+	call pr_run_sql(v_sql,@msg,@result);
 
-  update recon_trn_tmanualtranbrkp set
-    tranbrkp_status = 'M'
-  where scheduler_gid = in_scheduler_gid
-  and tran_gid in (select tran_gid from recon_tmp_ttrangid)
-  and tranbrkp_status = 'P'
-  and delete_flag = 'N';
-
-  update recon_trn_ttran set
-    mapped_value = tran_value
-  where tran_gid in (select tran_gid from recon_tmp_ttrangid)
-  and excp_value = tran_value
-  and mapped_value = 0
-  and delete_flag = 'N';
-
-  update recon_trn_tmanualtranbrkp as a
-  inner join recon_trn_ttranbrkp as b
-    on a.tranbrkp_gid = b.tranbrkp_gid
-    and b.excp_value > 0
-    and b.excp_value = a.tranbrkp_value
-    and b.tran_gid = 0
-    and b.delete_flag = 'N'
-  set
-    b.tran_gid = a.tran_gid
+  update recon_trn_tmanualtranbrkp as a set
+    a.tranbrkp_status = 'M'
   where a.scheduler_gid = in_scheduler_gid
-  and a.tranbrkp_status = 'M'
+  and a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)
+  and a.tranbrkp_status = 'P'
   and a.delete_flag = 'N';
+
+	set v_sql = concat("
+		update ",v_tran_table," as a set
+			a.mapped_value = b.tran_value
+		where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)
+		and a.excp_value = tran_value
+		and a.mapped_value = 0
+		and a.delete_flag = 'N'");
+	
+	call pr_run_sql(v_sql,@msg,@result);
+
+	set v_sql = concat("
+		update recon_trn_tmanualtranbrkp as a
+		inner join ",v_tranbrkp_table," as b
+			on a.tranbrkp_gid = b.tranbrkp_gid
+			and b.excp_value > 0
+			and b.excp_value = a.tranbrkp_value
+			and b.tran_gid = 0
+			and b.delete_flag = 'N'
+		set
+			b.tran_gid = a.tran_gid
+		where a.scheduler_gid = in_scheduler_gid
+		and a.tranbrkp_status = 'M'
+		and a.delete_flag = 'N'");
+
+	call pr_run_sql(v_sql,@msg,@result);
 
   update recon_trn_tmanualtranbrkp set
     tranbrkp_status = 'C'
