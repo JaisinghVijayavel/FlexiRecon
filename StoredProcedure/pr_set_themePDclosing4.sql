@@ -26,12 +26,12 @@ me:begin
     set v_ds_table = concat(v_ds_dbname,'.',in_dataset_code);
   end if;
 
-  drop temporary table if exists recon_tmp_ttranwithbrkp;
+  drop temporary table if exists recon_tmp_ttranwithbrkp1;
   drop temporary table if exists recon_tmp_tuhidoutstanding;
   drop temporary table if exists recon_tmp_tnotposted;
 
   -- PD Recon Exception Table
-  CREATE temporary TABLE recon_tmp_ttranwithbrkp(
+  CREATE temporary TABLE recon_tmp_ttranwithbrkp1(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     bill_no varchar(255) default null,
@@ -77,6 +77,9 @@ me:begin
     and col5 <> 'CREDIT NOTE REFUND'
     and col5 <> 'DEBIT NOTE'
     and col5 <> 'BILL REALIZATION'
+    and (col16 is null or col16 = '')
+    /*and cast(col19 as unsigned) = 0
+    and cast(col18 as unsigned) >= cast(col19 as unsigned)*/
 
     and delete_flag = 'N'");
 
@@ -87,7 +90,7 @@ me:begin
   end if;
 
   -- insert records from tran table
-  set v_sql = concat("insert into recon_tmp_ttranwithbrkp
+  set v_sql = concat("insert into recon_tmp_ttranwithbrkp1
     (tran_gid,tranbrkp_gid,bill_no,ipop_no,uhid_no,excp_value,tran_mult,unit_name)
     select tran_gid,0,col2,col4,col3,excp_value,tran_mult,'",in_unit_name,"' from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
@@ -97,7 +100,7 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
-  set v_sql = concat("insert into recon_tmp_ttranwithbrkp
+  set v_sql = concat("insert into recon_tmp_ttranwithbrkp1
     (tran_gid,tranbrkp_gid,bill_no,ipop_no,uhid_no,excp_value,tran_mult,unit_name)
     select tran_gid,tranbrkp_gid,col2,col4,col3,excp_value,tran_mult,'",in_unit_name,"' from ",v_tranbrkp_table,"
     where recon_code = '",in_recon_code,"'
@@ -109,13 +112,16 @@ me:begin
     and col5 <> 'CREDIT NOTE REFUND'
     and col5 <> 'DEBIT NOTE'
     and col5 <> 'BILL REALIZATION'
+    and (col16 is null or col16 = '')
+    /*and cast(col19 as unsigned) = 0
+    and cast(col18 as unsigned) >= cast(col19 as unsigned)*/
 
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
 
   -- not posted tranbrkp
-  set v_sql = concat("insert into recon_tmp_ttranwithbrkp
+  set v_sql = concat("insert into recon_tmp_ttranwithbrkp1
     (tran_gid,tranbrkp_gid,bill_no,ipop_no,uhid_no,excp_value,tran_mult,unit_name)
     select tran_gid,tranbrkp_gid,col2,col4,col3,excp_value,tran_mult,'",in_unit_name,"' from ",v_tranbrkp_table,"
     where recon_code = '",in_recon_code,"'
@@ -128,7 +134,7 @@ me:begin
 
   -- uhid outstanding
   insert into recon_tmp_tuhidoutstanding (uhid_no,ipop_no,os_amount)
-    select ifnull(uhid_no,''),ifnull(ipop_no,''),sum(excp_value*tran_mult) from recon_tmp_ttranwithbrkp
+    select ifnull(uhid_no,''),ifnull(ipop_no,''),sum(excp_value*tran_mult) from recon_tmp_ttranwithbrkp1
     group by uhid_no,ipop_no;
 
   -- update in dataset table based on uhid no and unit
@@ -150,7 +156,7 @@ me:begin
   call pr_run_sql(v_sql,@msg,@result);
 
   drop temporary table recon_tmp_tnotposted;
-  drop temporary table recon_tmp_ttranwithbrkp;
+  drop temporary table recon_tmp_ttranwithbrkp1;
   drop temporary table recon_tmp_tuhidoutstanding;
 end $$
 

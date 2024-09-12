@@ -27,6 +27,9 @@ me:BEGIN
   declare v_recon_date_field text default '';
   declare v_recon_date_flag text default '';
 
+  declare v_theme_code text default '';
+  declare v_theme_type_code text default '';
+
   -- get recon details
   select
     recon_date_field,
@@ -90,10 +93,44 @@ me:BEGIN
     call pr_run_preprocess(in_recon_code,v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
   end if;
 
-  -- set theme
-  call pr_run_themedirect(in_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-  call pr_run_theme_comparison(in_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-  call pr_run_theme_comparisonagg(in_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+  -- theme
+  theme_block:begin
+    declare theme_done int default 0;
+    declare theme_cursor cursor for
+      select
+        theme_code,theme_type_code
+      from recon_mst_ttheme
+      where recon_code = in_recon_code
+      and hold_flag = 'N'
+      and active_status = 'Y'
+      and delete_flag = 'N'
+      order by theme_order;
+    declare continue handler for not found set theme_done=1;
+
+    open theme_cursor;
+
+    theme_loop: loop
+      fetch theme_cursor into v_theme_code,v_theme_type_code;
+
+      if theme_done = 1 then leave theme_loop; end if;
+
+      set v_theme_code = ifnull(v_theme_code,'');
+      set v_theme_type_code = ifnull(v_theme_type_code,'');
+
+      -- set theme
+      if v_theme_type_code = 'QCD_THEME_DIRECT' then
+        call pr_run_themedirect(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      elseif v_theme_type_code = 'QCD_THEME_COMPARE' then
+        call pr_run_theme_comparison(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      elseif v_theme_type_code = 'QCD_THEME_COMPARE_AGG' then
+        call pr_run_theme_comparisonagg(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      elseif v_theme_type_code = 'QCD_THEME_QUERY' then
+        call pr_run_themequery(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+      end if;
+    end loop theme_loop;
+
+    close theme_cursor;
+  end theme_block;
 
   call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C','Completed',@msg,@result);
 

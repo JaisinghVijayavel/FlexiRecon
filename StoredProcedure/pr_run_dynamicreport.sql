@@ -35,6 +35,7 @@ me:BEGIN
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
+  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -57,6 +58,7 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
+  */
 
   set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
   set in_outputfile_type = ifnull(in_outputfile_type,'');
@@ -272,7 +274,7 @@ me:BEGIN
                            in_outputfile_type,
                            in_user_code,@msg,@result);
   elseif v_report_exec_type = 'C' then
-    call pr_run_customsp(in_recon_code,in_report_code,v_sp_name,v_job_gid,in_user_code,@msg,@result);
+    call pr_run_customsp(in_recon_code,in_report_code,v_sp_name,in_report_condition,v_job_gid,in_user_code,@msg,@result);
   else
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,

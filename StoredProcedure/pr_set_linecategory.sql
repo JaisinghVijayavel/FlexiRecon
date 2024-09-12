@@ -15,6 +15,8 @@ me:begin
 	set v_tran_table = 'recon_trn_ttran';
 	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
+  leave me;
+
   -- clear line category
   set v_sql = concat("
     update ",v_tran_table,"

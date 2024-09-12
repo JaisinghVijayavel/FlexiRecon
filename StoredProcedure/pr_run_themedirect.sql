@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_themedirect` $$
 CREATE PROCEDURE `pr_run_themedirect`
 (
   in in_recon_code varchar(32),
+  in in_theme_code varchar(32),
   in in_job_gid int,
   in in_period_from date,
   in in_period_to date,
@@ -98,6 +99,7 @@ me:BEGIN
         theme_code,theme_desc
       from recon_mst_ttheme
       where recon_code = in_recon_code
+      and theme_code = in_theme_code 
       and theme_type_code = 'QCD_THEME_DIRECT'
       and hold_flag = 'N'
       and active_status = 'Y'
@@ -119,7 +121,7 @@ me:BEGIN
 
       -- filter condition
       if v_theme_code <> '' then
-        set v_theme_filter = ' and ';
+        set v_theme_filter = ' and (';
 
 				-- filter block
 				filter_block:begin
@@ -175,7 +177,7 @@ me:BEGIN
 
             set v_theme_filter = concat(v_theme_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                             fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
 					end loop filter_loop;
@@ -184,11 +186,15 @@ me:BEGIN
 
 				end filter_block;
 
+        set v_theme_filter = concat(v_theme_filter,' 1 = 1 )');
+
+        /*
         if v_theme_filter = ' and ' then
           set v_theme_filter = '';
         else
           set v_theme_filter = concat(v_theme_filter,' 1 = 1 ');
         end if;
+        */
 
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,'theme_code = concat(if(theme_code = '''',',char(39),v_theme_desc,char(39),',');

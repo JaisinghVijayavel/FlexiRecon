@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_theme_comparison` $$
 CREATE PROCEDURE `pr_run_theme_comparison`
 (
   in in_recon_code text,
+  in in_theme_code text,
   in in_job_gid int,
   in in_period_from date,
   in in_period_to date,
@@ -154,26 +155,26 @@ me:BEGIN
 
   select database() into v_database_name;
 
-  drop temporary table if exists recon_tmp_tmatch;
-  drop temporary table if exists recon_tmp_tmatchdtl;
-  drop temporary table if exists recon_tmp_tmatchdtlgid;
-  drop temporary table if exists recon_tmp_tmatchdup;
-  drop temporary table if exists recon_tmp_tmatchparentgid;
-  drop temporary table if exists recon_tmp_tmatchko;
-  drop temporary table if exists recon_tmp_tmatchkotran;
-  drop temporary table if exists recon_tmp_tmatchkotranbrkp;
-  drop temporary table if exists recon_tmp_tmatchdiff;
-  drop temporary table if exists recon_tmp_tmatchdiffdtl;
-  drop temporary table if exists recon_tmp_tmanymatch;
-  drop temporary table if exists recon_tmp_tpseudorows;
-  drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_ttranbrkpgid;
-  drop temporary table if exists recon_tmp_ttranwithbrkpgid;
+  drop temporary table if exists recon_tmp_tthemematch;
+  drop temporary table if exists recon_tmp_tthemematchdtl;
+  drop temporary table if exists recon_tmp_tthemematchdtlgid;
+  drop temporary table if exists recon_tmp_tthemematchdup;
+  drop temporary table if exists recon_tmp_tthemematchparentgid;
+  drop temporary table if exists recon_tmp_tthemematchko;
+  drop temporary table if exists recon_tmp_tthemematchkotran;
+  drop temporary table if exists recon_tmp_tthemematchkotranbrkp;
+  drop temporary table if exists recon_tmp_tthemematchdiff;
+  drop temporary table if exists recon_tmp_tthemematchdiffdtl;
+  drop temporary table if exists recon_tmp_tthememanymatch;
+  drop temporary table if exists recon_tmp_tthemepseudorows;
+  drop temporary table if exists recon_tmp_tthemetrangid;
+  drop temporary table if exists recon_tmp_tthemetranbrkpgid;
+  drop temporary table if exists recon_tmp_tthemetranwithbrkpgid;
 
-  drop temporary table if exists recon_tmp_tindex;
-  drop temporary table if exists recon_tmp_tsql;
+  drop temporary table if exists recon_tmp_tthemeindex;
+  drop temporary table if exists recon_tmp_tthemesql;
 
-  CREATE TEMPORARY TABLE recon_tmp_tindex(
+  CREATE TEMPORARY TABLE recon_tmp_tthemeindex(
     table_name varchar(128) not null,
     index_name varchar(128) not null,
     sys_flag char(1) not null default 'N',
@@ -181,25 +182,25 @@ me:BEGIN
     key idx_sys_flag(sys_flag)
   ) ENGINE = MyISAM;
 
-  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_tran_date','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_excp_value','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_recon_code','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_dataset_date','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_tran_date','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_excp_value','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_recon_code','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_dataset_date','Y';
 
-  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_tran_date','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_excp_value','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_recon_code','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_dataset_date','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_tran_date','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_excp_value','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_recon_code','Y';
+  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_dataset_date','Y';
 
   /*
-  drop table if exists recon_tmp_tmatch;
-  drop table if exists recon_tmp_tmatchdtl;
-  drop table if exists recon_tmp_tmatchko;
-  drop table if exists recon_tmp_tmatchdiff;
-  drop table if exists recon_tmp_tmatchdiffdtl;
+  drop table if exists recon_tmp_tthemematch;
+  drop table if exists recon_tmp_tthemematchdtl;
+  drop table if exists recon_tmp_tthemematchko;
+  drop table if exists recon_tmp_tthemematchdiff;
+  drop table if exists recon_tmp_tthemematchdiffdtl;
   */
 
-  CREATE temporary TABLE recon_tmp_tmatch(
+  CREATE temporary TABLE recon_tmp_tthemematch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -217,7 +218,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdtl(
+  create temporary table recon_tmp_tthemematchdtl(
     matchdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -235,7 +236,7 @@ me:BEGIN
     key idx_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchko(
+  create temporary table recon_tmp_tthemematchko(
     tran_gid int unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
     excp_value decimal(15,2) not null default 0,
@@ -246,7 +247,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdiff(
+  create temporary table recon_tmp_tthemematchdiff(
     tran_gid int unsigned NOT NULL,
     tran_mult tinyint not null default 0,
     tran_value decimal(15,2) not null default 0,
@@ -256,7 +257,7 @@ me:BEGIN
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdiffdtl(
+  create temporary table recon_tmp_tthemematchdiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -274,7 +275,7 @@ me:BEGIN
     key idx_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchkotran(
+  create temporary table recon_tmp_tthemematchkotran(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned NOT NULL default 0,
     parent_tran_gid int unsigned NOT NULL default 0,
@@ -285,7 +286,7 @@ me:BEGIN
     key idx_ko_gid(ko_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchkotranbrkp(
+  create temporary table recon_tmp_tthemematchkotranbrkp(
     tranbrkp_gid int unsigned NOT NULL,
     tran_gid int unsigned NOT NULL default 0,
     ko_value decimal(15,2) not null default 0,
@@ -296,10 +297,10 @@ me:BEGIN
   ) ENGINE = MyISAM;
 
   /*
-  drop table if exists recon_tmp_tmanymatch;
+  drop table if exists recon_tmp_tthememanymatch;
   */
 
-  CREATE temporary TABLE recon_tmp_tmanymatch(
+  CREATE temporary TABLE recon_tmp_tthememanymatch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     source_value double(15,2) not null default 0,
@@ -310,12 +311,12 @@ me:BEGIN
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdtlgid(
+  create temporary table recon_tmp_tthemematchdtlgid(
     matchdtl_gid int unsigned NOT NULL,
     PRIMARY KEY (matchdtl_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdup(
+  create temporary table recon_tmp_tthemematchdup(
     matchdup_gid int unsigned NOT NULL AUTO_INCREMENT,
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
@@ -325,7 +326,7 @@ me:BEGIN
     key idx_tranbrkp_gid(tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchparentgid(
+  create temporary table recon_tmp_tthemematchparentgid(
     parent_tran_gid int unsigned NOT NULL,
     parent_tranbrkp_gid int unsigned not null default 0,
     rec_count int unsigned not null default 0,
@@ -334,19 +335,19 @@ me:BEGIN
     key idx_parent_tranbrkp_gid(parent_tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_tpseudorows(
+  CREATE temporary TABLE recon_tmp_tthemepseudorows(
     row int unsigned NOT NULL,
     PRIMARY KEY (row)
   ) ENGINE = MyISAM;
 
-  insert into recon_tmp_tpseudorows select 0 union select 1;
+  insert into recon_tmp_tthemepseudorows select 0 union select 1;
 
-  CREATE temporary TABLE recon_tmp_ttrangid(
+  CREATE temporary TABLE recon_tmp_tthemetrangid(
     tran_gid int unsigned NOT NULL,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttranbrkpgid(
+  CREATE temporary TABLE recon_tmp_tthemetranbrkpgid(
     tranbrkp_gid int unsigned NOT NULL,
     excp_value double(15,2) not null default 0,
     tran_mult tinyint not null default 0,
@@ -355,7 +356,7 @@ me:BEGIN
     key idx_tran_gid(tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttranwithbrkpgid(
+  CREATE temporary TABLE recon_tmp_tthemetranwithbrkpgid(
     tran_gid int unsigned not null,
     tranbrkp_gid int unsigned NOT NULL,
     rec_count int not null default 0,
@@ -363,7 +364,7 @@ me:BEGIN
   ) ENGINE = MyISAM;
 
 
-  CREATE temporary TABLE recon_tmp_tsql(
+  CREATE temporary TABLE recon_tmp_tthemesql(
     sql_gid int(10) unsigned NOT NULL AUTO_INCREMENT,
     table_type char(1) default null,
     acc_mode char(1) default null,
@@ -381,7 +382,7 @@ me:BEGIN
   into
     v_tran_fields
   from recon_mst_ttablestru
-  where table_name = 'recon_tmp_ttranwithbrkp'
+  where table_name = 'recon_trn_ttranwithbrkp'
   and field_name <> 'tranbrkp_gid'
   and delete_flag = 'N'
   order by display_order;
@@ -391,7 +392,7 @@ me:BEGIN
   into
     v_tranbrkp_fields
   from recon_mst_ttablestru
-  where table_name = 'recon_tmp_ttranwithbrkp'
+  where table_name = 'recon_trn_ttranwithbrkp'
   and delete_flag = 'N'
   order by display_order;
 
@@ -426,6 +427,7 @@ me:BEGIN
         a.comparison_dataset_code
       from recon_mst_ttheme as a
       where a.recon_code = in_recon_code
+      and a.theme_code = in_theme_code
       and a.theme_type_code = 'QCD_THEME_COMPARE'
       and a.hold_flag = 'N'
       and a.active_status = 'Y'
@@ -482,7 +484,7 @@ me:BEGIN
       end if;
 
       -- source from tran table
-      set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
+      set v_source_head_sql = concat('insert into recon_tmp_tthemesource (',v_tran_fields,') ');
 
       set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
 
@@ -494,7 +496,7 @@ me:BEGIN
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
-      set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tran_fields,') ');
+      set v_comparison_head_sql = concat('insert into recon_tmp_tthemecomparison (',v_tran_fields,') ');
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
 
@@ -507,7 +509,7 @@ me:BEGIN
       end if;
 
       -- source from tranbrkp table
-      set v_source_headbrkp_sql = concat('insert into recon_tmp_tsource (',v_tranbrkp_fields,') ');
+      set v_source_headbrkp_sql = concat('insert into recon_tmp_tthemesource (',v_tranbrkp_fields,') ');
 
       set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
 
@@ -520,7 +522,7 @@ me:BEGIN
       end if;
 
       -- comparison from tranbrkp table
-      set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,') ');
+      set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tthemecomparison (',v_tranbrkp_fields,') ');
 
       set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
 
@@ -554,8 +556,8 @@ me:BEGIN
 
             open themefilter_cursor;
 
-            set v_sourcebase_filter = ' and ';
-            set v_comparisonbase_filter = ' and ';
+            set v_sourcebase_filter = ' and (';
+            set v_comparisonbase_filter = ' and (';
 
             themefilter_loop: loop
               fetch themefilter_cursor into v_filter_applied_on,
@@ -584,7 +586,7 @@ me:BEGIN
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
               set v_themefilter_condition = concat(v_open_parentheses_flag,
-                                                  fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                                  fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                                   v_close_parentheses_flag,' ',
                                                   v_join_condition,' ');
 
@@ -598,8 +600,8 @@ me:BEGIN
             close themefilter_cursor;
           end themefilter_block;
 
-          set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1 ');
-          set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1 ');
+          set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
+          set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
           set v_theme_condition = ' and ';
           set v_theme_notnull_condition = ' and ';
@@ -608,40 +610,40 @@ me:BEGIN
           set v_source_condition = ' and ';
           set v_comparison_condition = ' and ';
 
-          drop temporary table if exists recon_tmp_tsource;
-          drop temporary table if exists recon_tmp_tcomparison;
-          drop temporary table if exists recon_tmp_tsourcedup;
+          drop temporary table if exists recon_tmp_tthemesource;
+          drop temporary table if exists recon_tmp_tthemecomparison;
+          drop temporary table if exists recon_tmp_tthemesourcedup;
 
           /*
-          drop table if exists recon_tmp_tsource;
-          drop table if exists recon_tmp_tcomparison;
+          drop table if exists recon_tmp_tthemesource;
+          drop table if exists recon_tmp_tthemecomparison;
           */
 
-          create temporary table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tsource ENGINE = MyISAM;
-          alter table recon_tmp_tsource add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tsource(excp_value);
-          create index idx_tran_date on recon_tmp_tsource(tran_date);
-          create index idx_recon_code on recon_tmp_tsource(recon_code);
-          create index idx_dataset_code on recon_tmp_tsource(recon_code,dataset_code);
+          create temporary table recon_tmp_tthemesource select * from recon_trn_ttranwithbrkp where 1 = 2;
+          alter table recon_tmp_tthemesource ENGINE = MyISAM;
+          alter table recon_tmp_tthemesource add primary key(tran_gid,tranbrkp_gid);
+          create index idx_excp_value on recon_tmp_tthemesource(excp_value);
+          create index idx_tran_date on recon_tmp_tthemesource(tran_date);
+          create index idx_recon_code on recon_tmp_tthemesource(recon_code);
+          create index idx_dataset_code on recon_tmp_tthemesource(recon_code,dataset_code);
 
-          create temporary table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tcomparison ENGINE = MyISAM;
-          alter table recon_tmp_tcomparison add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tcomparison(excp_value);
-          create index idx_tran_date on recon_tmp_tcomparison(tran_date);
-          create index idx_recon_code on recon_tmp_tcomparison(recon_code);
-          create index idx_dataset_cdoe on recon_tmp_tcomparison(recon_code,dataset_code);
+          create temporary table recon_tmp_tthemecomparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          alter table recon_tmp_tthemecomparison ENGINE = MyISAM;
+          alter table recon_tmp_tthemecomparison add primary key(tran_gid,tranbrkp_gid);
+          create index idx_excp_value on recon_tmp_tthemecomparison(excp_value);
+          create index idx_tran_date on recon_tmp_tthemecomparison(tran_date);
+          create index idx_recon_code on recon_tmp_tthemecomparison(recon_code);
+          create index idx_dataset_cdoe on recon_tmp_tthemecomparison(recon_code,dataset_code);
 
-          create temporary table recon_tmp_tsourcedup select * from recon_tmp_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tsourcedup add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tsourcedup(excp_value);
-          create index idx_tran_date on recon_tmp_tsourcedup(tran_date);
-          create index idx_dataset_code on recon_tmp_tsourcedup(recon_code,dataset_code);
-          alter table recon_tmp_tsourcedup ENGINE = MyISAM;
+          create temporary table recon_tmp_tthemesourcedup select * from recon_trn_ttranwithbrkp where 1 = 2;
+          alter table recon_tmp_tthemesourcedup add primary key(tran_gid,tranbrkp_gid);
+          create index idx_excp_value on recon_tmp_tthemesourcedup(excp_value);
+          create index idx_tran_date on recon_tmp_tthemesourcedup(tran_date);
+          create index idx_dataset_code on recon_tmp_tthemesourcedup(recon_code,dataset_code);
+          alter table recon_tmp_tthemesourcedup ENGINE = MyISAM;
 
-          delete from recon_tmp_tindex where sys_flag <> 'Y';
-          truncate recon_tmp_tsql;
+          delete from recon_tmp_tthemeindex where sys_flag <> 'Y';
+          truncate recon_tmp_tthemesql;
 
           condition_block:begin
             declare condition_done int default 0;
@@ -669,36 +671,36 @@ me:BEGIN
 
               set v_index_name = concat('idx_',v_source_field);
 
-              if not exists(select index_name from recon_tmp_tindex
-                            WHERE table_name = 'recon_tmp_tsource'
+              if not exists(select index_name from recon_tmp_tthemeindex
+                            WHERE table_name = 'recon_tmp_tthemesource'
                             and index_name = v_index_name) then
 
                 if substr(v_source_field,1,3) = 'col' then
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemesource(',v_source_field,'(255))');
                 else
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,')');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemesource(',v_source_field,')');
                 end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
-                insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tsource',v_index_name;
+                insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemesource',v_index_name;
               end if;
 
               set v_index_name = concat('idx_',v_comparison_field);
 
-              if not exists(select index_name from recon_tmp_tindex
-                            WHERE table_name = 'recon_tmp_tcomparison'
+              if not exists(select index_name from recon_tmp_tthemeindex
+                            WHERE table_name = 'recon_tmp_tthemecomparison'
                             and index_name = v_index_name) then
 
                 if substr(v_comparison_field,1,3) = 'col' then
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemecomparison(',v_comparison_field,'(255))');
                 else
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,')');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemecomparison(',v_comparison_field,')');
                 end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
-                insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tcomparison',v_index_name;
+                insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemecomparison',v_index_name;
               end if;
 
               set v_source_field_org_type = fn_get_fieldorgtype(in_recon_code,v_source_field);
@@ -751,10 +753,10 @@ me:BEGIN
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tsource set ');
+                set v_sql = concat(v_sql,'update recon_tmp_tthemesource set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format);
 
-                insert into recon_tmp_tsql(table_type,sql_query) values ('S',v_sql);
+                insert into recon_tmp_tthemesql(table_type,sql_query) values ('S',v_sql);
 
                 set v_extraction_criteria = 'EXACT';
                 set v_extraction_filter = 0;
@@ -770,22 +772,22 @@ me:BEGIN
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
+                set v_sql = concat(v_sql,'update recon_tmp_tthemecomparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
 
                 if v_recontype_code <> 'N' then
                   set v_sql = concat(v_sql,'where true ');
                 end if;
 
-                insert into recon_tmp_tsql(table_type,sql_query) values ('C',v_sql);
+                insert into recon_tmp_tthemesql(table_type,sql_query) values ('C',v_sql);
 
 								if v_manytomany_match_flag = 'Y' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
 									set v_sql = '';
-									set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
+									set v_sql = concat(v_sql,'update recon_tmp_tthemecomparison set ');
 									set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
                   set v_sql = concat(v_sql,'where true ');
 
-									insert into recon_tmp_tsql(table_type,sql_query) values ('C',v_sql);
+									insert into recon_tmp_tthemesql(table_type,sql_query) values ('C',v_sql);
 								end if;
 
                 set v_comparison_criteria = 'EXACT';
@@ -830,8 +832,8 @@ me:BEGIN
             close condition_cursor;
           end condition_block;
 
-          truncate recon_tmp_tsource;
-          truncate recon_tmp_tcomparison;
+          truncate recon_tmp_tthemesource;
+          truncate recon_tmp_tthemecomparison;
 
           if v_source_condition = ' and ' or v_comparison_condition = ' and ' then
             set v_source_condition = ' and 1 = 2 ';
@@ -929,7 +931,7 @@ me:BEGIN
           sql_block:begin
             declare sql_done int default 0;
             declare sql_cursor cursor for
-            select sql_query from recon_tmp_tsql;
+            select sql_query from recon_tmp_tthemesql;
             declare continue handler for not found set sql_done=1;
 
             open sql_cursor;
@@ -944,8 +946,8 @@ me:BEGIN
           end sql_block;
 
           -- preload pseudorows
-          truncate recon_tmp_tpseudorows;
-          insert into recon_tmp_tpseudorows select 0 union select 1;
+          truncate recon_tmp_tthemepseudorows;
+          insert into recon_tmp_tthemepseudorows select 0 union select 1;
 
           -- get target addtional group field
           if v_group_flag = 'Y' then
@@ -965,12 +967,12 @@ me:BEGIN
             end if;
 					end if;
 
-          alter table recon_tmp_tcomparison ENGINE = MyISAM;
-          alter table recon_tmp_tsource ENGINE = MyISAM;
+          alter table recon_tmp_tthemecomparison ENGINE = MyISAM;
+          alter table recon_tmp_tthemesource ENGINE = MyISAM;
 
 					-- many to many match
 					if v_manytomany_match_flag = 'Y' then
-						set v_match_sql = 'insert ignore into recon_tmp_tmanymatch (tran_gid,tranbrkp_gid,matched_count,';
+						set v_match_sql = 'insert ignore into recon_tmp_tthememanymatch (tran_gid,tranbrkp_gid,matched_count,';
 						set v_match_sql = concat(v_match_sql,'tran_mult,source_value,comparison_value,matched_txt_json) ');
 						set v_match_sql = concat(v_match_sql,'select ');
 						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,a.tran_mult,');
@@ -986,8 +988,8 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'}',char(39),' order by b.tran_gid,b.tranbrkp_gid),');
 						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
 
-						set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_tthemesource as a ');
+						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tthemecomparison as b ');
 						set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
 						set v_match_sql = concat(v_match_sql,v_theme_condition,' ');
@@ -997,7 +999,7 @@ me:BEGIN
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- insert in match table
-						set v_match_sql = 'insert into recon_tmp_tmatch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+						set v_match_sql = 'insert into recon_tmp_tthemematch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'M',char(39),',');
 						set v_match_sql = concat(v_match_sql,'max(tran_gid),max(tranbrkp_gid),sum(matched_count)+count(*) as matched_count,');
 						set v_match_sql = concat(v_match_sql,'comparison_value as matched_value,tran_mult,');
@@ -1013,7 +1015,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'}',char(39),'),');
 						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json),matched_txt_json) as matched_json ');
 
-						set v_match_sql = concat(v_match_sql,'from recon_tmp_tmanymatch ');
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_tthememanymatch ');
 
 						if v_recontype_code <> 'N' then
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
@@ -1031,65 +1033,65 @@ me:BEGIN
 
 						call pr_run_sql(v_match_sql,@msg,@result);
 
-						select max(matched_count) into v_count from recon_tmp_tmatch;
+						select max(matched_count) into v_count from recon_tmp_tthemematch;
 						set v_count = ifnull(v_count,0);
 
-						truncate recon_tmp_tpseudorows;
+						truncate recon_tmp_tthemepseudorows;
 
 						if v_count >= 2 then
-							insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+							insert into recon_tmp_tthemepseudorows select row from pseudo_rows1 where row <= v_count;
 						else
-							insert into recon_tmp_tpseudorows select 0 union select 1;
+							insert into recon_tmp_tthemepseudorows select 0 union select 1;
 						end if;
 
-						insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+						insert into recon_tmp_tthemematchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
 							select
 								tran_gid as parent_tran_gid,
 								tranbrkp_gid as parent_tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
-							FROM recon_tmp_tmatch
-							JOIN recon_tmp_tpseudorows
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_gid'))) AS tran_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].ko_value'))) AS ko_value,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_mult'))) AS tran_mult,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+							FROM recon_tmp_tthemematch
+							JOIN recon_tmp_tthemepseudorows
 							where group_flag = 'M'
 							HAVING tran_gid IS NOT NULL;
 
 						-- clear matched records
-						truncate recon_tmp_ttrangid;
+						truncate recon_tmp_tthemetrangid;
 
-						insert into recon_tmp_ttrangid
-							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
+						insert into recon_tmp_tthemetrangid
+							select distinct tran_gid from recon_tmp_tthemematchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_tthemesource as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_tthemetrangid as b where a.tran_gid = b.tran_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_tthemecomparison as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_tthemetrangid as b where a.tran_gid = b.tran_gid);
 
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_tthemetranbrkpgid;
 
-						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
-							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
+						insert into recon_tmp_tthemetranbrkpgid (tranbrkp_gid)
+							select distinct tranbrkp_gid from recon_tmp_tthemematchdtl where tranbrkp_gid > 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_tthemesource as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_tthemetranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_tthemecomparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_tthemetranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						truncate recon_tmp_ttrangid;
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_tthemetrangid;
+						truncate recon_tmp_tthemetranbrkpgid;
 					end if;
 
 					 -- one to many match
            set v_manytomany_match_flag = 'N';
 
 					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' then
-            set v_match_sql = 'insert into recon_tmp_tmatch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+            set v_match_sql = 'insert into recon_tmp_tthemematch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
             set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
             set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,');
 
@@ -1128,8 +1130,8 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
 
-            set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+            set v_match_sql = concat(v_match_sql,'from recon_tmp_tthemesource as a ');
+            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tthemecomparison as b ');
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
 						set v_match_sql = concat(v_match_sql,'where 1 = 1 ');
@@ -1156,63 +1158,63 @@ me:BEGIN
             -- run match sql one to many
             call pr_run_sql(v_match_sql,@msg,@result);
 
-            select max(matched_count) into v_count from recon_tmp_tmatch;
+            select max(matched_count) into v_count from recon_tmp_tthemematch;
             set v_count = ifnull(v_count,0);
 
-            truncate recon_tmp_tpseudorows;
+            truncate recon_tmp_tthemepseudorows;
 
             if v_count >= 2 then
-              insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+              insert into recon_tmp_tthemepseudorows select row from pseudo_rows1 where row <= v_count;
             else
-              insert into recon_tmp_tpseudorows select 0 union select 1;
+              insert into recon_tmp_tthemepseudorows select 0 union select 1;
             end if;
 
-            insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+            insert into recon_tmp_tthemematchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
               select
                 tran_gid as parent_tran_gid,
                 tranbrkp_gid as parent_tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
-              FROM recon_tmp_tmatch
-              JOIN recon_tmp_tpseudorows
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_gid'))) AS tran_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].ko_value'))) AS ko_value,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_mult'))) AS tran_mult,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+              FROM recon_tmp_tthemematch
+              JOIN recon_tmp_tthemepseudorows
               where group_flag = 'Y'
               HAVING tran_gid IS NOT NULL;
 
 						-- clear matched records
-						truncate recon_tmp_ttrangid;
+						truncate recon_tmp_tthemetrangid;
 
-						insert into recon_tmp_ttrangid
-							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
+						insert into recon_tmp_tthemetrangid
+							select distinct tran_gid from recon_tmp_tthemematchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_tthemesource as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_tthemetrangid as b where a.tran_gid = b.tran_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_tthemecomparison as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_tthemetrangid as b where a.tran_gid = b.tran_gid);
 
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_tthemetranbrkpgid;
 
-						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
-							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
+						insert into recon_tmp_tthemetranbrkpgid (tranbrkp_gid)
+							select distinct tranbrkp_gid from recon_tmp_tthemematchdtl where tranbrkp_gid > 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_tthemesource as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_tthemetranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_tthemecomparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_tthemetranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						truncate recon_tmp_ttrangid;
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_tthemetrangid;
+						truncate recon_tmp_tthemetranbrkpgid;
 					 end if;
 
 					-- one to one match
           if v_manytomany_match_flag = 'N' then
-						set v_match_sql = 'insert into recon_tmp_tmatch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,matched_json) ';
+						set v_match_sql = 'insert into recon_tmp_tthemematch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
 						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,');
 
@@ -1250,8 +1252,8 @@ me:BEGIN
 
 						set v_match_sql = concat(v_match_sql,'}');
 						set v_match_sql = concat(v_match_sql,']',char(39),') as json) as matched_json ');
-						set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_tthemesource as a ');
+						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tthemecomparison as b ');
 						set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
 						set v_match_sql = concat(v_match_sql,v_theme_condition,' ');
@@ -1271,68 +1273,68 @@ me:BEGIN
 						-- select v_source_sql,v_comparison_sql,v_match_sql;
 						-- leave me;
 
-						truncate recon_tmp_tpseudorows;
+						truncate recon_tmp_tthemepseudorows;
 
-						select max(matched_count) into v_count from recon_tmp_tmatch;
+						select max(matched_count) into v_count from recon_tmp_tthemematch;
 						set v_count = ifnull(v_count,0);
 
 						if v_count >= 2 then
-							insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+							insert into recon_tmp_tthemepseudorows select row from pseudo_rows1 where row <= v_count;
 						else
-							insert into recon_tmp_tpseudorows select 0 union select 1;
+							insert into recon_tmp_tthemepseudorows select 0 union select 1;
 						end if;
 
-						insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+						insert into recon_tmp_tthemematchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
 							select
 								tran_gid as parent_tran_gid,
 								tranbrkp_gid as parent_tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
-							FROM recon_tmp_tmatch
-							JOIN recon_tmp_tpseudorows
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_gid'))) AS tran_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].ko_value'))) AS ko_value,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_mult'))) AS tran_mult,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemematch.matched_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+							FROM recon_tmp_tthemematch
+							JOIN recon_tmp_tthemepseudorows
 							where group_flag = 'N'
 							HAVING tran_gid IS NOT NULL;
           end if;
 
           -- duplicate validation
-          insert into recon_tmp_tmatchdup (tran_gid,tranbrkp_gid,rec_count)
-            select tran_gid,tranbrkp_gid,count(*) from recon_tmp_tmatchdtl
+          insert into recon_tmp_tthemematchdup (tran_gid,tranbrkp_gid,rec_count)
+            select tran_gid,tranbrkp_gid,count(*) from recon_tmp_tthemematchdtl
             group by tran_gid,tranbrkp_gid
             having count(*) > 1;
 
-          insert into recon_tmp_tmatchparentgid(parent_tran_gid,parent_tranbrkp_gid)
-            select b.parent_tran_gid,b.parent_tranbrkp_gid from recon_tmp_tmatchdup as a
-            inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
+          insert into recon_tmp_tthemematchparentgid(parent_tran_gid,parent_tranbrkp_gid)
+            select b.parent_tran_gid,b.parent_tranbrkp_gid from recon_tmp_tthemematchdup as a
+            inner join recon_tmp_tthemematchdtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
             group by b.parent_tran_gid,b.parent_tranbrkp_gid;
 
-          update recon_tmp_tmatch as a
-          inner join recon_tmp_tmatchparentgid as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
+          update recon_tmp_tthemematch as a
+          inner join recon_tmp_tthemematchparentgid as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
           set a.dup_flag = 'Y';
 
-          update recon_tmp_tmatch set
+          update recon_tmp_tthemematch set
             matched_value = abs(matched_value),
             ko_flag = 'Y'
           where dup_flag = 'N';
 
-          -- delete duplicate records in recon_tmp_tmatchdtl
-          delete from recon_tmp_tmatchdtl
+          -- delete duplicate records in recon_tmp_tthemematchdtl
+          delete from recon_tmp_tthemematchdtl
           where (parent_tran_gid,parent_tranbrkp_gid)
           in
           (
             select
               parent_tran_gid,
               parent_tranbrkp_gid
-            from recon_tmp_tmatchparentgid
+            from recon_tmp_tthemematchparentgid
           );
 
           -- theme update in tran table
           if v_recontype_code <> 'N' then
 						set v_sql = concat("
 							update ",v_tran_table," as a
-							inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0
+							inner join recon_tmp_tthemematchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0
 							set
 								a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
 									concat(a.theme_code,',','",v_theme_name,"')))
@@ -1344,7 +1346,7 @@ me:BEGIN
 						-- theme update in tranbrkp table
 						set v_sql = concat("
 							update ",v_tranbrkp_table," as a
-							inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = a.tranbrkp_gid
+							inner join recon_tmp_tthemematchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = a.tranbrkp_gid
 							set
 								a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
 									concat(a.theme_code,',','",v_theme_name,"')))
@@ -1355,7 +1357,7 @@ me:BEGIN
           else
 						set v_sql = concat("
 							update ",v_tran_table," as a
-							inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0
+							inner join recon_tmp_tthemematchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0
 							set
 								a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
 									concat(a.theme_code,',','",v_theme_name,"')))
@@ -1366,7 +1368,7 @@ me:BEGIN
 						-- theme update in tranbrkp table
 						set v_sql = concat("
 							update ",v_tranbrkp_table," as a
-							inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = a.tranbrkp_gid
+							inner join recon_tmp_tthemematchdtl as b on a.tran_gid = b.tran_gid and b.tranbrkp_gid = a.tranbrkp_gid
 							set
 								a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
 									concat(a.theme_code,',','",v_theme_name,"')))
@@ -1375,18 +1377,18 @@ me:BEGIN
 						call pr_run_sql(v_sql,@msg,@result);
           end if;
 
-          truncate recon_tmp_tsource;
-          truncate recon_tmp_tcomparison;
-          truncate recon_tmp_tsourcedup;
-          truncate recon_tmp_tmatch;
-          truncate recon_tmp_tmatchdtl;
-          truncate recon_tmp_tmatchdtlgid;
-          truncate recon_tmp_tmatchdup;
-          truncate recon_tmp_tmatchparentgid;
-          truncate recon_tmp_tmatchko;
-          truncate recon_tmp_tmanymatch;
-          truncate recon_tmp_ttrangid;
-          truncate recon_tmp_ttranbrkpgid;
+          truncate recon_tmp_tthemesource;
+          truncate recon_tmp_tthemecomparison;
+          truncate recon_tmp_tthemesourcedup;
+          truncate recon_tmp_tthemematch;
+          truncate recon_tmp_tthemematchdtl;
+          truncate recon_tmp_tthemematchdtlgid;
+          truncate recon_tmp_tthemematchdup;
+          truncate recon_tmp_tthemematchparentgid;
+          truncate recon_tmp_tthemematchko;
+          truncate recon_tmp_tthememanymatch;
+          truncate recon_tmp_tthemetrangid;
+          truncate recon_tmp_tthemetranbrkpgid;
     end loop theme_loop;
 
     close theme_cursor;
@@ -1396,26 +1398,26 @@ me:BEGIN
 
   set out_msg = 'Theme updated successfully !';
 
-  drop temporary table if exists recon_tmp_tsource;
-  drop temporary table if exists recon_tmp_tcomparison;
-  drop temporary table if exists recon_tmp_tsourcedup;
-  drop temporary table if exists recon_tmp_tmatch;
-  drop temporary table if exists recon_tmp_tmatchdtl;
-  drop temporary table if exists recon_tmp_tmatchdtlgid;
-  drop temporary table if exists recon_tmp_tmatchdup;
-  drop temporary table if exists recon_tmp_tmatchparentgid;
-  drop temporary table if exists recon_tmp_tmatchko;
-  drop temporary table if exists recon_tmp_tmatchkotran;
-  drop temporary table if exists recon_tmp_tmatchkotranbrkp;
-  drop temporary table if exists recon_tmp_tmatchdiff;
-  drop temporary table if exists recon_tmp_tmatchdiffdtl;
-  drop temporary table if exists recon_tmp_tmanymatch;
-  drop temporary table if exists recon_tmp_tpseudorows;
-  drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_ttranbrkpgid;
-  drop temporary table if exists recon_tmp_ttranwithbrkpgid;
-  drop temporary table if exists recon_tmp_tindex;
-  drop temporary table if exists recon_tmp_tsql;
+  drop temporary table if exists recon_tmp_tthemesource;
+  drop temporary table if exists recon_tmp_tthemecomparison;
+  drop temporary table if exists recon_tmp_tthemesourcedup;
+  drop temporary table if exists recon_tmp_tthemematch;
+  drop temporary table if exists recon_tmp_tthemematchdtl;
+  drop temporary table if exists recon_tmp_tthemematchdtlgid;
+  drop temporary table if exists recon_tmp_tthemematchdup;
+  drop temporary table if exists recon_tmp_tthemematchparentgid;
+  drop temporary table if exists recon_tmp_tthemematchko;
+  drop temporary table if exists recon_tmp_tthemematchkotran;
+  drop temporary table if exists recon_tmp_tthemematchkotranbrkp;
+  drop temporary table if exists recon_tmp_tthemematchdiff;
+  drop temporary table if exists recon_tmp_tthemematchdiffdtl;
+  drop temporary table if exists recon_tmp_tthememanymatch;
+  drop temporary table if exists recon_tmp_tthemepseudorows;
+  drop temporary table if exists recon_tmp_tthemetrangid;
+  drop temporary table if exists recon_tmp_tthemetranbrkpgid;
+  drop temporary table if exists recon_tmp_tthemetranwithbrkpgid;
+  drop temporary table if exists recon_tmp_tthemeindex;
+  drop temporary table if exists recon_tmp_tthemesql;
 end $$
 
 DELIMITER ;

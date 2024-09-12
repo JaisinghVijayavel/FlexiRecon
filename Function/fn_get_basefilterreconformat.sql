@@ -1,7 +1,9 @@
 ﻿DELIMITER $$
 
-DROP FUNCTION IF EXISTS `fn_get_basefilterformat` $$
-CREATE FUNCTION `fn_get_basefilterformat`(
+DROP FUNCTION IF EXISTS `fn_get_basefilterreconformat` $$
+CREATE FUNCTION `fn_get_basefilterreconformat`
+(
+  in_recon_code varchar(32),
   in_filter_field varchar(128),
   in_filter_criteria text,
   in_add_filter int,
@@ -11,13 +13,61 @@ CREATE FUNCTION `fn_get_basefilterformat`(
 ) RETURNS text
 begin
   declare v_filter_field text default '';
+  declare v_filter_field_type text default '';
+  declare v_ident_field_type text default '';
   declare v_txt text default '';
   declare v_collation text default '';
+
+  set in_ident_value = ifnull(in_ident_value,'');
+  set in_ident_value_flag = ifnull(in_ident_value_flag,'');
 
   select @@collation_database into v_collation;
 
 	-- filter criteria
   set v_filter_field = trim(in_filter_criteria);
+
+  set in_filter_field = ifnull(in_filter_field,'');
+  set v_filter_field_type = fn_get_fieldtype(in_recon_code,in_filter_field);
+
+  if lower(mid(in_filter_field,1,3)) = 'col' then
+    -- cast ident field
+    if v_filter_field_type = 'INTERGER' then
+      set in_filter_field = concat('cast(',in_filter_field,' as unsigned)');
+    end if;
+
+    if v_filter_field_type = 'NUMERIC' then
+      set in_filter_field = concat('cast(',in_filter_field,' as decimal(15,3))');
+    end if;
+
+    if v_filter_field_type = 'DATE' then
+      set in_filter_field = concat('cast(',in_filter_field,' as date)');
+    end if;
+
+    if v_filter_field_type = 'DATETIME' then
+      set in_filter_field = concat('cast(',in_filter_field,' as datetime)');
+    end if;
+  end if;
+
+  if in_ident_value_flag <> 'Y' and lower(substr(in_ident_value,1,3)) = 'col' then
+    set v_ident_field_type = fn_get_fieldtype(in_recon_code,in_ident_value);
+
+    -- cast ident field
+    if v_ident_field_type = 'INTERGER' then
+      set in_ident_value = concat('cast(',in_ident_value,' as unsigned)');
+    end if;
+
+    if v_ident_field_type = 'NUMERIC' then
+      set in_ident_value = concat('cast(',in_ident_value,' as decimal(15,3))');
+    end if;
+
+    if v_ident_field_type = 'DATE' then
+      set in_ident_value = concat('cast(',in_ident_value,' as date)');
+    end if;
+
+    if v_ident_field_type = 'DATETIME' then
+      set in_ident_value = concat('cast(',in_ident_value,' as datetime)');
+    end if;
+  end if;
 
   set v_filter_field = replace(v_filter_field,'$FIELD$',in_filter_field);
 
@@ -25,8 +75,8 @@ begin
     set v_filter_field = in_filter_field;
   end if;
 
-  
   set v_filter_field = fn_get_filterformat(v_filter_field,in_add_filter);
+
 
   -- comparison criteria =
   set in_comparison_criteria = trim(in_comparison_criteria);

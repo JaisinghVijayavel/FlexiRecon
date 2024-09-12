@@ -6,6 +6,7 @@ CREATE PROCEDURE `pr_run_customsp`
   in in_recon_code text,
   in in_report_code text,
   in in_sp_name text,
+  in in_condition text,
   in in_job_gid int,
   in in_user_code varchar(32),
   out out_msg text,
@@ -38,7 +39,8 @@ begin
 		select
       reportparam_type,
       reportparam_code,
-      fn_get_reportfiltervalue(in_recon_code,in_user_code,reportparam_value) as reportparam_value
+      fn_get_reportfiltervalue(in_recon_code,in_condition,
+        reportparam_value,in_user_code) as reportparam_value
     from recon_mst_treportparam
     where report_code = in_report_code
     and active_status = 'Y'

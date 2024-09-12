@@ -51,6 +51,10 @@ begin
 
   set v_field_type = ifnull(v_field_type,'');
 
+  if v_field_type = '' then
+    set v_field_type = 'TEXT';
+  end if;
+
   return v_field_type;
 end $$
 

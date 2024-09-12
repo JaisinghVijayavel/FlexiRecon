@@ -990,7 +990,7 @@ me:BEGIN
 
                 insert into recon_tmp_tsql(table_type,acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
 
-								if v_manytomany_match_flag = 'Y' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
+								if v_group_method_flag = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
 									set v_sql = '';
 									set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
 									set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
