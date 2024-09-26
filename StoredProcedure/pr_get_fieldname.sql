@@ -35,7 +35,6 @@ begin
 		  v_field_type
 	  from recon_mst_tfieldstru
 	  where field_alias_name = in_field_desc
-	  and recon_code = in_recon_code
 	  and delete_flag = 'N';
 
 	  set v_field_name = ifnull(v_field_name,'');

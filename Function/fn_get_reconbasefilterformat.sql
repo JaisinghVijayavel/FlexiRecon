@@ -1,8 +1,10 @@
 ﻿DELIMITER $$
 
-DROP FUNCTION IF EXISTS `fn_get_basefilterformat` $$
-CREATE FUNCTION `fn_get_basefilterformat`(
-  in_filter_field varchar(128),
+DROP FUNCTION IF EXISTS `fn_get_reconbasefilterformat` $$
+CREATE FUNCTION `fn_get_reconbasefilterformat`
+(
+  in_recon_code text,
+  in_filter_field text,
   in_filter_criteria text,
   in_add_filter int,
   in_comparison_criteria text,
@@ -13,8 +15,41 @@ begin
   declare v_filter_field text default '';
   declare v_txt text default '';
   declare v_collation text default '';
+  declare v_field_type text;
 
   select @@collation_database into v_collation;
+
+  -- filter field
+  set v_field_type = fn_get_fieldtype(in_recon_code,in_filter_field);
+
+  if lower(mid(in_filter_field,1,3)) = 'col' then
+		if v_field_type = 'NUMBER' or v_field_type = 'NUMERIC' then
+			set in_filter_field = concat('cast(',in_filter_field,' as decimal(15,2))');
+		elseif v_field_type = 'INTEGER' then
+			set in_filter_field = concat('cast(',in_filter_field,' as signed)');
+		elseif v_field_type = 'DATE' then
+			set in_filter_field = concat('cast(',in_filter_field,' as date)');
+		elseif v_field_type = 'DATETIME' then
+			set in_filter_field = concat('cast(',in_filter_field,' as datetime)');
+		end if;
+  end if;
+
+  -- comparison value
+  if in_ident_value_flag = 'N' then
+		set v_field_type = fn_get_fieldtype(in_recon_code,in_ident_value);
+
+		if lower(mid(in_ident_value,1,3)) = 'col' then
+			if v_field_type = 'NUMBER' or v_field_type = 'NUMERIC' then
+				set in_ident_value = concat('cast(',in_ident_value,' as decimal(15,2))');
+			elseif v_field_type = 'INTEGER' then
+				set in_ident_value = concat('cast(',in_ident_value,' as signed)');
+			elseif v_field_type = 'DATE' then
+				set in_ident_value = concat('cast(',in_ident_value,' as date)');
+			elseif v_field_type = 'DATETIME' then
+				set in_ident_value = concat('cast(',in_ident_value,' as datetime)');
+			end if;
+		end if;
+  end if;
 
 	-- filter criteria
   set v_filter_field = trim(in_filter_criteria);

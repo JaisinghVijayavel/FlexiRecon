@@ -76,13 +76,15 @@ me:begin
     and tran_gid > 0
     and theme_code = ''
 
+    /*
     and col1 <> 'DIGITAL  TESTING'
     and col5 <> 'CREDIT NOTE REFUND'
     and col5 <> 'DEBIT NOTE'
     and col5 <> 'BILL REALIZATION'
     and (col16 is null or col16 = '')
-    /*and cast(col19 as unsigned) = 0
-    and cast(col18 as unsigned) >= cast(col19 as unsigned)*/
+    and cast(col19 as unsigned) = 0
+    and cast(col18 as unsigned) >= cast(col19 as unsigned)
+    */
 
     and delete_flag = 'N'");
 

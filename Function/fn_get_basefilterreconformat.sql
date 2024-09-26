@@ -31,7 +31,7 @@ begin
 
   if lower(mid(in_filter_field,1,3)) = 'col' then
     -- cast ident field
-    if v_filter_field_type = 'INTERGER' then
+    if v_filter_field_type = 'INTEGER' then
       set in_filter_field = concat('cast(',in_filter_field,' as unsigned)');
     end if;
 
@@ -52,7 +52,7 @@ begin
     set v_ident_field_type = fn_get_fieldtype(in_recon_code,in_ident_value);
 
     -- cast ident field
-    if v_ident_field_type = 'INTERGER' then
+    if v_ident_field_type = 'INTEGER' then
       set in_ident_value = concat('cast(',in_ident_value,' as unsigned)');
     end if;
 
@@ -112,11 +112,23 @@ begin
 		else
 			set v_txt = concat(' ',v_filter_field,' LIKE concat(',in_ident_value,' collate ',v_collation,',''%'') ');
 		end if;
+  elseif in_comparison_criteria = 'NOT BEGINS WITH'  then
+		if in_ident_value_flag = 'Y' then
+			set v_txt = concat(v_filter_field,' NOT LIKE ',char(39),in_ident_value,'%',char(39),' ');
+		else
+			set v_txt = concat(' ',v_filter_field,' NOT LIKE concat(',in_ident_value,' collate ',v_collation,',''%'') ');
+		end if;
   elseif in_comparison_criteria = 'ENDS WITH'  then
 		if in_ident_value_flag = 'Y' then
 			set v_txt = concat(v_filter_field,' LIKE ',char(39),'%',in_ident_value,char(39),' ');
 		else
 			set v_txt = concat(' ',v_filter_field,' LIKE concat(''%'',',in_ident_value,' collate ',v_collation,') ');
+		end if;
+  elseif in_comparison_criteria = 'NOT ENDS WITH'  then
+		if in_ident_value_flag = 'Y' then
+			set v_txt = concat(v_filter_field,' NOT LIKE ',char(39),'%',in_ident_value,char(39),' ');
+		else
+			set v_txt = concat(' ',v_filter_field,' NOT LIKE concat(''%'',',in_ident_value,' collate ',v_collation,') ');
 		end if;
   elseif in_comparison_criteria = 'NOT CONTAINS'  then
 		if in_ident_value_flag = 'Y' then

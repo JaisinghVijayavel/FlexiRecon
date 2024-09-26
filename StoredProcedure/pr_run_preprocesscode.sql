@@ -582,6 +582,9 @@ me:BEGIN
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
 
+        select v_sql;
+        leave me;
+
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'Q' then

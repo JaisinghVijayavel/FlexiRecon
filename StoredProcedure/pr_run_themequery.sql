@@ -56,7 +56,7 @@ me:BEGIN
     open theme_cursor;
 
     theme_loop: loop
-      fetch theme_cursor into v_theme_code,v_theme_desc;
+      fetch theme_cursor into v_theme_code,v_theme_desc,v_theme_query;
 
       if theme_done = 1 then leave theme_loop; end if;
 

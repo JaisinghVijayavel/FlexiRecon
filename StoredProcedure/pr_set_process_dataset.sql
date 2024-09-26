@@ -191,6 +191,16 @@ me:begin
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
+  elseif v_dataset_code = 'FIELDUPDATE' then
+    set v_sql = concat("insert into recon_trn_tfieldupdate
+      (
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,recon_field_desc,field_value
+      )
+      select
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,recon_field_desc,field_value
+      from ",v_dataset_table_name,"
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
   else
     recon_block:begin
       declare recon_done int default 0;
@@ -230,6 +240,10 @@ me:begin
 
     if v_dataset_code = 'THEMEMANUAL' then
       call pr_set_themeupdate(in_scheduler_gid,in_user_code,in_role_code,in_lang_code,@msg,@result);
+    elseif v_dataset_code = 'KOMANUAL' then
+      call pr_set_manualupdate(in_scheduler_gid,@msg,@result);
+    elseif v_dataset_code = 'FIELDUPDATE' then
+      call pr_set_fieldupdate(in_scheduler_gid,in_user_code,in_role_code,in_lang_code,@msg,@result);
     end if;
   end if;
 

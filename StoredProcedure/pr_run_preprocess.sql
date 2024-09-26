@@ -39,6 +39,7 @@ me:BEGIN
   declare v_lookup_field text default '';
   declare v_lookup_grp_field text default '';
   declare v_lookup_multi_return_flag text default '';
+  declare v_lookup_agg_return_function text default '';
   declare v_lookup_update_fields text default '';
   declare v_lookup_filter text default '';
 
@@ -144,7 +145,8 @@ me:BEGIN
         lookup_dataset_code,
         lookup_return_field,
         lookup_group_flag,
-        lookup_multi_return_flag
+        lookup_multi_return_flag,
+        lookup_agg_return_function
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
       and postprocess_flag = in_postprocess_flag
@@ -168,7 +170,8 @@ me:BEGIN
         v_lookup_dataset_code,
         v_lookup_return_field,
         v_lookup_group_flag,
-        v_lookup_multi_return_flag;
+        v_lookup_multi_return_flag,
+        v_lookup_agg_return_function;
 
       if process_done = 1 then leave process_loop; end if;
 
@@ -183,6 +186,7 @@ me:BEGIN
       set v_lookup_return_field = ifnull(v_lookup_return_field,'');
       set v_lookup_group_flag = ifnull(v_lookup_group_flag,'N');
       set v_lookup_multi_return_flag = ifnull(v_lookup_multi_return_flag,'N');
+      set v_lookup_agg_return_function = ifnull(v_lookup_agg_return_function,'');
 
       if v_dataset_db_name <> '' then
         set v_lookup_dataset_code = concat(v_dataset_db_name,'.',v_lookup_dataset_code);
@@ -276,15 +280,19 @@ me:BEGIN
             if v_process_method = 'L' then
               if v_filter_applied_on = 'LOOKUP' then
                 set v_filter_field = concat('b.',v_filter_field);
+                set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
               else
                 set v_filter_field = concat('a.',v_filter_field);
+                set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
               end if;
 
               if v_filter_value_flag <> 'Y' then
                 if v_filter_applied_on = 'LOOKUP' then
                   set v_filter_value = concat('b.',v_filter_value);
+                  set v_filter_value = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_value);
                 else
                   set v_filter_value = concat('a.',v_filter_value);
+                  set v_filter_value = fn_get_reconfieldnamecast(in_recon_code,v_filter_value);
                 end if;
               end if;
             end if;
@@ -430,6 +438,8 @@ me:BEGIN
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
             if v_source_field_type = 'RECON' then
+              set v_recon_field = fn_get_reconfieldnamecast(in_recon_code,v_recon_field);
+
               set v_recon_field_format = fn_get_fieldfilterformat(v_recon_field,v_extraction_criteria,0);
 
               set v_build_condition = concat(v_open_parentheses_flag,
@@ -437,6 +447,8 @@ me:BEGIN
                                            v_close_parentheses_flag,' ',
                                            v_join_condition);
             else
+              set v_lookup_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_lookup_field);
+
               set v_lookup_field_format = fn_get_fieldfilterformat(v_lookup_field,v_extraction_criteria,0);
 
               set v_build_condition = concat(v_open_parentheses_flag,
@@ -545,6 +557,7 @@ me:BEGIN
 					set v_sql = concat(v_sql,'replace(group_concat(distinct cast(',v_lookup_return_field,' as nchar)),'','','';'')     ');
 					set v_sql = concat(v_sql,'from ',v_lookup_dataset_code,' ');
 					set v_sql = concat(v_sql,'where ',v_lookup_return_field,' <> '''' ');
+          set v_sql = concat(v_sql,replace(v_lookup_filter,'b.',''));
 					set v_sql = concat(v_sql,'and delete_flag = ''N'' ');
 					set v_sql = concat(v_sql,'group by ',v_lookup_grp_field);
 
@@ -595,7 +608,11 @@ me:BEGIN
         set v_sql = concat(v_sql,'inner join ',v_lookup_table,' as b ');
         set v_sql = concat(v_sql,'on 1 = 1 ');
         set v_sql = concat(v_sql,v_lookup_condition);
-        set v_sql = concat(v_sql,v_lookup_filter);
+
+        if v_lookup_group_flag <> 'Y' then
+          set v_sql = concat(v_sql,v_lookup_filter);
+        end if;
+
         set v_sql = concat(v_sql,'and b.delete_flag = ',char(39),'N',char(39),' ');
         set v_sql = concat(v_sql,'set ',v_lookup_update_fields,' ');
         set v_sql = concat(v_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');

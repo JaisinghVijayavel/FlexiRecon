@@ -53,7 +53,7 @@ BEGIN
 	inner join recon_mst_tdataset as d on c.target_dataset_code = d.dataset_code
     and d.dataset_code in ('KOMANUAL','POSTMANUAL')
     and d.delete_flag = 'N'
-  inner join recon_mst_trecon as r on s.recon_code = r.recon_code and r.delete_flag = 'N'
+  left join recon_mst_trecon as r on s.recon_code = r.recon_code and r.delete_flag = 'N'
   left join recon_trn_tjob as j on j.job_gid = d.last_job_gid and j.delete_flag = 'N'
   order by 1 asc;
 

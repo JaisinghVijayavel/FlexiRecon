@@ -75,6 +75,18 @@ begin
   delete from recon_trn_ttranbrkpko
   where recon_code = in_recon_code
   and delete_flag = 'N';
+
+  update recon_trn_ttran set
+    tran_remark2 = ''
+  where recon_code = in_recon_code
+  and tran_remark2 <> ''
+  and delete_flag = 'N';
+
+  update recon_trn_ttranbrkp set
+    tran_remark2 = ''
+  where recon_code = in_recon_code
+  and tran_remark2 <> ''
+  and delete_flag = 'N';
 end $$
 
 DELIMITER ;

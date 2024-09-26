@@ -510,8 +510,8 @@ me:BEGIN
     format(dr_value,2,'en_IN') as 'Dr Value',
     cr_count as 'Cr Count',
     format(cr_value,2,'en_IN') as 'Cr Value',
-    tot_count as 'Total Count',
-    format(tot_value,2,'en_IN') as 'Total Value',
+    /*tot_count as 'Total Count',
+    format(tot_value,2,'en_IN') as 'Total Value',*/
     ifnull(backcolor,'White') as backcolor,
     ifnull(forecolor,'Black') as forecolor
   from recon_tmp_tkosumm

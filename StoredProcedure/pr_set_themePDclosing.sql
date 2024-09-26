@@ -26,6 +26,7 @@ me:begin
     set v_ds_table = concat(v_ds_dbname,'.',in_dataset_code);
   end if;
 
+  /*
   -- blank theme
   -- tran table
   set v_sql = concat("
@@ -45,6 +46,7 @@ me:begin
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
+  */
 
   -- clear status in dataset table
   set v_sql = concat("update ",v_ds_table,"
@@ -109,13 +111,15 @@ me:begin
     and excp_value <> 0
     and tran_gid > 0
 
+    /*
     and col1 <> 'DIGITAL  TESTING'
     and col5 <> 'CREDIT NOTE REFUND'
     and col5 <> 'DEBIT NOTE'
     and col5 <> 'BILL REALIZATION'
     and (col16 is null or col16 = '')
-    /*and cast(col19 as unsigned) = 0
-    and cast(col18 as unsigned) >= cast(col19 as unsigned)*/
+    and cast(col19 as unsigned) = 0
+    and cast(col18 as unsigned) >= cast(col19 as unsigned)
+    */
 
     and theme_code = ''
     and delete_flag = 'N'");

@@ -21,7 +21,7 @@ begin
 
   set v_org_target_field = in_comparison_field;
 
-  
+
   set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
 
   if in_comparison_criteria = 'EXACT' then
@@ -32,8 +32,12 @@ begin
     set v_txt = concat(' ',in_source_field,' LIKE concat(''%'',',in_comparison_field,' collate ',v_collation,',''%'') ');
   elseif in_comparison_criteria = 'BEGINS WITH'  then
     set v_txt = concat(' ',in_comparison_field,' LIKE concat(',in_source_field,' collate ',v_collation,',''%'') ');
+  elseif in_comparison_criteria = 'NOT BEGINS WITH'  then
+    set v_txt = concat(' ',in_comparison_field,' NOT LIKE concat(',in_source_field,' collate ',v_collation,',''%'') ');
   elseif in_comparison_criteria = 'ENDS WITH'  then
     set v_txt = concat(' ',in_comparison_field,' LIKE concat(''%'',',in_source_field,' collate ',v_collation,') ');
+  elseif in_comparison_criteria = 'NOT ENDS WITH'  then
+    set v_txt = concat(' ',in_comparison_field,' NOT LIKE concat(''%'',',in_source_field,' collate ',v_collation,') ');
   elseif in_comparison_criteria = 'NOT CONTAINS'  then
     set v_txt = concat(' ifnull(',in_comparison_field,','''') NOT LIKE concat(''%'',',in_source_field,' collate ',v_collation,',''%'') ');
   elseif in_comparison_criteria = 'NOT CONTAINS IN BASE'  then
@@ -50,22 +54,28 @@ begin
 
     if v_field_type <> v_field_org_type then
       if v_field_org_type = 'TEXT' then
-        if v_field_type = 'NUMBER' then
+        if v_field_type = 'NUMBER' or v_field_type = 'NUMERIC' then
           set in_comparison_field = concat('cast(',in_comparison_field,' as decimal(15,2))');
+        elseif v_field_type = 'INTEGER' then
+          set in_comparison_field = concat('cast(',in_comparison_field,' as signed)');
         elseif v_field_type = 'DATE' then
           set in_comparison_field = concat('cast(',in_comparison_field,' as date)');
+        elseif v_field_type = 'DATETIME' then
+          set in_comparison_field = concat('cast(',in_comparison_field,' as datetime)');
         end if;
       end if;
     end if;
 
-    if v_field_type = 'DATE' then
+    if v_field_type = 'DATE' or v_field_type = 'DATETIME' then
       -- set v_txt = concat(' ',in_comparison_field,' >= adddate(',in_source_field,',',v_from,') and ',in_comparison_field,' <= adddate(',in_source_field,',',v_to,') ');
       if v_field_org_type = 'DATE' then
         set v_txt = concat(' ',in_comparison_field,' >= adddate(',in_source_field,',',v_from,') and ',in_comparison_field,' <= adddate(',in_source_field,',',v_to,') ');
-      else
+      elseif v_field_type = 'DATE' then
         set v_txt = concat(' cast(',in_comparison_field,' as date) >= adddate(cast(',in_source_field,' as date),',v_from,') and cast(',in_comparison_field,' as date) <= adddate(cast(',in_source_field,' as date),',v_to,') ');
+      elseif v_field_type = 'DATETIME' then
+        set v_txt = concat(' cast(',in_comparison_field,' as datetime) >= adddate(cast(',in_source_field,' as datetime),',v_from,') and cast(',in_comparison_field,' as datetime) <= adddate(cast(',in_source_field,' as datetime),',v_to,') ');
       end if;
-    elseif v_field_type = 'NUMBER' then
+    elseif v_field_type = 'NUMBER' or v_field_type = 'INTEGER' or v_field_type = 'NUMERIC' then
       set v_txt = concat(' ',in_comparison_field,' between (',in_source_field,'+',v_from,') and (',in_source_field,'+',v_to,') ');
     else
       set v_from = replace(v_from,'$FIELD$',in_comparison_field);
