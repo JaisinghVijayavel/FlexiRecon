@@ -23,6 +23,7 @@ me:BEGIN
   declare v_field text default '';
   declare v_sql_field text default '';
   declare v_sql text default '';
+  declare v_sql1 text default '';
   declare v_static_fields text default '';
   declare v_file_name varchar(128) default '';
   declare v_table_stru_flag boolean default false;
@@ -407,9 +408,22 @@ me:BEGIN
       and delete_flag = 'N';
     end if;
 
-    -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_tablequery',v_sql,@msg,@result);
+    if in_job_gid = 0 and in_outputfile_type = 'table' then
+      if v_report_code = '' then
+        set v_report_code = in_report_code;
+      end if;
 
-	  call pr_run_sql(v_sql,@msg,@result);
+      set v_sql1 = concat("drop table if exists ",in_recon_code,"_",v_report_code);
+
+	    call pr_run_sql(v_sql1,@msg,@result);
+
+      set v_sql1 = concat("create table ",in_recon_code,"_",v_report_code," ",v_sql);
+	    call pr_run_sql(v_sql1,@msg,@result);
+    else
+	    call pr_run_sql(v_sql,@msg,@result);
+    end if;
+
+    -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_tablequery',v_sql,@msg,@result);
 
     if in_job_gid > 0 then
       call pr_upd_job(in_job_gid,'C','Completed',@msg,@result);

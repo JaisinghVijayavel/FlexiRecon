@@ -39,7 +39,7 @@ me:BEGIN
 		  a.recon_code,
 		  d.recon_name,
 		  a.rule_code,
-		  e.rule_name,
+		  if(a.manual_matchoff = 'Y','Manual KO',e.rule_name),
 		  a.reversal_flag,
 		  a.manual_matchoff,
 		  a.ko_reason,
@@ -190,7 +190,8 @@ me:BEGIN
       c.value_debit,
       c.value_credit,
       c.bal_value_debit,
-      c.bal_value_credit
+      c.bal_value_credit,
+      a.job_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
 		inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -222,7 +223,7 @@ me:BEGIN
 		  a.recon_code,
 		  d.recon_name,
 		  a.rule_code,
-		  e.rule_name,
+		  if(a.manual_matchoff = 'Y','Manual KO',e.rule_name),
 		  a.reversal_flag,
 		  a.manual_matchoff,
 		  a.ko_reason,
@@ -373,7 +374,8 @@ me:BEGIN
       c.value_debit,
       c.value_credit,
       c.bal_value_debit,
-      c.bal_value_credit
+      c.bal_value_credit,
+      a.job_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
 		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -405,7 +407,7 @@ me:BEGIN
 		  a.recon_code,
 		  d.recon_name,
 		  a.rule_code,
-		  e.rule_name,
+		  if(a.manual_matchoff = 'Y','Manual KO',e.rule_name),
 		  a.reversal_flag,
 		  a.manual_matchoff,
 		  a.ko_reason,
@@ -556,7 +558,8 @@ me:BEGIN
       c.value_debit,
       c.value_credit,
       0,
-      0
+      0,
+      a.job_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid
 		inner join recon_trn_ttranbrkpko as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
@@ -588,7 +591,7 @@ me:BEGIN
 		  a.recon_code,
 		  d.recon_name,
 		  a.rule_code,
-		  e.rule_name,
+		  if(a.manual_matchoff = 'Y','Manual KO',e.rule_name),
 		  a.reversal_flag,
 		  a.manual_matchoff,
 		  a.ko_reason,
@@ -739,9 +742,10 @@ me:BEGIN
       c.value_debit,
       c.value_credit,
       0,
-      0
+      0,
+      a.job_gid 
 		from recon_trn_tko as a
-		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid 
+		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid
 		inner join recon_trn_ttranbrkp as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'

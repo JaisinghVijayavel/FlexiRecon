@@ -593,8 +593,7 @@ me:BEGIN
         set v_sql = v_process_query;
         -- set v_sql = concat(v_sql,v_recon_date_condition);
 
-        call pr_run_sql1(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
-        call pr_run_sql1(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        call pr_run_sql1(v_sql,@msg,@result);
       elseif v_process_method = 'L' then
         if v_recon_date_flag = 'Y' then
           set v_recon_date_condition = '';

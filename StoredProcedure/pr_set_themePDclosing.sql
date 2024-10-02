@@ -167,6 +167,7 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  -- update tallied
   -- update in tranwithbrkp table
   update recon_tmp_tuhidoutstanding as a
   inner join recon_tmp_ttranwithbrkp1 as b on a.uhid_no = b.uhid_no and a.ipop_no = b.ipop_no
@@ -180,7 +181,8 @@ me:begin
     update ",v_tran_table," as a
     inner join recon_tmp_ttranwithbrkp1 as b on a.tran_gid=b.tran_gid and b.tranbrkp_gid = 0
     set a.theme_code = b.balance_type
-    where b.tally_status = 'TALLIED'
+    where 1 = 1
+    and b.tally_status = 'TALLIED'
     and a.theme_code = ''");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -191,247 +193,17 @@ me:begin
     inner join recon_tmp_ttranwithbrkp1 as b on a.tranbrkp_gid = b.tranbrkp_gid
       and a.tran_gid=b.tran_gid
     set a.theme_code = b.balance_type
-    where b.tally_status = 'TALLIED'
+    where 1 = 1
+    and b.tally_status = 'TALLIED'
     and a.theme_code = ''");
 
   call pr_run_sql(v_sql,@msg,@result);
 
-  /*
-  select * from recon_tmp_tuhidoutstanding;
-  select * from recon_tmp_ttranwithbrkp1;
-  */
-
   call pr_set_themePDclosing2(in_recon_code,in_dataset_code,in_unit_name);
   call pr_set_themePDclosing3(in_recon_code,in_dataset_code,in_unit_name);
 
-  -- Unreconciled
-  -- update in tran table
-  /*
-  set v_sql = concat("
-    update ",v_tran_table," set
-      theme_code = 'Unreconciled',
-      col13 = 'Unreconciled OB'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'Opening Balance Unreconciled'
-    and theme_code = ''
-    and delete_flag = 'N'");
 
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- update in tranbrkp table
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Unreconciled'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'Opening Balance Unreconciled'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- CMH Manual
-  -- update in tran table
-  set v_sql = concat("
-    update ",v_tran_table," set
-      theme_code = 'Manual',
-      col13 = 'Not Related to PD'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'CMH Manual'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  set v_sql = concat("
-    update ",v_tran_table," set
-      theme_code = 'Manual',
-      col13 = 'Not Related to PD'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'Opening Balance CMH Manual'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- update in tranbrkp table
-  set v_sql = concat("
-    update ",v_tranbrkp_table," set
-      theme_code = 'Manual'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'CMH Manual'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Entry to be Passed in OF
-  -- update in tran table
-  set v_sql = concat("
-    update ",v_tran_table," set
-      theme_code = 'Entry to be Passed in OF',
-      col13 = 'Entry to be Passed in OF'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'Deposits Ledger to be corrected in Oracle'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Payroll
-  -- update in tran table
-  set v_sql = concat("
-    update ",v_tran_table," set
-      theme_code = 'Payroll',
-      col13 = 'Not Related to PD'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'Excelity_Payroll_Salary'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- update in tranbrkp table
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Payroll'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'Excelity_Payroll_Salary'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- DIGITAL  TESTING
-  -- update in tran table
-  set v_sql = concat("
-    update ",v_tran_table,"
-    set theme_code = 'Digital Testing'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'DIGITAL  TESTING'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- update in tranbrkp table
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Digital Testing'
-    where recon_code = '",in_recon_code,"'
-    and excp_value <> 0
-    and col1 = 'DIGITAL  TESTING'
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- RR Not Mapped with Misc Receipts
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'RR Not Mapped with Misc Receipts'
-    where recon_code = '",in_recon_code,"'
-    and tran_gid = 0
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- BILL REALIZATION
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Bill Realization'
-    where recon_code = '",in_recon_code,"'
-    and col5 = 'BILL REALIZATION'
-    and tran_gid > 0
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Remark field Opening Balance Bill Realisation
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Bill Realization'
-    where recon_code = '",in_recon_code,"'
-    and col9 = 'Opening Balance Bill Realisation'
-    and tran_gid > 0
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Credit note refund
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Credit Note Refund'
-    where recon_code = '",in_recon_code,"'
-    and col5 = 'CREDIT NOTE REFUND'
-    and tran_gid > 0
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Debit Note
-  set v_sql = concat("
-    update ",v_tranbrkp_table,"
-    set theme_code = 'Debit Note'
-    where recon_code = '",in_recon_code,"'
-    and col5 = 'DEBIT NOTE'
-    and tran_gid > 0
-    and theme_code = ''
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- line category update
-  -- Memos
-  set v_sql = concat("
-    update ",v_tran_table,"
-    set col13 = 'Credit Memos'
-    where recon_code = '",in_recon_code,"'
-    and col1 = 'Credit Memos'
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  set v_sql = concat("
-    update ",v_tran_table,"
-    set col13 = 'Debit Memos'
-    where recon_code = '",in_recon_code,"'
-    and col1 = 'Debit Memos'
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Sales Invoice
-  set v_sql = concat("
-    update ",v_tran_table,"
-    set col13 = 'Sales Invoices'
-    where recon_code = '",in_recon_code,"'
-    and col1 = 'Sales Invoices'
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  -- Misc Receipts
-  set v_sql = concat("
-    update ",v_tran_table,"
-    set col13 = 'Misc Receipts'
-    where recon_code = '",in_recon_code,"'
-    and col1 in ('Misc Receipts','Opening Balance IP Deposits','Opening Balance IP Refund','Opening Balance UHID Deposits')
-    and delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-  */
+  call pr_set_themePDclosing7(in_recon_code,in_dataset_code,in_unit_name);
 
   -- update net exception
   -- update in tran table

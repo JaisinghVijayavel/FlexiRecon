@@ -129,6 +129,7 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  -- update tallied
   -- update in tranwithbrkp table
   update recon_tmp_tuhidoutstanding as a
   inner join recon_tmp_ttranwithbrkp1 as b on a.uhid_no = b.uhid_no
@@ -142,7 +143,8 @@ me:begin
     update ",v_tran_table," as a
     inner join recon_tmp_ttranwithbrkp1 as b on a.tran_gid=b.tran_gid and b.tranbrkp_gid = 0
     set a.theme_code = b.balance_type
-    where b.tally_status = 'TALLIED'
+    where 1 = 1
+    and b.tally_status = 'TALLIED'
     and a.theme_code = ''");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -153,15 +155,11 @@ me:begin
     inner join recon_tmp_ttranwithbrkp1 as b on a.tranbrkp_gid = b.tranbrkp_gid
       and a.tran_gid=b.tran_gid
     set a.theme_code = b.balance_type
-    where b.tally_status = 'TALLIED'
+    where 1 = 1
+    and b.tally_status = 'TALLIED'
     and a.theme_code = ''");
 
   call pr_run_sql(v_sql,@msg,@result);
-
-  /*
-  select * from recon_tmp_tuhidoutstanding;
-  select * from recon_tmp_ttranwithbrkp1;
-  */
 
   drop temporary table recon_tmp_ttranwithbrkp1;
   drop temporary table recon_tmp_tuhidoutstanding;

@@ -150,7 +150,9 @@ me:BEGIN
     end if;
 
     call pr_run_sp(in_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sort_order,in_user_code,@msg,@result);
-    call pr_get_tablequery(in_recon_code,v_table_name,concat(' and job_gid = ', cast(v_job_gid as nchar) ,' '),v_job_gid,in_user_code,@msg,@result);
+
+    call pr_get_tablequery(in_recon_code,'',v_table_name,concat(' and job_gid = ', cast(v_job_gid as nchar) ,' '),v_job_gid,in_user_code,@msg,@result);
+
 
     /*
     if v_job_gid = 0 then
@@ -162,7 +164,7 @@ me:BEGIN
   elseif v_report_exec_type = 'C' then
     call pr_run_customsp(in_recon_code,in_report_code,v_sp_name,v_job_gid,in_user_code,@msg,@result);
   else
-    call pr_get_tablequery(in_recon_code,v_table_name,in_report_condition,v_job_gid,in_user_code,@msg,@result);
+    call pr_get_tablequery(in_recon_code,'',v_table_name,in_report_condition,v_job_gid,in_user_code,@msg,@result);
   end if;
 
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
