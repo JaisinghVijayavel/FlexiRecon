@@ -45,10 +45,17 @@ me:BEGIN
   WHERE t.table_schema=database()
   AND t.table_name = 'recon_trn_ttranbrkp';
 
-  select recontype_code into v_recontype_code from recon_mst_trecon
-  where recon_code = (select recon_code from recon_trn_tjob where job_gid = in_job_gid)
-  and active_status = 'Y'
-  and delete_flag = 'N';
+  if in_job_gid > 0 then
+    select recontype_code into v_recontype_code from recon_mst_trecon
+    where recon_code = (select recon_code from recon_trn_tjob where job_gid = in_job_gid)
+    and active_status = 'Y'
+    and delete_flag = 'N';
+  else
+    select recontype_code into v_recontype_code from recon_mst_trecon
+    where recon_code = in_recon_code
+    and active_status = 'Y'
+    and delete_flag = 'N';
+  end if;
 
   set v_recontype_code = ifnull(v_recontype_code,'');
 

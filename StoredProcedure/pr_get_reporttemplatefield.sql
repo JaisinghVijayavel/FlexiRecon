@@ -103,12 +103,14 @@ BEGIN
         report_code,
         reportparam_code,
         reportparam_desc,
+        display_desc,
         reportparam_order,
         system_flag
       )
       SELECT
         v_report_code,
         field_name,
+        report_field_desc,
         report_field_desc,
         @sno := @sno + 1,
         system_flag
@@ -124,11 +126,13 @@ BEGIN
 					report_code,
 					reportparam_code,
 					reportparam_desc,
+          display_desc,
 					reportparam_order
 				)
 				select
 					v_report_code as report_code,
 					recon_field_name as reportparam_code,
+					fn_get_reconfieldname(recon_code,recon_field_name),
 					fn_get_reconfieldname(recon_code,recon_field_name),
 					display_order
 				from recon_mst_treconfield
@@ -145,12 +149,14 @@ BEGIN
         report_code,
         reportparam_code,
         reportparam_desc,
+        display_desc,
         reportparam_order,
         system_flag
       )
       SELECT
         v_report_code,
         field_name,
+        report_field_desc,
         report_field_desc,
         @sno := @sno + 1,
         system_flag
@@ -166,11 +172,13 @@ BEGIN
 					report_code,
 					reportparam_code,
 					reportparam_desc,
+          display_desc,
 					reportparam_order
 				)
 				select
 					v_report_code as report_code,
 					recon_field_name as reportparam_code,
+					fn_get_reconfieldname(recon_code,recon_field_name),
 					fn_get_reconfieldname(recon_code,recon_field_name),
 					@sno := @sno + 1
 				from recon_mst_treconfield
@@ -184,7 +192,7 @@ BEGIN
     select
       reportparam_code as report_field,
       reportparam_desc as report_field_desc,
-      reportparam_desc as display_desc,
+      display_desc,
       display_flag,
       reportparam_order as display_order
     from recon_tmp_treportparam

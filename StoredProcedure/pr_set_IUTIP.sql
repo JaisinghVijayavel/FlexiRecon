@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS pr_set_IUT $$
-CREATE PROCEDURE pr_set_IUT(in_recon_code varchar(32))
+DROP PROCEDURE IF EXISTS pr_set_IUTIP $$
+CREATE PROCEDURE pr_set_IUTIP(in_recon_code varchar(32))
 me:begin
   declare v_tran_gid int default 0;
   declare v_uhid_no text default '';
@@ -29,9 +29,6 @@ me:begin
 
   declare v_ref_no text default '';
 
-  declare v_from_unit text default '';
-  declare v_to_unit text default '';
-
   declare v_dataset_db_name text default '';
   declare v_sql text default '';
   declare v_succ_flag boolean default false;
@@ -48,215 +45,6 @@ me:begin
   else
     set v_transfer_table = concat(v_dataset_db_name,'.recon_trn_tiutentry');
   end if;
-
-  -- trucate entry table
-  set v_sql = concat("truncate ",v_transfer_table);
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  set v_sql = concat("delete from ",v_tranbrkp_table,"
-            where recon_code = '",in_recon_code,"'");
-  call pr_run_sql2(v_sql,@msg,@result);
-
-
-  -- iUT - IP Entry Generation
-  -- col38 - Source Recon Code
-  -- col41 - IUT Entry Flag
-  -- col44 - UHID Multi Location Flag
-  -- col45 - IUT Recon Code
-  -- col47 - IUT IP/OP
-  -- col9 - Exception Value
-  -- col12 - Dr/Cr Mult
-
-
-  set v_sql = concat("update ",v_tran_table," set
-    col44 = 'Y',
-    col46 = col37,
-    col51 = fn_get_autocode('IUT')
-    where recon_code = '",in_recon_code,"'
-    and col12 = '1'
-    and col41 = 'Y'
-    and col47 = 'IUT - IP'
-    and delete_flag = 'N'
-    ");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  set v_sql = concat("insert into ",v_transfer_table,"
-    (entry_date,uhid_no,transfer_amount,transfer_ref_no,from_recon_code,to_recon_code,ipop_type)
-    select
-      sysdate(),
-      col20,
-      cast(col9 as decimal(15,2)),
-      col51,
-      col38,
-      col45,'IUT - IP'
-    from ",v_tran_table,"
-    where recon_code = '",in_recon_code,"'
-    and col12 = '1'
-    and col41 = 'Y'
-    and col47 = 'IUT - IP'
-    and delete_flag = 'N'
-    ");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-	-- dr location
-	set v_sql=concat("insert into ",v_tranbrkp_table,"
-		(
-      scheduler_gid,
-			recon_code,
-			dataset_code,
-			tranbrkp_dataset_code,
-			col4,
-			col8,
-			col9,
-			col11,
-			col12,
-			col16,
-			col17,
-			col18,
-			col19,
-			col20,
-			col21,
-			col22,
-			col23,
-			col37,
-			col38,
-			col43,
-      col45,
-      col46,
-			col47,
-      col48,
-      col49,
-      col50,
-      col51
-		)
-		select
-      1,
-			'",in_recon_code,"',
-			'",v_ds_code,"',
-			'",v_tranbrkp_ds_code,"',
-			cast(sysdate() as nchar),
-			col8,
-			col9,
-			'D',
-			'-1',
-			'Entry',
-			col9,
-			'0.00',
-			col19,
-			col20,
-			col21,
-			'Entry',
-			'Entry',
-			concat('-',col9),
-			col38,
-			col43,
-      col45,
-			concat('-',col9),
-			'IUT - IP',
-      col48,
-      col49,
-      col50,
-      col51
-    from ",v_tran_table,"
-    where recon_code = '",in_recon_code,"'
-    and col12 = '1'
-    and col41 = 'Y'
-    and col47 = 'IUT - IP'
-    and delete_flag = 'N'
-    ");
-
-	call pr_run_sql2(v_sql,@msg,@result);
-
-	-- cr location
-	set v_sql=concat("insert into ",v_tranbrkp_table,"
-		(
-      scheduler_gid,
-			recon_code,
-			dataset_code,
-			tranbrkp_dataset_code,
-			col4,
-			col8,
-			col9,
-			col11,
-			col12,
-			col16,
-			col17,
-			col18,
-			col19,
-			col20,
-			col21,
-			col22,
-			col23,
-			col37,
-			col38,
-			col43,
-      col45,
-      col46,
-			col47,
-      col48,
-      col49,
-      col50,
-      col51
-		)
-		select
-      1,
-			'",in_recon_code,"',
-			'",v_ds_code,"',
-			'",v_tranbrkp_ds_code,"',
-			cast(sysdate() as nchar),
-			col8,
-			col9,
-			'C',
-			'1',
-			'Entry',
-			'0.00',
-			col9,
-			col19,
-			col20,
-			col21,
-			'Entry',
-			'Entry',
-      col9,
-			col45,
-			col43,
-			col38,
-			col37,
-			'IUT - IP',
-      col49,
-      col48,
-      col43,
-      col51
-    from ",v_tran_table,"
-    where recon_code = '",in_recon_code,"'
-    and col12 = '1'
-    and col41 = 'Y'
-    and col47 = 'IUT - IP'
-    and delete_flag = 'N'
-    ");
-
-	call pr_run_sql2(v_sql,@msg,@result);
-
-  /*
-  set v_sql = concat("insert into ",v_transfer_table,"
-    (entry_date,uhid_no,transfer_amount,from_recon_code,to_recon_code,ipop_type)
-    select
-      sysdate(),
-      col20,
-     cast(col9 as decimal(15,2)),
-      col45,
-      col38,'IUT - IP'
-    from ",v_tran_table,"
-    where recon_code = '",in_recon_code,"'
-    and col12 = '-1'
-    and col41 = 'Y'
-    and col47 = 'IUT - IP'
-    and delete_flag = 'N'
-    ");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-  */
 
   drop temporary table if exists recon_tmp_tuhid;
   drop temporary table if exists recon_tmp_tuhidrecon;
@@ -342,6 +130,59 @@ me:begin
     PRIMARY KEY (gid)
   ) ENGINE = MyISAM;
 
+  -- iUT - IP Entry Generation
+  -- col9 - Exception Value
+  -- col12 - Dr/Cr Mult
+  -- col19 - Bill No
+  -- col20 - uhid
+  -- col21 - IP/OP No
+  -- col22 - Event
+  -- col23 - Pay Mode
+  -- col38 - Source Recon Code
+  -- col41 - IUT Entry Flag
+  -- col45 - IUT Recon Code
+  -- col47 - IUT IP/OP
+  -- col48 - From Unit
+  -- col49 - To Unit
+  -- col52 - IP Flag
+
+  -- update IP Flag
+  set v_sql = concat("update ",v_tran_table,"
+      set col52 = 'Y'
+    where recon_code = '",in_recon_code,"'
+    and col20 <> ''
+    and col20 <> 'AC01.0005284627'
+    and col38 <> ''
+    and (col21 like '%IP%'
+    or col19 like '%-ICR-%'
+    or col19 like '%-ICS-%')
+    and col41 is null
+    and col52 is null
+    and delete_flag = 'N'
+    ");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- update IP Flag New Method
+  set v_sql = concat("update ",v_tran_table,"
+      set col52 = 'Y'
+    where recon_code = '",in_recon_code,"'
+    and col20 <> ''
+    and col20 <> 'AC01.0005284627'
+    and col38 <> ''
+    and col21 = col20
+    and (col19 like '%-ICR-%'
+    or col19 like '%-ICS-%')
+    and col22 = 'REFUND'
+    and col23 = 'Deposit Adjustment/Transfer'
+    and col41 is null
+    and col52 is null
+    and delete_flag = 'N'
+    ");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+
   -- col2  - support tran id
   -- col4  - Tran Date
   -- col19 - Bill No
@@ -356,15 +197,7 @@ me:begin
   set v_sql = concat("insert into recon_tmp_tuhid (uhid_no)
     select col20 from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
-    and col42 is null
-    and col20 <> ''
-    and col20 <> 'AC01.0005284627'
-    and col38 <> ''
-    and col2 <> '0'
-    and col2 <> ''
-    and col21 not like '%IP%'
-    and col19 not like '%-ICR-%'
-    and col19 not like '%-ICS-%'
+    and col52 = 'Y'
     and delete_flag = 'N'
     group by col20
     having count(distinct col38) > 1
@@ -376,13 +209,10 @@ me:begin
     select a.col20,a.col38 from ",v_tran_table," as a
     inner join recon_tmp_tuhid as b on  a.col20 = b.uhid_no
     where a.recon_code = '",in_recon_code,"'
-    and a.col42 is null
     and a.col20 <> ''
     and a.col20 <> 'AC01.0005284627'
     and a.col38 <> ''
-    and a.col21 not like '%IP%'
-    and a.col19 not like '%-ICR-%'
-    and a.col19 not like '%-ICS-%'
+    and a.col52 = 'Y'
     and a.delete_flag = 'N'
     group by a.col20,a.col38
     having sum(cast(a.col9 as decimal(15,2))*cast(a.col12 as signed)) <= 0
@@ -398,319 +228,14 @@ me:begin
     inner join recon_tmp_tuhid as b on a.col20 = b.uhid_no
       set a.col44 = 'Y'
     where a.recon_code = '",in_recon_code,"'
-    and a.col42 is null
     and a.col20 <> ''
     and a.col20 <> 'AC01.0005284627'
     and a.col38 <> ''
-    and a.col21 not like '%IP%'
-    and a.col19 not like '%-ICR-%'
-    and a.col19 not like '%-ICS-%'
+    and a.col52 = 'Y'
     and a.delete_flag = 'N'
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
-
-  -- col4 - Tran Date
-  -- col9 - Exception Value
-  -- col12 - Mult
-  -- col20 - uhid
-  -- col38 - Recon Code
-  -- col44 - UHID Multi Location Flag
-
-  -- col23 - PayMode
-  -- col22 - Event
-
-  -- Case1 - Deposit Adjustment Transfer-Refund
-  -- calculate uhid dr unit wise
-  set v_sql = concat("insert into recon_tmp_tuhiddr (uhid_no,recon_code,loc_code,tran_gid,tran_date,dr_amount)
-    select
-      col20,
-      col38,
-      col43,
-      tran_gid,
-      cast(col4 as date),
-      cast(col9 as decimal(15,2))
-    from ",v_tran_table,"
-    where recon_code = '",in_recon_code,"'
-    and col12 = '-1'
-    and col20 <> ''
-    and col20 <> 'AC01.0005284627'
-    and col22 = 'REFUND'
-    and col23 = 'Deposit Adjustment/Transfer'
-    and col38 <> ''
-    and col44 = 'Y'
-    and col2 <> '0'
-    and col2 <> ''
-    and col47 is null
-    and delete_flag = 'N'
-    ");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-	-- dr block
-	dr1_block:begin
-		declare dr1_done int default 0;
-		declare dr1_cursor cursor for
-		  select tran_gid,uhid_no,dr_amount,recon_code,loc_code from recon_tmp_tuhiddr;
-		declare continue handler for not found set dr1_done=1;
-
-		open dr1_cursor;
-
-		dr1_loop: loop
-			fetch dr1_cursor into v_tran_dr_gid,v_uhid_no,v_dr_amount,v_dr_recon_code,v_dr_loc_code;
-
-			if dr1_done = 1 then leave dr1_loop; end if;
-
-			-- check uhid cr
-			set v_sql = concat("select count(*) into @rec_count
-				from ",v_tran_table,"
-				where recon_code = '",in_recon_code,"'
-				and col12 = '1'
-				and col20 = '",v_uhid_no,"'
-				and col38 <> '",v_dr_recon_code,"'
-        and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
-				and col38 <> ''
-				and col44 = 'Y'
-				and col2 <> '0'
-				and col2 <> ''
-        and col47 is null
-				and delete_flag = 'N'
-				");
-
-			call pr_run_sql2(v_sql,@msg,@result);
-
-      set @rec_count = ifnull(@rec_count,0);
-
-      if @rec_count > 0 then
-        set v_tran_cr_gid = 0;
-        set v_cr_recon_code = '';
-
-        set @v_tran_cr_gid = 0;
-        set @v_cr_recon_code = '';
-
-				-- check uhid cr
-				set v_sql = concat("select tran_gid,col38,col43 into @v_tran_cr_gid,@v_cr_recon_code,@v_cr_loc_code
-					from ",v_tran_table,"
-					where recon_code = '",in_recon_code,"'
-					and col12 = '1'
-					and col20 = '",v_uhid_no,"'
-					and col38 <> '",v_dr_recon_code,"'
-					and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
-					and col38 <> ''
-					and col44 = 'Y'
-					and col2 <> '0'
-					and col2 <> ''
-          and col47 is null
-					and delete_flag = 'N' limit 0,1
-					");
-
-				call pr_run_sql2(v_sql,@msg,@result);
-
-        set v_tran_cr_gid = ifnull(@v_tran_cr_gid,0);
-        set v_cr_recon_code = ifnull(@v_cr_recon_code,'');
-        set v_cr_loc_code = ifnull(@v_cr_loc_code,'');
-
-        if v_tran_cr_gid > 0 then
-          set v_ref_no = fn_get_autocode('IUT');
-
-          -- dr side
-					set v_sql = concat("update ",v_tran_table," set
-						col41 = 'Y',
-						col45 = '", v_cr_recon_code ,"',
-						col46 = '-",cast(v_dr_amount as nchar),"',
-						col47 = 'IUT - OP',
-            col50 = '",v_cr_loc_code,"',
-            col51 = '",v_ref_no,"'
-					where tran_gid = ",cast(v_tran_dr_gid as nchar),"
-					");
-
-					call pr_run_sql2(v_sql,@msg,@result);
-
-					-- cr side
-					set v_sql = concat("update ",v_tran_table," set
-						col45 = '", v_dr_recon_code ,"',
-						col46 = '",cast(v_dr_amount as nchar),"',
-						col47 = 'IUT - OP',
-            col50 = '",v_dr_loc_code,"',
-            col51 = '",v_ref_no,"'
-					where tran_gid = ",cast(v_tran_cr_gid as nchar),"
-					");
-
-					call pr_run_sql2(v_sql,@msg,@result);
-
-          -- advice entry
-          set v_sql = concat("insert into ",v_transfer_table,"
-            (entry_date,uhid_no,transfer_amount,transfer_ref_no,from_recon_code,to_recon_code,ipop_type)
-            select
-              sysdate(),
-              '",v_uhid_no,"',
-              '",cast(v_dr_amount as nchar),"',
-              '",v_ref_no,"',
-              '",v_cr_recon_code,"',
-              '",v_dr_recon_code,"','IUT - OP'
-            ");
-
-					call pr_run_sql2(v_sql,@msg,@result);
-
-          -- col4-Tran Date_
-          -- col8-Tran Value_
-          -- col9-Exception Value_
-          -- col11-Dr/Cr_
-					-- col12-Dr/Cr Mult_
-					-- col16-Particulars_
-					-- col17-Debit_
-					-- col18-Credit_
-					-- col19-Bill No_
-					-- col20-Registration No_
-					-- col21-IP/OP No_
-					-- col22-Event_
-					-- col23-Pay Mode_
-					-- col30-Receipt Number_
-					-- col37-Net Exception_
-          -- col38-Recon Code
-					-- col43-Location Code
-					-- col47-IUT IP/OP
-
-          -- tranbrkp_dataset_code - recon_trn_tiutentry
-          -- dataset_code - DS274
-
-          -- dr location
-          set v_sql=concat("insert into ",v_tranbrkp_table,"
-            (
-              scheduler_gid,
-              recon_code,
-              dataset_code,
-              tranbrkp_dataset_code,
-              col4,
-              col8,
-              col9,
-              col11,
-              col12,
-              col16,
-              col17,
-              col18,
-              col19,
-              col20,
-              col21,
-              col22,
-              col23,
-              col37,
-              col38,
-              col43,
-              col45,
-              col46,
-              col47,
-              col50,
-              col51
-            )
-            select
-              1,
-              '",in_recon_code,"',
-              dataset_code,
-              '",v_tranbrkp_ds_code,"',
-              cast(sysdate() as nchar),
-              col8,
-              col9,
-              col11,
-              col12,
-              'Entry',
-              col17,
-              col18,
-              col19,
-              col20,
-              col21,
-              'Entry',
-              'Entry',
-              col37,
-              '",v_dr_recon_code,"',
-              '",v_dr_loc_code,"',
-              '",v_cr_recon_code,"',
-              col37,
-              col47,
-              '",v_cr_loc_code,"',
-              '",v_ref_no,"'
-            from ",v_tran_table,"
-            where recon_code = '",in_recon_code,"'
-            and tran_gid = ",cast(v_tran_cr_gid as nchar),"
-            and delete_flag = 'N'
-          ");
-
-					call pr_run_sql2(v_sql,@msg,@result);
-
-          -- cr location
-          set v_sql=concat("insert into ",v_tranbrkp_table,"
-            (
-              scheduler_gid,
-              recon_code,
-              dataset_code,
-              tranbrkp_dataset_code,
-              col4,
-              col8,
-              col9,
-              col11,
-              col12,
-              col16,
-              col17,
-              col18,
-              col19,
-              col20,
-              col21,
-              col22,
-              col23,
-              col37,
-              col38,
-              col43,
-              col45,
-              col46,
-              col47,
-              col50,
-              col51
-            )
-            select
-              1,
-              '",in_recon_code,"',
-              dataset_code,
-              '",v_tranbrkp_ds_code,"',
-              cast(sysdate() as nchar),
-              col8,
-              col9,
-              col11,
-              col12,
-              'Entry',
-              col17,
-              col18,
-              col19,
-              col20,
-              col21,
-              'Entry',
-              'Entry',
-              col37,
-              '",v_cr_recon_code,"',
-              '",v_cr_loc_code,"',
-              '",v_dr_recon_code,"',
-              col37,
-              col47,
-              '",v_dr_loc_code,"',
-              '",v_ref_no,"'
-            from ",v_tran_table,"
-            where recon_code = '",in_recon_code,"'
-            and tran_gid = ",cast(v_tran_dr_gid as nchar),"
-            and delete_flag = 'N'
-          ");
-
-					call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-      end if;
-		end loop dr1_loop;
-
-		close dr1_cursor;
-	end dr1_block;
-
-  truncate recon_tmp_tuhid;
-  truncate recon_tmp_tuhiddr;
-  truncate recon_tmp_tuhidcr;
-  truncate recon_tmp_tuhidcr1;
-  truncate recon_tmp_tuhiddr1;
 
   -- case3
 
@@ -722,9 +247,11 @@ me:begin
   -- col38 - Recon Code
   -- col41 - IUT Entry Flag
   -- col42 - IUT Location
+  -- col43 - Location Code
   -- col44 - UHID Multi Location Flag
   -- col45 - IUT recon_code
   -- col46 - IUT amount
+  -- col47 - IUT  IP/OP
 
   -- col23 - PayMode
   -- col22 - Event
@@ -743,6 +270,7 @@ me:begin
     and col38 <> ''
     and col44 = 'Y'
     and col47 is null
+    and col52 = 'Y'
     and delete_flag = 'N'
     group by col20,col38,col43
     having sum(cast(col9 as decimal(15,2))*cast(col12 as signed)) < 0
@@ -759,6 +287,7 @@ me:begin
     and col38 <> ''
     and col44 = 'Y'
     and col47 is null
+    and col52 = 'Y'
     and delete_flag = 'N'
     group by col20,col38,col43
     having sum(cast(col9 as decimal(15,2))*cast(col12 as signed)) > 0
@@ -809,6 +338,7 @@ me:begin
 				and col2 <> ''
         and col44 = 'Y'
 				and col47 is null
+        and col52 = 'Y'
 				and delete_flag = 'N'
 				");
 
@@ -830,6 +360,7 @@ me:begin
 				  and col2 <> ''
           and col44 = 'Y'
 				  and col47 is null
+          and col52 = 'Y'
 				  and delete_flag = 'N'
           order by cast(col4 as date) asc
           limit 0,1
@@ -846,8 +377,8 @@ me:begin
 						    col41 = 'Y',
 						    col45 = '", v_dr_recon_code ,"',
 						    col46 = '",cast(v_cr_amount as nchar),"',
-						    col47 = 'IUT - OP',
-						    col50 = '", v_dr_loc_code ,"',
+						    col47 = 'IUT - IP',
+                col50 = '",v_dr_loc_code,"',
                 col51 = '",v_ref_no,"'
               where tran_gid = ",cast(v_tran_cr_gid as nchar),"
               and delete_flag = 'N'
@@ -859,8 +390,8 @@ me:begin
 						set v_sql = concat("update ",v_tran_table," set
               col45 = '",v_cr_recon_code,"',
               col46 = col37,
-							col47 = 'IUT - OP',
-              col50 = '", v_cr_loc_code ,"',
+							col47 = 'IUT - IP',
+              col50 = '",v_cr_loc_code,"',
               col51 = '",v_ref_no,"'
 						where recon_code = '",in_recon_code,"'
 						and col20 = '",cast(v_uhid_no as nchar),"'
@@ -869,6 +400,7 @@ me:begin
 						and col2 <> ''
 						and col47 is null
             and col44 = 'Y'
+            and col52 = 'Y'
 						and delete_flag = 'N'
 						");
 
@@ -883,7 +415,7 @@ me:begin
                 '",cast(v_dr_amount as nchar),"',
                 '",v_ref_no,"',
                 '",v_cr_recon_code,"',
-                '",v_dr_recon_code,"','IUT - OP'
+                '",v_dr_recon_code,"','IUT - IP'
               ");
 
 					  call pr_run_sql2(v_sql,@msg,@result);
@@ -974,8 +506,8 @@ me:begin
 								col37,
 								col38,
 								col43,
-                col45,
-                col46,
+								col45,
+								col46,
 								col47,
                 col50,
                 col51
@@ -1041,7 +573,7 @@ me:begin
 				  set v_sql = concat("update ",v_tran_table," set
             col45 = '",v_dr_recon_code,"',
             col46 = col37,
-					  col47 = 'IUT - OP',
+					  col47 = 'IUT - IP',
             col50 = '",v_dr_loc_code,"',
             col51 = '",v_ref_no,"'
 				  where recon_code = '",in_recon_code,"'
@@ -1051,6 +583,7 @@ me:begin
 				  and col2 <> ''
 				  and col47 is null
           and col44 = 'Y'
+          and col52 = 'Y'
 				  and delete_flag = 'N'
 				  ");
         else
@@ -1067,8 +600,8 @@ me:begin
 
           set v_sql = concat("update ",v_tran_table," set
               col45 = concat(col45,'",v_dr_recon_code,"'),
-              col50 = concat(col50,'",v_dr_loc_code,"'),
               col51 = concat(col51,'",v_ref_no,"'),
+              col50 = concat(col50,'",v_dr_loc_code,"'),
               col46 = cast(cast(col46 as decimal(15,2)) + ",cast(v_dr_amount as nchar)," as nchar)
             where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
             and delete_flag = 'N'
@@ -1077,7 +610,7 @@ me:begin
           call pr_run_sql2(v_sql,@msg,@result);
 
 				  set v_sql = concat("update ",v_tran_table," set
-					  col47 = 'IUT - OP'
+					  col47 = 'IUT - IP'
 				  where recon_code = '",in_recon_code,"'
 				  and col20 = '",cast(v_uhid_no as nchar),"'
 				  and col38 = '",v_cr_recon_code,"'
@@ -1085,6 +618,7 @@ me:begin
 				  and col2 <> ''
 				  and col47 is null
           and col44 = 'Y'
+          and col52 = 'Y'
 				  and delete_flag = 'N'
 				  ");
         end if;
@@ -1096,8 +630,8 @@ me:begin
           col41 = 'Y',
           col45 = '", v_cr_recon_code ,"',
           col46 = col37,
-					col47 = 'IUT - OP',
-          col50 = '", v_cr_loc_code ,"',
+					col47 = 'IUT - IP',
+          col50 = '",v_cr_loc_code,"',
           col51 = '",v_ref_no,"'
 				where recon_code = '",in_recon_code,"'
 				and col20 = '",cast(v_uhid_no as nchar),"'
@@ -1106,6 +640,7 @@ me:begin
 				and col2 <> ''
 				and col47 is null
         and col44 = 'Y'
+        and col52 = 'Y'
 				and delete_flag = 'N'
 				");
 
@@ -1120,7 +655,7 @@ me:begin
             '",cast(v_dr_amount as nchar),"',
             '",v_ref_no,"',
             '",v_cr_recon_code,"',
-            '",v_dr_recon_code,"','IUT - OP'
+            '",v_dr_recon_code,"','IUT - IP'
           ");
 
         call pr_run_sql2(v_sql,@msg,@result);
@@ -1146,7 +681,7 @@ me:begin
 							col37,
 							col38,
 							col43,
-              col45,
+							col45,
               col46,
 							col47,
               col50,
@@ -1173,7 +708,7 @@ me:begin
 							'",v_cr_loc_code,"',
 							'",v_dr_recon_code,"',
               '-",cast(v_dr_amount as nchar),"',
-							'IUT - OP',
+							'IUT - IP',
 							'",v_dr_loc_code,"',
               '",v_ref_no,"'
 					");
@@ -1228,7 +763,7 @@ me:begin
 							'",v_dr_loc_code,"',
 							'",v_cr_recon_code,"',
               '",cast(v_dr_amount as nchar),"',
-							'IUT - OP',
+							'IUT - IP',
 							'",v_cr_loc_code,"',
               '",v_ref_no,"'
 					");
@@ -1248,8 +783,6 @@ me:begin
   drop temporary table if exists recon_tmp_tuhidrecon;
   drop temporary table if exists recon_tmp_tuhid;
   drop temporary table if exists recon_tmp_treconuhid;
-
-  call pr_set_IUTIP(in_recon_code);
 end $$
 
 DELIMITER ;

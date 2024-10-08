@@ -130,8 +130,6 @@ me:BEGIN
     set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
   end if;
 
-  select 1;
-
   -- process
   process_block:begin
     declare process_done int default 0;
@@ -645,6 +643,19 @@ me:BEGIN
   end process_block;
 
   drop temporary table if exists recon_tmp_tlookup;
+
+  select
+        v_preprocess_code,
+        v_preprocess_desc,
+        v_get_recon_field,
+        v_set_recon_field,
+        v_process_method,
+        v_process_query,
+        v_process_function,
+        v_lookup_dataset_code,
+        v_lookup_return_field,
+        v_lookup_group_flag,
+        v_lookup_multi_return_flag;
 
   set out_result = 1;
   set out_msg = 'Success';
