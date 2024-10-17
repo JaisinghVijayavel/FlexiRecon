@@ -8,6 +8,7 @@ me:begin
   declare v_dr_amount decimal(15,2) default 0;
   declare v_cr_amount decimal(15,2) default 0;
   declare v_recon_code text default '';
+  declare v_iut_loc_code text default '';
 
   declare v_dr_recon_code text default '';
   declare v_cr_recon_code text default '';
@@ -336,6 +337,7 @@ me:begin
         and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
 				and col2 <> '0'
 				and col2 <> ''
+        and col22 <> 'CREDIT NOTE REFUND'
         and col44 = 'Y'
 				and col47 is null
         and col52 = 'Y'
@@ -358,6 +360,7 @@ me:begin
           and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
 				  and col2 <> '0'
 				  and col2 <> ''
+          and col22 <> 'CREDIT NOTE REFUND'
           and col44 = 'Y'
 				  and col47 is null
           and col52 = 'Y'
@@ -398,6 +401,7 @@ me:begin
 						and col38 = '",v_dr_recon_code,"'
 						and col2 <> '0'
 						and col2 <> ''
+            and col22 <> 'CREDIT NOTE REFUND'
 						and col47 is null
             and col44 = 'Y'
             and col52 = 'Y'
@@ -568,62 +572,127 @@ me:begin
         order by cr_amount
         limit 0,1;
 
+        set v_sql = concat("select col50 into @iut_loc_code from ", v_tran_table,"
+          where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
+          and delete_flag = 'N'
+          ");
+
+        call pr_run_sql2(v_sql,@msg,@result);
+
+        set v_iut_loc_code = ifnull(@iut_loc_code,'');
+
 				-- cr side
-        if v_cr_amount = v_dr_amount then
-				  set v_sql = concat("update ",v_tran_table," set
-            col45 = '",v_dr_recon_code,"',
-            col46 = col37,
-					  col47 = 'IUT - IP',
-            col50 = '",v_dr_loc_code,"',
-            col51 = '",v_ref_no,"'
-				  where recon_code = '",in_recon_code,"'
-				  and col20 = '",cast(v_uhid_no as nchar),"'
-				  and col38 = '",v_cr_recon_code,"'
-				  and col2 <> '0'
-				  and col2 <> ''
-				  and col47 is null
-          and col44 = 'Y'
-          and col52 = 'Y'
-				  and delete_flag = 'N'
-				  ");
+        if v_iut_loc_code = '' then
+					if v_cr_amount = v_dr_amount then
+						set v_sql = concat("update ",v_tran_table," set
+							col45 = '",v_dr_recon_code,"',
+							col46 = col37,
+							col47 = 'IUT - IP',
+							col50 = '",v_dr_loc_code,"',
+							col51 = '",v_ref_no,"'
+						where recon_code = '",in_recon_code,"'
+						and col20 = '",cast(v_uhid_no as nchar),"'
+						and col38 = '",v_cr_recon_code,"'
+						and col2 <> '0'
+						and col2 <> ''
+						and col22 <> 'CREDIT NOTE REFUND'
+						and col47 is null
+						and col44 = 'Y'
+						and col52 = 'Y'
+						and delete_flag = 'N'
+						");
+					else
+						set v_sql = concat("update ",v_tran_table," set
+								col45 = '",v_dr_recon_code,"',
+								col51 = '",v_ref_no,"',
+								col50 = '",v_dr_loc_code,"',
+								col46 = '",cast(v_dr_amount as nchar),"'
+							where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
+							and delete_flag = 'N'
+						");
+
+						call pr_run_sql2(v_sql,@msg,@result);
+
+						set v_sql = concat("update ",v_tran_table," set
+							col47 = 'IUT - IP'
+						where recon_code = '",in_recon_code,"'
+						and col20 = '",cast(v_uhid_no as nchar),"'
+						and col38 = '",v_cr_recon_code,"'
+						and col2 <> '0'
+						and col2 <> ''
+						and col22 <> 'CREDIT NOTE REFUND'
+						and col47 is null
+						and col44 = 'Y'
+						and col52 = 'Y'
+						and delete_flag = 'N'
+						");
+					end if;
+
+					call pr_run_sql2(v_sql,@msg,@result);
         else
-          set v_sql = concat("update ",v_tran_table," set
-              col45 = ifnull(concat(col45,','),''),
-              col46 = ifnull(col46,'0'),
-              col50 = ifnull(concat(col50,','),''),
-              col51 = ifnull(concat(col51,','),'')
-            where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
-            and delete_flag = 'N'
-          ");
+					set v_sql = concat("insert into ",v_tranbrkp_table,"
+						(
+              scheduler_gid,
+              recon_code,
+              dataset_code,
+              tranbrkp_dataset_code,
+							col1,
+							col2,
+							col3,
+							col4,
+							col5,
+							col6,
+							col7,
+							col16,
+							col19,
+							col20,
+							col21,
+							col22,
+							col23,
+							col37,
+							col38,
+							col43,
+							col45,
+							col46,
+							col47,
+							col48,
+							col50,
+							col51
+						)
+						select
+              1,
+              '",in_recon_code,"',
+              dataset_code,
+              '",v_tranbrkp_ds_code,"',
+							col1,
+							col2,
+							col3,
+							col4,
+							col5,
+							col6,
+							col7,
+							'Adj Entry',
+							col19,
+							col20,
+							col21,
+							'Adj Entry',
+							'Adj Entry',
+							'0.00',
+							col38,
+							col43,
+							'",v_dr_recon_code,"',
+							'",cast(v_dr_amount as nchar),"',
+							'IUT - OP',
+							col48,
+							'",v_dr_loc_code,"',
+							'",v_ref_no,"'
+					from ",v_tran_table,"
+					where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
+					and delete_flag = 'N'
+					");
 
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          set v_sql = concat("update ",v_tran_table," set
-              col45 = concat(col45,'",v_dr_recon_code,"'),
-              col51 = concat(col51,'",v_ref_no,"'),
-              col50 = concat(col50,'",v_dr_loc_code,"'),
-              col46 = cast(cast(col46 as decimal(15,2)) + ",cast(v_dr_amount as nchar)," as nchar)
-            where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
-            and delete_flag = 'N'
-          ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-				  set v_sql = concat("update ",v_tran_table," set
-					  col47 = 'IUT - IP'
-				  where recon_code = '",in_recon_code,"'
-				  and col20 = '",cast(v_uhid_no as nchar),"'
-				  and col38 = '",v_cr_recon_code,"'
-				  and col2 <> '0'
-				  and col2 <> ''
-				  and col47 is null
-          and col44 = 'Y'
-          and col52 = 'Y'
-				  and delete_flag = 'N'
-				  ");
+					call pr_run_sql2(v_sql,@msg,@result);
         end if;
-
-				call pr_run_sql2(v_sql,@msg,@result);
 
 				-- dr side
 				set v_sql = concat("update ",v_tran_table," set
@@ -638,6 +707,7 @@ me:begin
 				and col38 = '",v_dr_recon_code,"'
 				and col2 <> '0'
 				and col2 <> ''
+        and col22 <> 'CREDIT NOTE REFUND'
 				and col47 is null
         and col44 = 'Y'
         and col52 = 'Y'
