@@ -44,7 +44,7 @@ begin
   end if;
 
   if v_field_type = 'INTEGER' then
-    set v_field_name = concat("cast(",v_field_name," as unsigned)");
+    set v_field_name = concat("cast(",v_field_name," as signed)");
   elseif v_field_type = 'NUMERIC' then
     set v_field_name = concat("cast(",v_field_name," as decimal(15,3))");
   elseif v_field_type = 'DATE' then
