@@ -58,8 +58,8 @@ me:begin
   set out_msg = 'initiated';
 
   drop temporary table if exists recon_tmp_ttranko;
-  drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_ttranbrkpgid;
+  drop temporary table if exists recon_tmp_tkotrangid;
+  drop temporary table if exists recon_tmp_tkotranbrkpgid;
 
   create temporary table recon_tmp_ttranko(
     tran_gid int(10) unsigned NOT NULL,
@@ -68,12 +68,12 @@ me:begin
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttrangid(
+  CREATE temporary TABLE recon_tmp_tkotrangid(
     tran_gid int(10) unsigned NOT NULL,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttranbrkpgid(
+  CREATE temporary TABLE recon_tmp_tkotranbrkpgid(
     tranbrkp_gid int(10) unsigned NOT NULL,
     PRIMARY KEY (tranbrkp_gid)
   ) ENGINE = MyISAM;
@@ -133,11 +133,11 @@ me:begin
 				
 			call pr_run_sql(v_sql,@msg,@result);
 
-      insert into recon_tmp_ttrangid
+      insert into recon_tmp_tkotrangid
         select tran_gid from recon_tmp_ttranko;
 
 			set v_sql = concat("
-				insert into recon_tmp_ttranbrkpgid
+				insert into recon_tmp_tkotranbrkpgid
 					select distinct b.tranbrkp_gid from ",v_ko_table," as a
 					inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid > 0 and b.delete_flag = 'N'
 					where a.job_gid = ",cast(in_job_gid as nchar),"
@@ -146,7 +146,7 @@ me:begin
 			call pr_run_sql(v_sql,@msg,@result);
 
 			set v_sql = concat("
-				insert ignore into recon_tmp_ttranbrkpgid
+				insert ignore into recon_tmp_tkotranbrkpgid
 					select b.tranbrkp_gid from ",v_ko_table," as a
 					inner join ",v_tranbrkpko_table," as b on a.ko_gid = b.ko_gid and b.excp_value = 0 and b.delete_flag = 'N'
 					where a.job_gid = ",cast(in_job_gid as nchar),"
@@ -156,28 +156,28 @@ me:begin
 
 			set v_sql = concat("
 				insert into ",v_tran_table,"
-					select b.* from recon_tmp_ttrangid as a
+					select b.* from recon_tmp_tkotrangid as a
 					inner join ",v_tranko_table," as b on a.tran_gid = b.tran_gid and b.delete_flag = 'N'");
 					
 			call pr_run_sql(v_sql,@msg,@result);
 
 			set v_sql = concat("
       insert into ",v_tranbrkp_table,"
-        select b.* from recon_tmp_ttranbrkpgid as a
+        select b.* from recon_tmp_tkotranbrkpgid as a
         inner join ",v_tranbrkpko_table," as b on a.tranbrkp_gid = b.tranbrkp_gid and b.delete_flag = 'N'");
 
 			call pr_run_sql(v_sql,@msg,@result);
 
 			set v_sql = concat("
 				delete a.* from ",v_tranko_table," as a where a.tran_gid in (
-					select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)
+					select b.tran_gid from recon_tmp_tkotrangid as b where a.tran_gid = b.tran_gid)
 					and a.delete_flag = 'N'");
 
 			call pr_run_sql(v_sql,@msg,@result);
 
 			set v_sql = concat("
 				delete a.* from ",v_tranbrkpko_table," as a where a.tranbrkp_gid in (
-        select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid)
+        select b.tranbrkp_gid from recon_tmp_tkotranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid)
         and a.delete_flag = 'N'");
 
 			call pr_run_sql(v_sql,@msg,@result);
@@ -257,15 +257,24 @@ me:begin
 			set v_count = ifnull(@post_count,0);
 
       if v_count = 0 then
+        truncate recon_tmp_tkotrangid;
+
+        set v_sql = concat("insert into recon_tmp_tkotrangid (tran_gid)
+            select distinct tran_gid from ",v_tranbrkp_table,"
+              where posted_job_gid = ",cast(in_job_gid as nchar),"
+              and delete_flag = 'N'
+          ");
+
+				call pr_run_sql2(v_sql,@msg,@result);
+
 				set v_sql = concat("
-					update ",v_tran_table," set
-						mapped_value = 0
-					where tran_gid in (select distinct tran_gid from ",v_tranbrkp_table,"
-													 where posted_job_gid = ",cast(in_job_gid as nchar),"
-													 and delete_flag = 'N')
-					and mapped_value = tran_value
-					and delete_flag = 'N'");
-				
+					update ",v_tran_table," as a set
+						a.mapped_value = 0
+					where a.tran_gid in (select b.tran_gid from recon_tmp_tkotrangid as b
+													 where a.tran_gid = b.tran_gid)
+					and a.mapped_value = tran_value
+					and a.delete_flag = 'N'");
+
 				call pr_run_sql(v_sql,@msg,@result);
 
 				set v_sql = concat("
@@ -289,8 +298,8 @@ me:begin
   end if;
 
   drop temporary table if exists recon_tmp_ttranko;
-  drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_ttranbrkpgid;
+  drop temporary table if exists recon_tmp_tkotrangid;
+  drop temporary table if exists recon_tmp_tkotranbrkpgid;
 end $$
 
 DELIMITER ;

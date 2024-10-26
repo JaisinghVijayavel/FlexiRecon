@@ -306,7 +306,7 @@ me:BEGIN
     key idx_group_flag(group_flag),
     key idx_dup_flag(dup_flag),
     key idx_ko_flag(ko_flag)
-  ) ENGINE = MyISAM;
+  );
 
   create temporary table recon_tmp_t2matchdtl(
     matchdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
@@ -322,7 +322,7 @@ me:BEGIN
     PRIMARY KEY (matchdtl_gid),
     key idx_parent_tran_gid(parent_tran_gid,parent_tranbrkp_gid),
     key idx_tran_gid(tran_gid,tranbrkp_gid)
-  ) ENGINE = MyISAM;
+  );
 
   CREATE temporary TABLE recon_tmp_t2manymatch(
     tran_gid int unsigned NOT NULL,
@@ -1476,9 +1476,9 @@ me:BEGIN
 
           -- find matchoff diff value
           -- plus value
-          set v_match_sql = 'insert into recon_tmp_t2thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,matched_json) ';
+          set v_match_sql = 'insert into recon_tmp_t2thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
           set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
+          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
           set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
           set v_match_sql = concat(v_match_sql,'{');
           set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
@@ -1518,9 +1518,9 @@ me:BEGIN
           call pr_run_sql(v_match_sql,@msg,@result);
 
           -- minus value
-          set v_match_sql = 'insert ignore into recon_tmp_t2thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,matched_json) ';
+          set v_match_sql = 'insert ignore into recon_tmp_t2thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
           set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
+          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
           set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
           set v_match_sql = concat(v_match_sql,'{');
           set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
@@ -1737,10 +1737,16 @@ me:BEGIN
               fetch source_cursor into v_tran_gid,v_tranbrkp_gid,v_src_acc_mode,v_diff_value,v_matched_count;
               if source_done = 1 then leave source_loop; end if;
 
-              if v_src_acc_mode = 'C' then
-                set v_cmp_acc_mode = 'D';
+              if v_recontype_code = 'B'
+                or v_recontype_code = 'W'
+                or (v_recontype_code = 'I' and v_source_dataset_code = v_comparison_dataset_code) then
+                if v_src_acc_mode = 'C' then
+                  set v_cmp_acc_mode = 'D';
+                else
+                  set v_cmp_acc_mode = 'C';
+                end if;
               else
-                set v_cmp_acc_mode = 'C';
+                set v_cmp_acc_mode = v_src_acc_mode;
               end if;
 
               if v_diff_value > 0 then
@@ -2080,9 +2086,9 @@ me:BEGIN
 
 					-- one to one match
           if v_manytomany_match_flag = 'N' then
-						set v_match_sql = 'insert into recon_tmp_t2match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,matched_json) ';
+						set v_match_sql = 'insert into recon_tmp_t2match (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,matched_value,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,');
+						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,');
 
 						if v_recontype_code <> 'N' then
 							set v_match_sql = concat(v_match_sql,'a.excp_value as matched_value,');

@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_automatch` $$
-CREATE PROCEDURE `pr_run_automatch`(
+DROP PROCEDURE IF EXISTS `pr_run_automatchchk2` $$
+CREATE PROCEDURE `pr_run_automatchchk2`(
   in in_recon_code text,
   in in_rule_code text,
   in in_group_flag text,
@@ -1807,6 +1807,10 @@ me:BEGIN
               set b.ko_flag = 'Y'
               where a.ko_flag = 'Y' and a.dup_flag = 'N';
 
+              select * from recon_tmp_t1match;
+              select * from recon_tmp_t1match
+              where ko_flag = 'Y' and dup_flag = 'N';
+
               -- knockoff validation
 							set v_sql = concat("
 								insert into recon_tmp_t1matchko (tran_gid,ko_value,excp_value)
@@ -1835,6 +1839,8 @@ me:BEGIN
               set a.ko_flag = 'N'
               where a.dup_flag = 'N';
             end if;
+
+            leave me;
 
 						set v_sql = concat("
 							insert into ",v_ko_table,"

@@ -1582,6 +1582,8 @@ me:BEGIN
             -- run match sql one to one
 						call pr_run_sql(v_match_sql,@msg,@result);
 
+            select v_match_sql;
+
 						truncate recon_tmp_tpseudorows;
 
 						select max(matched_count) into v_count from recon_tmp_tmatch;
@@ -1878,7 +1880,7 @@ me:BEGIN
 										a.theme_code = ''
 								where a.excp_value <> 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
             else
 							set v_sql = concat("

@@ -108,6 +108,7 @@ begin
 
   -- Nil Transactions
   -- update transaction count
+  /*
   set v_sql = concat("update ",v_OF_tb_name," as a
     inner join ",v_dataset_db_name,".DS256 as b on b.col1 = a.col1 and b.col2 = a.col2
     set a.col31 = b.col11
@@ -126,6 +127,7 @@ begin
   prepare sql_stmt1 from @sql;
   execute sql_stmt1;
   deallocate prepare sql_stmt1;
+  */
 
   -- Pharmacy Transactions
   set v_sql = concat("update ",v_OF_tb_name," as a
