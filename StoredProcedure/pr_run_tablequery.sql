@@ -163,7 +163,7 @@ me:BEGIN
         field_name,
         fn_get_reconfieldname(in_recon_code,field_name),
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
-        @sno := @sno + 1
+        if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = in_table_name
       -- and acc_field_flag = 'Y'
@@ -175,7 +175,7 @@ me:BEGIN
         field_name,
         fn_get_reconfieldname(in_recon_code,field_name),
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
-        @sno := @sno + 1
+        if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = in_table_name
       -- and value_field_flag = 'Y'
@@ -187,7 +187,7 @@ me:BEGIN
         field_name,
         fn_get_reconfieldname(in_recon_code,field_name),
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
-        @sno := @sno + 1
+        if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = in_table_name
       and acc_field_flag = 'N'

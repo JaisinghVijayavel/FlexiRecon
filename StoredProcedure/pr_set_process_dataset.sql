@@ -16,9 +16,9 @@ me:begin
     Created Date : 19-11-2023
 
     Updated By : Vijayavel
-    Updated Date : 26-03-2024
+    Updated Date : 19-10-2024
 
-    Version : 3
+    Version : 4
   */
   declare v_pipeline_code text default '';
   declare v_dataset_code text default '';
@@ -33,6 +33,7 @@ me:begin
   declare v_dataset_table_name text default '';
   declare v_sql text default '';
   declare v_result int default 0;
+  declare v_msg text default '';
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -201,6 +202,18 @@ me:begin
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
+  elseif v_dataset_code = 'IUTENTRY' then
+    set v_sql = concat("insert into recon_trn_tiutentry
+      (
+        scheduler_gid,recon_code,entry_date,entry_ref_no,uhid_no,entry_value,
+        from_loc_code,to_loc_code,iut_ipop,ref_tran_gid,ref_tranbrkp_gid,insert_date
+      )
+      select
+        scheduler_gid,recon_code,entry_date,entry_ref_no,uhid_no,entry_value,
+        from_loc_code,to_loc_code,iut_ipop,ref_tran_gid,ref_tranbrkp_gid,sysdate()
+      from ",v_dataset_table_name,"
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
   else
     recon_block:begin
       declare recon_done int default 0;
@@ -244,6 +257,10 @@ me:begin
       call pr_set_manualupdate(in_scheduler_gid,@msg,@result);
     elseif v_dataset_code = 'FIELDUPDATE' then
       call pr_set_fieldupdate(in_scheduler_gid,in_user_code,in_role_code,in_lang_code,@msg,@result);
+    elseif v_dataset_code = 'IUTENTRY' then
+      call pr_run_iutentry(in_scheduler_gid,v_job_gid,@msg,@result);
+
+      set v_msg = @msg;
     end if;
   end if;
 
@@ -277,6 +294,12 @@ me:begin
 
   set out_msg = 'Success';
   set out_result = 1;
+
+  if v_msg <> 'Success' then
+    if v_dataset_code = 'IUTENTRY' then
+      call pr_upd_job(v_job_gid,'F',concat('Failed download file for reference !'),@msg,@result);
+    end if;
+  end if;
 end $$
 
 DELIMITER ;

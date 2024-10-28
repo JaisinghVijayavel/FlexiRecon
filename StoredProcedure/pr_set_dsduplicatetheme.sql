@@ -12,7 +12,7 @@ begin
 
   -- get duplicate record
   set v_sql = concat("create temporary table recon_tmp_ttran
-	  select ",in_duplicate_col," from recon_flexi_dataset_poc.",in_dataset_code,
+	  select ",in_duplicate_col," from ",in_dataset_code,
 	  " where delete_flag = 'N'
 	  group by ",in_duplicate_col,"
 	  having count(*) > 1");
@@ -23,7 +23,7 @@ begin
   deallocate prepare sql_stmt1;
 
   # Updating delete_flag = 'D' in dataset table
-  set v_sql = concat("update recon_flexi_dataset_poc.",in_dataset_code," set delete_flag = 'D'
+  set v_sql = concat("update ",in_dataset_code," set delete_flag = 'D'
 	  where (",in_duplicate_col,") in (select ",in_duplicate_col,"
 	  from recon_tmp_ttran)
 	  and delete_flag = 'N'");

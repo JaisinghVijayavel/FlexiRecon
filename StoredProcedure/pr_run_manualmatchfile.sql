@@ -496,7 +496,8 @@ me:BEGIN
 							inner join recon_tmp_tmanualtrankodtl as b on a.tran_gid = b.tran_gid
 							set a.excp_value = a.excp_value - (b.ko_value)*a.tran_mult,
 								a.ko_gid = b.ko_gid,
-								a.ko_date = curdate()
+								a.ko_date = curdate(),
+                a.theme_code = ''
 							where a.excp_value <> 0
 							and a.delete_flag = 'N'");
 
@@ -508,7 +509,8 @@ me:BEGIN
 								and a.tranbrkp_gid = b.tranbrkp_gid
 							set a.excp_value = 0,
 								a.ko_gid = b.ko_gid,
-								a.ko_date = curdate()
+								a.ko_date = curdate(),
+                a.theme_code = ''
 							where a.excp_value > 0
 							and a.delete_flag = 'N'");
 
@@ -544,7 +546,8 @@ me:BEGIN
 						update ",v_tran_table," as a
 						inner join recon_tmp_tmanualkodtl as b on a.tran_gid = b.tran_gid
 						set a.ko_gid = b.ko_gid,
-								a.ko_date = curdate()
+								a.ko_date = curdate(),
+                a.theme_code = ''
 						where a.delete_flag = 'N'");
 
 					call pr_run_sql(v_sql,@msg,@result);

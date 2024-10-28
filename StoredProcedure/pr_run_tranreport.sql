@@ -67,6 +67,10 @@ me:BEGIN
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  -- calc exception value based on roundoff value
+  update recon_tmp_ttran set
+    excp_value = excp_value - roundoff_value;
+
   -- transfer records to report table
   set @rec_slno := 0;
 

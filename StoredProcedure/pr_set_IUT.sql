@@ -334,26 +334,6 @@ me:begin
 		close cr1_cursor;
 	end cr1_block;
 
-  -- advice IUT - IP Entry
-  set v_sql = concat("insert into ",v_transfer_table,"
-    (entry_date,uhid_no,transfer_amount,transfer_ref_no,from_recon_code,to_recon_code,ipop_type)
-    select
-      sysdate(),
-      col20,
-      cast(col9 as decimal(15,2)),
-      col51,
-      col38,
-      col45,'IUT - IP'
-    from ",v_tran_table,"
-    where recon_code = '",in_recon_code,"'
-    and col12 = '1'
-    and col41 = 'Y'
-    and col47 = 'IUT - IP'
-    and delete_flag = 'N'
-    ");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
 	-- dr location
 	set v_sql=concat("insert into ",v_tranbrkp_table,"
 		(
@@ -711,20 +691,6 @@ me:begin
 
 					call pr_run_sql2(v_sql,@msg,@result);
 
-          -- advice entry
-          set v_sql = concat("insert into ",v_transfer_table,"
-            (entry_date,uhid_no,transfer_amount,transfer_ref_no,from_recon_code,to_recon_code,ipop_type)
-            select
-              sysdate(),
-              '",v_uhid_no,"',
-              '",cast(v_dr_amount as nchar),"',
-              '",v_ref_no,"',
-              '",v_cr_recon_code,"',
-              '",v_dr_recon_code,"','IUT - OP'
-            ");
-
-					call pr_run_sql2(v_sql,@msg,@result);
-
           -- col4-Tran Date_
           -- col8-Tran Value_
           -- col9-Exception Value_
@@ -1050,20 +1016,6 @@ me:begin
 
 				    call pr_run_sql2(v_sql,@msg,@result);
 
-            -- advice entry
-            set v_sql = concat("insert into ",v_transfer_table,"
-              (entry_date,uhid_no,transfer_amount,transfer_ref_no,from_recon_code,to_recon_code,ipop_type)
-              select
-                sysdate(),
-                '",v_uhid_no,"',
-                '",cast(v_dr_amount as nchar),"',
-                '",v_ref_no,"',
-                '",v_cr_recon_code,"',
-                '",v_dr_recon_code,"','IUT - OP'
-              ");
-
-					  call pr_run_sql2(v_sql,@msg,@result);
-
 						-- dr location
 						set v_sql=concat("insert into ",v_tranbrkp_table,"
 							(
@@ -1255,7 +1207,9 @@ me:begin
 						call pr_run_sql2(v_sql,@msg,@result);
 
 						set v_sql = concat("update ",v_tran_table," set
-							col47 = 'IUT - OP'
+              col45 = '",v_dr_recon_code,"',
+							col47 = 'IUT - OP',
+              col50 = '",v_dr_loc_code,"' 
 						where recon_code = '",in_recon_code,"'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
@@ -1278,11 +1232,7 @@ me:begin
               tranbrkp_dataset_code,
 							col1,
 							col2,
-							col3,
 							col4,
-							col5,
-							col6,
-							col7,
 							col16,
 							col19,
 							col20,
@@ -1306,11 +1256,7 @@ me:begin
               '",v_tranbrkp_ds_code,"',
 							col1,
 							col2,
-							col3,
 							col4,
-							col5,
-							col6,
-							col7,
 							'Adj Entry',
 							col19,
 							col20,
@@ -1354,20 +1300,6 @@ me:begin
 				");
 
 				call pr_run_sql2(v_sql,@msg,@result);
-
-        -- advice entry
-        set v_sql = concat("insert into ",v_transfer_table,"
-          (entry_date,uhid_no,transfer_amount,transfer_ref_no,from_recon_code,to_recon_code,ipop_type)
-          select
-            sysdate(),
-            '",v_uhid_no,"',
-            '",cast(v_dr_amount as nchar),"',
-            '",v_ref_no,"',
-            '",v_cr_recon_code,"',
-            '",v_dr_recon_code,"','IUT - OP'
-          ");
-
-        call pr_run_sql2(v_sql,@msg,@result);
 
 					-- dr location
 					set v_sql=concat("insert into ",v_tranbrkp_table,"
