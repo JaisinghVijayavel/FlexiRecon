@@ -6,18 +6,33 @@ CREATE PROCEDURE `pr_get_recon_mindate`
   in in_recon_code varchar(32)
 )
 me:begin
+  declare v_finyear_start_date date;
+  declare v_min_tran_date date;
+
+  if month(curdate()) > 3 then
+    set v_finyear_start_date = cast(concat(cast(year(curdate()) as nchar),'-04-01') as date);
+  else
+    set v_finyear_start_date = cast(concat(cast(year(curdate())-1 as nchar),'-04-01') as date);
+  end if;
+
   if exists(select min(tran_date) from recon_trn_ttran
     where recon_code = in_recon_code
     and excp_value <> 0
     and delete_flag = 'N') then
     select
-      ifnull(min(tran_date),curdate()) as min_tran_date
+      ifnull(min(tran_date),curdate()) into v_min_tran_date
     from recon_trn_ttran
     where recon_code = in_recon_code
     and excp_value <> 0
     and delete_flag = 'N';
+
+    if datediff(v_finyear_start_date,v_min_tran_date) < 0 then
+      set v_min_tran_date = v_finyear_start_date;
+    end if;
+
+    select DATE_FORMAT(v_min_tran_date,'%d/%m/%Y') as min_tran_date;
   else
-    select curdate() as min_tran_date;
+    select DATE_FORMAT(curdate(),'%d/%m/%Y') as min_tran_date;
   end if;
 end $$
 

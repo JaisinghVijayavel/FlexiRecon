@@ -1757,7 +1757,7 @@ me:BEGIN
 
                 -- insert roundoff value
                 insert into recon_tmp_t2tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
-                select v_tran_gid,v_tranbrkp_gid,v_diff_value;
+                  select v_tran_gid,v_tranbrkp_gid,v_diff_value;
               else
                 set v_diff_value = abs(v_diff_value);
 
@@ -2428,14 +2428,14 @@ me:BEGIN
 							and kodtl_post_flag = 'N'
 							HAVING tran_gid IS NOT NULL
 							order by ko_gid");
-						
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- insert in kodtl table
 						set v_sql = concat("
 							insert into ",v_kodtl_table," (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
 								select ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_t2kodtl");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             if v_recontype_code <> 'N' then
@@ -2446,7 +2446,7 @@ me:BEGIN
 										b.ko_gid,b.tran_gid,b.tranbrkp_gid,a.roundoff_value
 									from recon_tmp_t2tranroundoff as a
 									inner join recon_tmp_t2kodtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid");
-									
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               insert into recon_tmp_t2kodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
@@ -2482,7 +2482,18 @@ me:BEGIN
 										a.theme_code = ''
 								where ((a.excp_value <> 0 and a.mapped_value = 0) or a.mapped_value > 0)
 								and a.delete_flag = 'N'");
-								
+
+							call pr_run_sql(v_sql,@msg,@result);
+
+              -- zero roundoff value
+							set v_sql = concat("
+								update ",v_tran_table," as a
+								inner join recon_tmp_t2kodtlsumm as b on a.tran_gid = b.tran_gid
+								set a.excp_value = a.excp_value - a.roundoff_value
+								where a.excp_value = a.roundoff_value
+                and a.roundoff_value <> 0
+								and a.delete_flag = 'N'");
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               -- update in tranbrkp table
@@ -2495,7 +2506,7 @@ me:BEGIN
 										a.theme_code = ''
 								where a.excp_value <> 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               -- update in tranbrkp table
@@ -2505,7 +2516,7 @@ me:BEGIN
 								inner join recon_tmp_t2kodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
 								set a.roundoff_value = r.roundoff_value
 								where a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
             else
 							set v_sql = concat("
@@ -2516,7 +2527,7 @@ me:BEGIN
 										a.theme_code = ''
 								where a.ko_gid = 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
 
 							set v_sql = concat("
@@ -2527,7 +2538,7 @@ me:BEGIN
 										a.theme_code = ''
 								where a.ko_gid = 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
             end if;
 
@@ -2541,14 +2552,14 @@ me:BEGIN
 									and b.excp_value = 0
 									and b.mapped_value = 0
 									and b.delete_flag = 'N'");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
 							insert into ",v_tranko_table,"
 								select t.* from recon_tmp_t2trangid as g
 								inner join ",v_tran_table," as t on g.tran_gid = t.tran_gid");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("delete a.* from ",v_tran_table," as a

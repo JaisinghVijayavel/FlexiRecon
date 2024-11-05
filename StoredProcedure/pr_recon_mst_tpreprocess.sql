@@ -104,7 +104,9 @@ me:BEGIN
 	end if;
 
   if in_process_method ='QCD_EXPRESSION' THEN
-    set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression);
+    set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,false);
+  elseif in_process_method ='QCD_CUMULATIVEXP' THEN
+    set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,true);
   end if;
 
 	if (in_action = 'INSERT') then

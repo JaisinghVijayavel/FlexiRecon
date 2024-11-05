@@ -19,37 +19,6 @@ me:BEGIN
 	set v_tran_table = 'recon_trn_ttran';
 	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
-  /*
-  set v_sql = concat("update recon_trn_tmanualtran as a
-    inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
-      and b.delete_flag = 'N'
-    set
-      a.recon_code = b.recon_code,
-      a.dataset_code = b.dataset_code,
-      a.ko_mult = b.tran_mult,
-      a.ko_acc_mode = b.tran_acc_mode
-    where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
-    and a.tranbrkp_gid = 0
-    and a.delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-
-  set v_sql = concat("update recon_trn_tmanualtran as a
-    inner join ",v_tranbrkp_table," as b on a.tran_gid = b.tran_gid
-      and a.tranbrkp_gid = b.tranbrkp_gid
-      and b.delete_flag = 'N'
-    set
-      a.recon_code = b.recon_code,
-      a.dataset_code = b.tranbrkp_dataset_code,
-      a.ko_mult = b.tran_mult,
-      a.ko_acc_mode = b.tran_acc_mode
-    where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
-    and a.tranbrkp_gid > 0
-    and a.delete_flag = 'N'");
-
-  call pr_run_sql(v_sql,@msg,@result);
-  */
-
     -- dataset_code
   select b.target_dataset_code into v_dataset_code from con_trn_tscheduler as a
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code and b.delete_flag = 'N'
@@ -125,11 +94,6 @@ me:BEGIN
 		where a.scheduler_gid = in_scheduler_gid
 		and a.delete_flag = 'N';
 
-    /*
-    select '' as 'Recon Code','' as 'Recon Name';
-    select '' as 'Dataset Code','' as 'Dataset Name','' as 'Dataset Type';
-    */
-
 		if v_recontype_code = 'W' or v_recontype_code = 'B' then
 			-- Proof/BRS
 			select
@@ -154,8 +118,8 @@ me:BEGIN
 				sum(if(c.dataset_type = 'B',a.ko_value*a.ko_mult,0)) as 'Base Total',
 				sum(if(c.dataset_type = 'T',1,0)) as 'Target Count',
 				sum(if(c.dataset_type = 'T',a.ko_value*a.ko_mult,0)) as 'Target Total',
-				sum(if(c.dataset_type = 'B',a.ko_value*a.ko_mult,0)) - sum(if(c.dataset_type = 'B',a.ko_value*a.ko_mult,0)) as 'Difference'
-           from recon_trn_tmanualtran as a
+				sum(if(c.dataset_type = 'B',a.ko_value*a.ko_mult,0)) - sum(if(c.dataset_type = 'T',a.ko_value*a.ko_mult,0)) as 'Difference'
+      from recon_trn_tmanualtran as a
 			left join recon_trn_ttran as b on a.tran_gid = b.tran_gid
 				and b.recon_code = v_recon_code
 				and b.excp_value > 0

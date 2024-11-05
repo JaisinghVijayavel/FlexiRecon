@@ -5,7 +5,8 @@ CREATE function `fn_get_expressionformat`
 (
   in_recon_code varchar(32),
   in_set_recon_field text,
-  in_expression text
+  in_expression text,
+  in_cumulative_flag boolean
 ) returns text
 me:begin
   declare v_split_col text;
@@ -42,6 +43,10 @@ me:begin
     set v_split_col = SPLIT(in_expression,']',i);
   until v_split_col = ''
   end repeat;
+
+  if in_cumulative_flag = true then
+    set v_expression = concat('@cumulative_value := @cumulative_value + ',v_expression);
+  end if;
 
   if lower(mid(trim(in_set_recon_field),1,3)) = 'col' then
     set v_expression = concat('cast(',v_expression,' as nchar)');
