@@ -22,8 +22,6 @@ begin
   set v_org_target_field = in_comparison_field;
 
 
-  set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
-
   if in_comparison_criteria = 'EXACT' then
     set v_txt = concat(' ',in_source_field,' = ',in_comparison_field,' ');
   elseif in_comparison_criteria = 'CONTAINS'  then
@@ -76,18 +74,20 @@ begin
         set v_txt = concat(' cast(',in_comparison_field,' as datetime) >= adddate(cast(',in_source_field,' as datetime),',v_from,') and cast(',in_comparison_field,' as datetime) <= adddate(cast(',in_source_field,' as datetime),',v_to,') ');
       end if;
     elseif v_field_type = 'NUMBER' or v_field_type = 'INTEGER' or v_field_type = 'NUMERIC' then
+      set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
+
       set v_txt = concat(' ',in_comparison_field,' between (',in_source_field,'+',v_from,') and (',in_source_field,'+',v_to,') ');
     else
       set v_from = replace(v_from,'$FIELD$',in_comparison_field);
       set v_to = replace(v_to,'$FIELD$',in_comparison_field);
 
+      set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
       set v_txt = concat(' ',in_source_field,' between (',v_from,') and (',v_to,') ');
     end if;
   elseif substr(in_comparison_criteria,1,11) = 'FIND_IN_SET' then
     set v_txt = trim(in_comparison_criteria);
     set in_comparison_field = v_org_target_field;
     set in_comparison_field = replace(v_txt,'$FIELD$',in_comparison_field);
-    set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
     set in_comparison_field = substr(in_comparison_field,1,length(in_comparison_field)-1);
 
     set v_txt = concat(' ',in_comparison_field,',',in_source_field,') > 0 ');
@@ -96,18 +96,21 @@ begin
     set v_txt = trim(in_comparison_criteria);
 
     set in_comparison_field = v_org_target_field;
+    set in_comparison_field = fn_get_fieldnamecast(in_recon_code,in_comparison_field);
     set in_comparison_field = replace(v_txt,'$FIELD$',in_comparison_field);
-    set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
 
+    set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
     set v_txt = concat(' ',in_source_field,' = ',in_comparison_field,' ');
   elseif instr(in_comparison_criteria,'$COMPARISON_FIELD$') > 0 then
     -- comparison criteria condition type added with function
     set v_txt = trim(in_comparison_criteria);
 
     set in_comparison_field = v_org_target_field;
-    set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
+    set in_comparison_field = fn_get_fieldnamecast(in_recon_code,in_comparison_field);
 
     set in_comparison_field = replace(v_txt,'$COMPARISON_FIELD$',in_comparison_field);
+
+    set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
 
     if instr(in_comparison_criteria,'$SOURCE_FIELD$') > 0 then
       set v_txt = replace(in_comparison_field,'$SOURCE_FIELD$',in_source_field);
@@ -116,8 +119,9 @@ begin
     end if;
   else
     set in_comparison_field = v_org_target_field;
-    set in_comparison_field = fn_get_filterformat(in_comparison_field,in_comparison_filter);
-    -- set v_txt = concat(' ',in_source_field,' ',in_comparison_criteria,' ',in_comparison_field,' ');
+    set in_comparison_field = fn_get_fieldnamecast(in_recon_code,in_comparison_field);
+    set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
+
     set v_txt = concat(' ',in_comparison_field,' ',in_comparison_criteria,' ',in_source_field,' ');
   end if;
 

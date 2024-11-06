@@ -604,6 +604,8 @@ me:BEGIN
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'C' then
+        set v_orderby_field = '';
+
 				-- order by field block
 				orderbyfield_block:begin
 					declare orderbyfield_done int default 0;
@@ -661,10 +663,10 @@ me:BEGIN
         set v_sql = concat(v_sql,v_orderby_field,' ');
 
         set @cumulative_value := 0;
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+        call pr_run_sql(replace(concat(v_sql,',tran_gid'),'$TABLENAME$',v_tran_table),@msg,@result);
 
         set @cumulative_value := 0;
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid'),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'A' then
         set v_aggjoin_condition = ' 1 = 1 ';
         set v_grp_field = '';
