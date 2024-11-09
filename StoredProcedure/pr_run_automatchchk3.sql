@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_automatch` $$
-CREATE PROCEDURE `pr_run_automatch`(
+DROP PROCEDURE IF EXISTS `pr_run_automatchchk3` $$
+CREATE PROCEDURE `pr_run_automatchchk3`(
   in in_recon_code text,
   in in_rule_code text,
   in in_group_flag text,
@@ -69,8 +69,6 @@ me:BEGIN
   declare v_comparison_field_type text default '';
   declare v_comparison_function text default '';
   declare v_comparison_criteria text default '';
-
-  declare v_source_criteria text default '';
 
   declare v_condition_criteria text default '';
   declare v_value_flag text default '';
@@ -278,16 +276,14 @@ me:BEGIN
   insert into recon_tmp_t1index select 'recon_tmp_t1source','idx_tran_date','Y';
   insert into recon_tmp_t1index select 'recon_tmp_t1comparison','idx_tran_date','Y';
 
-  /*
   drop table if exists recon_tmp_t1tranagg;
   drop table if exists recon_tmp_t1match;
   drop table if exists recon_tmp_t1matchdtl;
   drop table if exists recon_tmp_t1matchko;
   drop table if exists recon_tmp_t1matchdiff;
   drop table if exists recon_tmp_t1matchdiffdtl;
-  */
 
-  CREATE temporary TABLE recon_tmp_t1tranagg(
+  CREATE /*temporary*/ TABLE recon_tmp_t1tranagg(
     tranagg_gid int unsigned NOT NULL AUTO_INCREMENT,
     rec_count int not null default 0,
     agg_json json NOT NULL,
@@ -295,7 +291,7 @@ me:BEGIN
     key idx_rec_count(rec_count)
   );
 
-  CREATE temporary TABLE recon_tmp_t1match(
+  CREATE /*temporary*/ TABLE recon_tmp_t1match(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -313,7 +309,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   );
 
-  create temporary table recon_tmp_t1matchdtl(
+  create /*temporary*/ table recon_tmp_t1matchdtl(
     matchdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -331,7 +327,7 @@ me:BEGIN
     key idx_gid(tran_gid,tranbrkp_gid)
   );
 
-  create temporary table recon_tmp_t1matchko(
+  create /*temporary*/ table recon_tmp_t1matchko(
     tran_gid int unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
     excp_value decimal(15,2) not null default 0,
@@ -342,7 +338,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_t1matchdiff(
+  create /*temporary*/ table recon_tmp_t1matchdiff(
     tran_gid int unsigned NOT NULL,
     tran_mult tinyint not null default 0,
     tran_value decimal(15,2) not null default 0,
@@ -352,7 +348,7 @@ me:BEGIN
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_t1matchdiffdtl(
+  create /*temporary*/ table recon_tmp_t1matchdiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -857,15 +853,13 @@ me:BEGIN
           drop temporary table if exists recon_tmp_t1sourceagg;
           drop temporary table if exists recon_tmp_t1comparisonagg;
 
-          /*
           drop table if exists recon_tmp_t1source;
           drop table if exists recon_tmp_t1comparison;
 
           drop table if exists recon_tmp_t1sourceagg;
           drop table if exists recon_tmp_t1comparisonagg;
-          */
 
-          create temporary table recon_tmp_t1source select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t1source select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t1source ENGINE = MyISAM;
           alter table recon_tmp_t1source add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t1source(excp_value);
@@ -873,7 +867,7 @@ me:BEGIN
           create index idx_recon_code on recon_tmp_t1source(recon_code);
           create index idx_dataset_code on recon_tmp_t1source(recon_code,dataset_code);
 
-          create temporary table recon_tmp_t1comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t1comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t1comparison ENGINE = MyISAM;
           alter table recon_tmp_t1comparison add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t1comparison(excp_value);
@@ -881,14 +875,14 @@ me:BEGIN
           create index idx_recon_code on recon_tmp_t1comparison(recon_code);
           create index idx_dataset_cdoe on recon_tmp_t1comparison(recon_code,dataset_code);
 
-          create temporary table recon_tmp_t1sourceagg select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t1sourceagg select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t1sourceagg ENGINE = MyISAM;
 				  alter table recon_tmp_t1sourceagg add sourceagg_gid int not null primary key AUTO_INCREMENT FIRST;
           alter table recon_tmp_t1sourceagg add rec_count int not null default 0;
           alter table recon_tmp_t1sourceagg add agg_json json default null;
           alter table recon_tmp_t1sourceagg add src_comp_flag varchar(32) default null;
 
-          create temporary table recon_tmp_t1comparisonagg select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t1comparisonagg select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t1comparisonagg ENGINE = MyISAM;
 				  alter table recon_tmp_t1comparisonagg add comparisonagg_gid int not null primary key AUTO_INCREMENT FIRST;
           alter table recon_tmp_t1comparisonagg add rec_count int not null default 0;
@@ -1794,7 +1788,7 @@ me:BEGIN
                                             v_open_parentheses_flag,v_close_parentheses_flag,v_join_condition;
 									if compagg_done = 1 then leave compagg_loop; end if;
 
-									set v_source_field = concat('b.',ifnull(v_source_field,''));
+									set v_source_field = concat('a',ifnull(v_source_field,''));
 									set v_source_function = ifnull(v_source_function,'');
 									set v_source_field_type = ifnull(v_source_field_type,'');
 
@@ -1802,7 +1796,7 @@ me:BEGIN
 									set v_value_flag = ifnull(v_value_flag,'');
 									set v_value = ifnull(v_value,'');
 
-									set v_comparison_field = concat('a.',ifnull(v_comparison_field,''));
+									set v_comparison_field = concat('b.',ifnull(v_comparison_field,''));
 									set v_comparison_function = ifnull(v_comparison_function,'');
 									set v_comparison_field_type = ifnull(v_comparison_field_type,'');
 
@@ -1818,16 +1812,16 @@ me:BEGIN
                   set v_source_field = replace(v_source_function,'$FIELD$',v_source_field);
 
                   if v_value_flag = 'Y' then
-                    set v_comparison_field = v_value;
+                    set v_comparison_field = v_value_flag;
                   else
                     set v_comparison_field = fn_get_fieldnamecast(in_recon_code,v_comparison_field);
                     set v_comparison_field = replace(v_comparison_function,'$FIELD$',v_comparison_field);
                   end if;
 
                   set v_agg_condition = concat(v_agg_condition,v_open_parentheses_flag,
-                                             fn_get_basefilterreconformat(in_recon_code,v_source_field,
-                                               'EXACT',0,v_comparison_criteria,v_value_flag,v_comparison_field),
-                                             v_close_parentheses_flag,
+                                             fn_get_comparisoncondition(in_recon_code,v_source_field,
+                                               v_comparison_field,v_comparison_criteria,0),
+                                             v_close_parentheses_flag,' and ',
                                              v_join_condition);
 								end loop compagg_loop;
 								close compagg_cursor;
