@@ -41,6 +41,7 @@ me:BEGIN
 
   declare v_reversal_flag char(1) default '';
   declare v_group_flag varchar(32) default '';
+  declare v_group_code varchar(32) default '';
   declare v_group_desc text default '';
   declare v_group_method_flag char(1) default '';
   declare v_manytomany_match_flag char(1) default '';
@@ -221,9 +222,13 @@ me:BEGIN
     set v_group_desc = ' (many to many)';
   elseif v_group_flag = 'OTM' then
     set v_group_desc = ' (one to many)';
+  elseif v_group_flag = 'MTO' then
+    set v_group_desc = ' (many to one)';
   elseif v_group_flag = 'OTO' then
     set v_group_desc = ' (one to one)';
   end if;
+
+  set v_group_code = v_group_flag;
 
   if in_automatch_flag = 'Y' then
     set v_system_matchoff = 'Y';
@@ -626,7 +631,7 @@ me:BEGIN
       if v_group_flag = 'OTO' then
         set v_group_flag = 'N';
         set v_manytomany_match_flag = 'N';
-      elseif v_group_flag = 'OTM' then
+      elseif v_group_flag = 'OTM' or v_group_flag = 'MTO' then
         set v_group_flag = 'Y';
         set v_manytomany_match_flag = 'N';
       elseif v_group_flag = 'MTM' then
@@ -846,6 +851,7 @@ me:BEGIN
           set v_rule_condition = ' and ';
           set v_rule_notnull_condition = ' and ';
           set v_rule_groupby = '';
+
 
           set v_source_condition = ' and ';
           set v_comparison_condition = ' and ';
@@ -1747,7 +1753,7 @@ me:BEGIN
 					end if;
 
 					-- one to many match
-					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' then
+					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' and v_group_code = 'OTM' then
 							-- comparison aggregation block
 							compagg_block:begin
 								declare compagg_done int default 0;
@@ -1905,6 +1911,219 @@ me:BEGIN
             end if;
 
             -- run match sql one to many
+            call pr_run_sql(v_match_sql,@msg,@result);
+
+            select max(matched_count) into v_count from recon_tmp_t1match;
+            set v_count = ifnull(v_count,0);
+
+            truncate recon_tmp_t1pseudorows;
+
+            if v_count >= 2 then
+              insert into recon_tmp_t1pseudorows select row from pseudo_rows1 where row <= v_count;
+            else
+              insert into recon_tmp_t1pseudorows select 0 union select 1;
+            end if;
+
+            insert into recon_tmp_t1matchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+              select
+                tran_gid as parent_tran_gid,
+                tranbrkp_gid as parent_tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t1match.matched_json, CONCAT('$[', recon_tmp_t1pseudorows.row, '].tran_gid'))) AS tran_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t1match.matched_json, CONCAT('$[', recon_tmp_t1pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t1match.matched_json, CONCAT('$[', recon_tmp_t1pseudorows.row, '].ko_value'))) AS ko_value,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t1match.matched_json, CONCAT('$[', recon_tmp_t1pseudorows.row, '].tran_mult'))) AS tran_mult,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t1match.matched_json, CONCAT('$[', recon_tmp_t1pseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+              FROM recon_tmp_t1match
+              JOIN recon_tmp_t1pseudorows
+              where group_flag = 'Y'
+              HAVING tran_gid IS NOT NULL;
+
+						-- clear matched records
+						truncate recon_tmp_t1trangid;
+
+						insert into recon_tmp_t1trangid
+							select distinct tran_gid from recon_tmp_t1matchdtl where tran_gid > 0 and tranbrkp_gid = 0;
+
+						delete a.* from recon_tmp_t1source as a
+              where a.tran_gid in (select b.tran_gid from recon_tmp_t1trangid as b where a.tran_gid = b.tran_gid);
+
+						delete a.* from recon_tmp_t1comparison as a
+              where a.tran_gid in (select b.tran_gid from recon_tmp_t1trangid as b where a.tran_gid = b.tran_gid);
+
+						truncate recon_tmp_t1tranbrkpgid;
+
+						insert into recon_tmp_t1tranbrkpgid (tranbrkp_gid)
+							select distinct tranbrkp_gid from recon_tmp_t1matchdtl where tranbrkp_gid > 0;
+
+						delete a.* from recon_tmp_t1source as a
+              where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t1tranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
+
+						delete a.* from recon_tmp_t1comparison as a
+              where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t1tranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
+
+						truncate recon_tmp_t1trangid;
+						truncate recon_tmp_t1tranbrkpgid;
+          end if;
+
+					-- many to one match
+					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' and v_group_code = 'MTO' then
+							-- comparison aggregation block
+							compagg_block:begin
+								declare compagg_done int default 0;
+								declare compagg_cursor cursor for
+									select
+										b.recon_field as source_field,
+										b.ruleagg_function as source_function,
+										b.ruleagg_field_type as source_field_type,
+										a.ruleagg_criteria,
+										a.ruleagg_value_flag,
+										a.ruleagg_value,
+										c.recon_field as comparison_field,
+										c.ruleagg_function as comparison_function,
+										c.ruleagg_field_type as comparison_field_type,
+										a.open_parentheses_flag,
+										a.close_parentheses_flag,
+                    a.join_condition
+									from recon_mst_truleaggcondition as a
+									inner join recon_mst_truleaggfield as b on a.rule_code = b.rule_code
+										and b.ruleagg_field = a.ruleagg_field
+										and b.ruleaggfield_applied_on = 'S'
+										and b.active_status = 'Y'
+										and b.delete_flag = 'N'
+									left join recon_mst_truleaggfield as c on a.rule_code = c.rule_code
+										and c.ruleagg_field = a.ruleagg_value
+										and c.ruleaggfield_applied_on = 'S'
+										and c.active_status = 'Y'
+										and c.delete_flag = 'N'
+									where a.rule_code = v_rule_code
+									and a.active_status = 'Y'
+									and a.delete_flag = 'N'
+									order by a.ruleaggcondition_seqno;
+
+								declare continue handler for not found set compagg_done=1;
+
+								open compagg_cursor;
+
+                set v_agg_condition = 'and (';
+
+								compagg_loop: loop
+									fetch compagg_cursor into v_source_field,v_source_function,v_source_field_type,
+                                            v_comparison_criteria,v_value_flag,v_value,
+                                            v_comparison_field,v_comparison_function,v_comparison_field_type,
+                                            v_open_parentheses_flag,v_close_parentheses_flag,v_join_condition;
+									if compagg_done = 1 then leave compagg_loop; end if;
+
+									set v_source_field = concat('a.',ifnull(v_source_field,''));
+									set v_source_function = ifnull(v_source_function,'');
+									set v_source_field_type = ifnull(v_source_field_type,'');
+
+									set v_comparison_criteria = ifnull(v_comparison_criteria,'');
+									set v_value_flag = ifnull(v_value_flag,'');
+									set v_value = ifnull(v_value,'');
+
+									set v_comparison_field = concat('b.',ifnull(v_comparison_field,''));
+									set v_comparison_function = ifnull(v_comparison_function,'');
+									set v_comparison_field_type = ifnull(v_comparison_field_type,'');
+
+									set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
+									set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
+                  set v_join_condition = ifnull(v_join_condition,'');
+
+                  set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
+                  set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
+                  set v_join_condition = if(v_join_condition = '','and',v_join_condition);
+
+                  set v_source_field = fn_get_fieldnamecast(in_recon_code,v_source_field);
+                  set v_source_field = replace(v_source_function,'$FIELD$',v_source_field);
+
+                  if v_value_flag = 'Y' then
+                    set v_comparison_field = v_value;
+                  else
+                    set v_comparison_field = fn_get_fieldnamecast(in_recon_code,v_comparison_field);
+                    set v_comparison_field = replace(v_comparison_function,'$FIELD$',v_comparison_field);
+                  end if;
+
+                  set v_agg_condition = concat(v_agg_condition,v_open_parentheses_flag,
+                                             fn_get_basefilterreconformat(in_recon_code,v_source_field,
+                                               'EXACT',0,v_comparison_criteria,v_value_flag,v_comparison_field),
+                                             v_close_parentheses_flag,
+                                             v_join_condition);
+								end loop compagg_loop;
+								close compagg_cursor;
+							end compagg_block;
+
+              set v_agg_condition = concat(v_agg_condition,' 1 = 1) ');
+
+            set v_match_sql = 'insert into recon_tmp_t1match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+            set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
+            set v_match_sql = concat(v_match_sql,'b.tran_gid,b.tranbrkp_gid,count(*) as matched_count,');
+
+            if v_recontype_code <> 'N' then
+              set v_match_sql = concat(v_match_sql,'b.excp_value as matched_value,b.tran_mult,');
+            else
+              set v_match_sql = concat(v_match_sql,'0 as matched_value,0 as tran_mult,');
+            end if;
+
+            set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
+            set v_match_sql = concat(v_match_sql,'{');
+            set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(b.tran_mult as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
+
+            if v_recontype_code <> 'N' then
+              set v_match_sql = concat(v_match_sql,'"ko_value":', char(39),',cast(b.excp_value as nchar),',char(39));
+            else
+              set v_match_sql = concat(v_match_sql,'"ko_value":', char(39),',cast(0 as nchar),',char(39));
+            end if;
+
+            set v_match_sql = concat(v_match_sql,'},',char(39),',');
+            set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
+            set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(a.tranbrkp_gid as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(a.tran_mult as nchar),',char(39),',');
+            set v_match_sql = concat(v_match_sql,'"src_comp_flag":"C",');
+
+            if v_recontype_code <> 'N' then
+              set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(a.excp_value as nchar),',char(39));
+            else
+              set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(0 as nchar),',char(39));
+            end if;
+
+            set v_match_sql = concat(v_match_sql,'}',char(39),'),');
+            set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
+
+            set v_match_sql = concat(v_match_sql,'from recon_tmp_t1comparison as b ');
+            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t1source as a ');
+            set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
+
+						set v_match_sql = concat(v_match_sql,'where 1 = 1 ');
+            set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
+
+            if v_recontype_code <> 'N' then
+              set v_match_sql = concat(v_match_sql,'group by b.excp_value,b.tran_gid,b.tranbrkp_gid',v_rule_groupby,' ');
+            else
+              set v_match_sql = concat(v_match_sql,'group by b.tran_gid,b.tranbrkp_gid',v_rule_groupby,' ');
+            end if;
+
+            set v_match_sql = concat(v_match_sql,'having count(*) > 1 ',v_agg_condition);
+
+            if v_recontype_code <> 'N' then
+              if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
+                -- contra
+                set v_match_sql = concat(v_match_sql,'and b.excp_value*b.tran_mult = sum(a.excp_value*a.tran_mult)*-1 ');
+              else
+                -- mirror
+                set v_match_sql = concat(v_match_sql,'and b.excp_value*b.tran_mult = sum(a.excp_value*a.tran_mult) ');
+              end if;
+            end if;
+
+            -- add record order by
+            if v_recorder <> '' then
+              set v_match_sql = concat(v_match_sql,v_recorder);
+            end if;
+
+            -- run match sql many to one
             call pr_run_sql(v_match_sql,@msg,@result);
 
             select max(matched_count) into v_count from recon_tmp_t1match;

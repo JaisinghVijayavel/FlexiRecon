@@ -32,6 +32,10 @@ me:begin
   declare v_recon_date_field text default '';
   declare v_dataset_type text default '';
 
+  declare v_recon_closure_date text default '';
+  declare v_tran_date_field text default '';
+  declare v_recon_condition text default '';
+
   declare v_valuetype_code text default '';
   declare v_bal_valuetype_code text default '';
 
@@ -134,6 +138,7 @@ me:begin
     a.recon_value_field,
     a.recon_date_flag,
     a.recon_date_field,
+    cast(a.recon_closure_date as nchar),
     b.dataset_type,
     b.dataset_code,
     b.parent_dataset_code,
@@ -145,6 +150,7 @@ me:begin
     v_recon_value_field,
     v_recon_date_flag,
     v_recon_date_field,
+    v_recon_closure_date,
     v_dataset_type,
     v_dataset_code,
     v_parent_dataset_code,
@@ -169,6 +175,8 @@ me:begin
   set v_recon_value_field = ifnull(v_recon_value_field,'');
   set v_recon_date_flag = ifnull(v_recon_date_flag,'');
   set v_recon_date_field = ifnull(v_recon_date_field,'');
+  set v_recon_closure_date = ifnull(v_recon_closure_date,'');
+
   set v_dataset_type = ifnull(v_dataset_type,'');
   set v_dataset_code = ifnull(v_dataset_code,'');
   set v_parent_dataset_code = ifnull(v_parent_dataset_code,'');
@@ -177,6 +185,23 @@ me:begin
 
   -- get iis server date format
   set v_iis_date_format = ifnull(fn_get_configvalue('iis_date_format'),'');
+
+  if (v_recontype_code = 'W' or v_recontype_code = 'I' or v_recontype_code = 'B')
+    and v_recon_closure_date <> '' then
+
+    select
+      dataset_field_name into v_tran_date_field
+    from recon_mst_treconfieldmapping
+    where reconcode = in_recon_code
+    and dataset_code = v_dataset_code
+    and recon_field_name = 'tran_date'
+    and active_status = 'Y'
+    and delete_flag = 'N';
+
+    if v_tran_date_field <> '' then
+      set v_recon_condition = concat(" and cast(",v_tran_date_field ,"as date) > '",v_recon_closure_date,"' ");
+    end if;
+  end if;
 
   if v_dataset_type = 'B' or v_dataset_type = 'T' then
     set v_target_table = 'recon_trn_ttran';
@@ -203,6 +228,7 @@ me:begin
   set v_source_sql = concat(v_source_sql,@out_dataset_field_all,' from ',v_dataset_table_name);
   set v_source_sql = concat(v_source_sql,' where scheduler_gid = ');
   set v_source_sql = concat(v_source_sql,cast(in_scheduler_gid as nchar));
+  set v_source_sql = concat(v_source_sql,v_recon_condition);
   set v_source_sql = concat(v_source_sql,' and delete_flag = ''N''');
 
   set v_target_sql = concat(v_target_sql,@out_recon_field_all,') ');

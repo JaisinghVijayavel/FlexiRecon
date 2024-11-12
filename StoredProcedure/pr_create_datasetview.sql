@@ -20,6 +20,7 @@ me:BEGIN
   declare v_table_stru_flag boolean default false;
 
   declare v_dataset_db_name text default '';
+  declare v_db_name text default '';
   declare v_table_name text default '';
   declare v_view_name text default '';
   declare v_recon_code text default '';
@@ -50,8 +51,9 @@ me:BEGIN
   ) ENGINE = MyISAM;
 
     set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+    select database() into v_db_name;
 
-    if v_dataset_db_name <> '' then
+    if v_dataset_db_name <> '' and v_dataset_db_name <> v_db_name then
       set v_table_name = concat(v_dataset_db_name,'.',in_dataset_code);
     else
       set v_table_name = in_dataset_code;
@@ -77,6 +79,8 @@ me:BEGIN
       display_order
     )
     select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
+
+  set v_sql_field = concat('dataset_gid as "Dataset ID",scheduler_gid as "Scheduler ID"');
 
   field_block:begin
     declare field_done int default 0;

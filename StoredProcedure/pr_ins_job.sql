@@ -15,7 +15,16 @@ CREATE PROCEDURE `pr_ins_job`(
   out out_msg text,
   out out_result int(10)
 )
-BEGIN
+me:BEGIN
+  if in_job_ref_gid > 0 and in_jobtype_code = 'S' then
+    if exists(select job_gid from recon_trn_tjob
+      where jobtype_code = in_jobtype_code
+      and job_ref_gid = in_job_ref_gid
+      and delete_flag = 'N') then
+      leave me;
+    end if;
+  end if;
+
   insert into recon_trn_tjob
   (
     recon_code,
