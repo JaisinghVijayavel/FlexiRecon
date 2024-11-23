@@ -18,6 +18,7 @@ me:BEGIN
   declare v_txt text default '';
   declare v_job_gid int default 0;
 
+  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -36,6 +37,7 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
+  */
 
   drop temporary table if exists recon_tmp_ttrangid;
 
@@ -101,7 +103,7 @@ me:BEGIN
 
 	  leave me;
 	else
-	  call pr_ins_job(v_recon_code,'M',in_scheduler_gid,concat('Manual posting - ',v_file_name),v_file_name,
+	  call pr_ins_job(v_recon_code,'M',in_scheduler_gid,concat('Manual posting...'),'',
       in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 	end if;
 
@@ -113,28 +115,30 @@ me:BEGIN
     select
       a.tran_gid,
       b.excp_value,
-      sum(a.tranbrkp_value*c.tran_mult) as match_value,
+      sum(c.excp_value*c.tran_mult) as match_value,
       b.tran_mult
     from recon_trn_tmanualtranbrkp as a
     inner join recon_trn_ttran as b
       on a.tran_gid = b.tran_gid
-      and b.recon_code = a.recon_code
-      and b.excp_value >= a.tranbrkp_value
       and b.excp_value = b.tran_value
       and b.mapped_value = 0
       and b.delete_flag = 'N'
     inner join recon_trn_ttranbrkp as c
       on a.tranbrkp_gid = c.tranbrkp_gid
+      and c.recon_code = b.recon_code
+      and c.dataset_code = b.dataset_code
       and c.excp_value > 0
-      and c.excp_value = b.tranbrkp_value
+      and c.excp_value = c.tran_value
       and c.tran_gid = 0
       and c.delete_flag = 'N'
     where a.scheduler_gid = in_scheduler_gid
-    and a.dataset_code = v_dataset_code
     and a.delete_flag = 'N'
     group by a.tran_gid,b.excp_value,b.tran_mult
-    having sum(a.tranbrkp_value*c.tran_mult) = (b.excp_value*b.tran_mult);
+    having sum(c.excp_value*c.tran_mult) = (b.excp_value*b.tran_mult);
 
+    -- and a.dataset_code = v_dataset_code
+
+  /*
   update recon_trn_tmanualtranbrkp set
     tranbrkp_status = 'M'
   where scheduler_gid = in_scheduler_gid
@@ -148,12 +152,30 @@ me:BEGIN
   and excp_value = tran_value
   and mapped_value = 0
   and delete_flag = 'N';
+  */
+
+  update recon_trn_tmanualtranbrkp as a
+  inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
+  set
+    a.tranbrkp_status = 'M'
+  where a.scheduler_gid = in_scheduler_gid
+  and a.tranbrkp_status = 'P'
+  and a.delete_flag = 'N';
+
+  update recon_trn_ttran as a
+  inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
+  set
+    a.mapped_value = a.tran_value
+  where a.excp_value = a.tran_value
+  and a.mapped_value = 0
+  and a.excp_value > 0
+  and a.delete_flag = 'N';
 
   update recon_trn_tmanualtranbrkp as a
   inner join recon_trn_ttranbrkp as b
     on a.tranbrkp_gid = b.tranbrkp_gid
     and b.excp_value > 0
-    and b.excp_value = b.tranbrkp_value
+    and b.excp_value = b.tran_value
     and b.tran_gid = 0
     and b.delete_flag = 'N'
   set
@@ -183,7 +205,7 @@ me:BEGIN
 
   set v_succ_count = ifnull(v_succ_count,0);
 
-	insert into recon_trn_tmanualtranbrkpmatch
+	insert into recon_trn_tmanualtranbrkppost
 	  select * from recon_trn_tmanualtranbrkp
 	  where scheduler_gid = in_scheduler_gid
 	  and delete_flag = 'N';

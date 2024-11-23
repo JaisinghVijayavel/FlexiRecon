@@ -25,7 +25,7 @@ me:BEGIN
   if v_dataset_code = 'KOMANUAL' then
     call pr_run_manualmatchfile(in_scheduler_gid,in_ip_addr,in_user_code,@out_msg,@out_result);
   elseif v_dataset_code = 'POSTMANUAL' then
-    call pr_run_manualpostfile(in_scheduler_gid,in_ip_addr,in_user_code,@out_msg,@out_result);
+    call pr_run_manualpostfile(in_scheduler_gid,'',in_ip_addr,in_user_code,@out_msg,@out_result);
   else
     set @out_msg = 'Invalid scheduler !';
     set @out_result = 0;

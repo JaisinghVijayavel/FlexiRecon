@@ -25,6 +25,7 @@ me:BEGIN
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
+  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -43,6 +44,7 @@ me:BEGIN
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
+  */
 
 	-- set tran table
   /*
@@ -156,28 +158,27 @@ me:BEGIN
 			select
 				a.tran_gid,
 				b.excp_value,
-				sum(a.tranbrkp_value*c.tran_mult) as match_value,
+				sum(c.excp_value*c.tran_mult) as match_value,
 				b.tran_mult
 			from recon_trn_tmanualtranbrkp as a
 			inner join ",v_tran_table," as b
 				on a.tran_gid = b.tran_gid
-				and b.recon_code = a.recon_code
-				and b.excp_value >= a.tranbrkp_value
 				and b.excp_value = b.tran_value
 				and b.mapped_value = 0
 				and b.delete_flag = 'N'
 			inner join ",v_tranbrkp_table," as c
 				on a.tranbrkp_gid = c.tranbrkp_gid
+        and c.recon_code = b.recon_code
+        and c.dataset_code = b.dataset_code
 				and c.excp_value > 0
-				and c.excp_value = a.tranbrkp_value
+				and c.excp_value = c.tran_value
 				and c.tran_gid = 0
 				and c.delete_flag = 'N'
 			where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
-			and a.dataset_code = '",v_dataset_code,"'
 			and a.delete_flag = 'N'
 			group by a.tran_gid,b.excp_value,b.tran_mult
-			having sum(a.tranbrkp_value*c.tran_mult) = (b.excp_value*b.tran_mult)");
-	
+			having sum(c.tran_value*c.tran_mult) = (b.excp_value*b.tran_mult)");
+
 	call pr_run_sql(v_sql,@msg,@result);
 
   update recon_trn_tmanualtranbrkp as a set
@@ -189,12 +190,12 @@ me:BEGIN
 
 	set v_sql = concat("
 		update ",v_tran_table," as a set
-			a.mapped_value = b.tran_value
+			a.mapped_value = a.tran_value
 		where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)
-		and a.excp_value = tran_value
+		and a.excp_value = a.tran_value
 		and a.mapped_value = 0
 		and a.delete_flag = 'N'");
-	
+
 	call pr_run_sql(v_sql,@msg,@result);
 
 	set v_sql = concat("
@@ -202,12 +203,13 @@ me:BEGIN
 		inner join ",v_tranbrkp_table," as b
 			on a.tranbrkp_gid = b.tranbrkp_gid
 			and b.excp_value > 0
-			and b.excp_value = a.tranbrkp_value
+			and b.excp_value = b.tran_value
 			and b.tran_gid = 0
 			and b.delete_flag = 'N'
 		set
+      b.mapped_value = b.tran_value,
 			b.tran_gid = a.tran_gid
-		where a.scheduler_gid = in_scheduler_gid
+		where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
 		and a.tranbrkp_status = 'M'
 		and a.delete_flag = 'N'");
 

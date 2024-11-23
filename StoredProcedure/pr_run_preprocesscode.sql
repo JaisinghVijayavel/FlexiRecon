@@ -606,6 +606,8 @@ me:BEGIN
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'C' then
+        set v_orderby_field = '';
+
 				-- order by field block
 				orderbyfield_block:begin
 					declare orderbyfield_done int default 0;
@@ -650,6 +652,10 @@ me:BEGIN
           set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
         end if;
 
+        if v_orderby_field <> '' then
+          set v_orderby_field = concat('order by ',v_orderby_field);
+        end if;
+
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -659,12 +665,14 @@ me:BEGIN
         set v_sql = concat(v_sql,v_orderby_field,' ');
 
         set @cumulative_value := 0;
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+        call pr_run_sql(replace(concat(v_sql,',tran_gid'),'$TABLENAME$',v_tran_table),@msg,@result);
 
         set @cumulative_value := 0;
-        call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid'),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
       elseif v_process_method = 'A' then
         set v_aggjoin_condition = ' 1 = 1 ';
+        set v_grp_field = '';
+        set v_idx_grp_field = '';
 
 				-- grp by field block
 				grpfield_block:begin
@@ -767,8 +775,6 @@ me:BEGIN
 
         call pr_run_sql2(v_sql,@msg,@result);
 
-        select * from recon_tmp_ttranagg;
-
         set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_grp_field,",",v_set_recon_field,")
           select ",v_grp_field,",",v_process_function," from ",v_tranbrkp_table,"
           where 1 = 1
@@ -805,10 +811,6 @@ me:BEGIN
         set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
         set v_sql = concat(v_sql,'where 1 = 1 ');
         set v_sql = concat(v_sql,v_recon_condition);
-
-        select * from recon_tmp_ttranagg;
-        select v_sql;
-        leave me;
 
         call pr_run_sql2(v_sql,@msg,@result);
 

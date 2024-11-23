@@ -13,7 +13,7 @@ BEGIN
 		update recon_trn_tjob set
       end_date = sysdate(),
       job_status = in_job_status,
-      job_remark = in_job_remark,
+      job_remark = if(in_job_status = 'C',in_job_remark,concat(in_job_remark,':',job_remark)),
       update_date = sysdate()
     where job_gid = in_job_gid
     and delete_flag = 'N';

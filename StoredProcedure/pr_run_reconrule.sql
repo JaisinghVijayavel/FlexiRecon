@@ -622,6 +622,16 @@ me:BEGIN
     call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
 
     call pr_run_dynamicreport('',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',in_ip_addr,in_user_code,@msg,@result);
+
+    call pr_run_tablequery('',
+                           v_recon_code,
+                           'RPT_AMT_MATCHED',
+                           'recon_rpt_tpreview',
+                           concat(' and job_gid = ',cast(v_job_gid as nchar)),
+                           0,
+                           false,
+                           'table',
+                           in_user_code,@msg,@result);
   end if;
 
   -- job remark

@@ -10,7 +10,7 @@ CREATE PROCEDURE `pr_recon_mst_tpreprocess`(
   in in_get_recon_field varchar(32),
   in in_set_recon_field varchar(32), 
   in in_process_method varchar(32),
-  in in_process_query text, 
+  in in_process_query text,
   in in_expression text, 
   in in_process_function text,
   in in_lookup_dataset_code varchar(32), 
@@ -108,7 +108,7 @@ me:BEGIN
 		leave me;
 	end if;
 
-  if in_process_method ='QCD_EXPRESSION' THEN
+  if in_process_method ='QCD_EXPRESSION' or in_process_method = 'QCD_AGGEXP' THEN
     set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,false);
   elseif in_process_method ='QCD_CUMULATIVEXP' THEN
     set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,true);

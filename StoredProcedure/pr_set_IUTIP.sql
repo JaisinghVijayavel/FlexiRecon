@@ -183,6 +183,40 @@ me:begin
 
   call pr_run_sql2(v_sql,@msg,@result);
 
+  -- update IP Flag Opening Balance prior date entries
+  set v_sql = concat("update ",v_tran_table,"
+      set col52 = 'Y'
+    where recon_code = '",in_recon_code,"'
+    and col20 <> ''
+    and col20 <> 'AC01.0005284627'
+    and col38 <> ''
+    and col19 = ''
+    and col21 = ''
+    and col41 is null
+    and col47 is null
+    and col52 is null
+    and delete_flag = 'N'
+    ");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- update IP Flag Opening Balance prior date entries
+  set v_sql = concat("update ",v_tran_table,"
+      set col52 = 'Y'
+    where recon_code = '",in_recon_code,"'
+    and col20 <> ''
+    and col20 <> 'AC01.0005284627'
+    and col38 <> ''
+    and col19 = ''
+    and col20 = col21
+    and col41 is null
+    and col47 is null
+    and col52 is null
+    and delete_flag = 'N'
+    ");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
 
   -- col2  - support tran id
   -- col4  - Tran Date
@@ -363,7 +397,7 @@ me:begin
 				where recon_code = '",in_recon_code,"'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_cr_recon_code,"'
-				and col22 <> 'CREDIT NOTE REFUND'
+				and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
 				and col44 = 'Y'
 				and col52 = 'Y'
@@ -382,7 +416,7 @@ me:begin
 				where recon_code = '",in_recon_code,"'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
-				and col22 <> 'CREDIT NOTE REFUND'
+				and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
 				and col44 = 'Y'
 				and col52 = 'Y'
@@ -560,7 +594,7 @@ me:begin
 						and col38 = '",v_cr_recon_code,"'
 						and col2 <> '0'
 						and col2 <> ''
-						and col22 <> 'CREDIT NOTE REFUND'
+						and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
 						and col52 = 'Y'
@@ -587,7 +621,7 @@ me:begin
 						and col38 = '",v_cr_recon_code,"'
 						and col2 <> '0'
 						and col2 <> ''
-						and col22 <> 'CREDIT NOTE REFUND'
+						and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
 						and col52 = 'Y'
@@ -664,7 +698,7 @@ me:begin
 				where recon_code = '",in_recon_code,"'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
-        and col22 <> 'CREDIT NOTE REFUND'
+        and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
         and col44 = 'Y'
         and col52 = 'Y'
@@ -792,6 +826,7 @@ me:begin
   set v_sql = concat("update ",v_tran_table," as a
     set a.col47 = 'IUT - IP'
     where a.recon_code = '",in_recon_code,"'
+    and a.col20 <> a.col21 
     and a.col47 is null
     and a.col52 = 'Y'
     and a.delete_flag = 'N'

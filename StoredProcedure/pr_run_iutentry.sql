@@ -59,6 +59,8 @@ me:BEGIN
     tran_gid int not null default 0,
     bill_no varchar(32) default null,
     ipop_no varchar(32) default null,
+    from_unit varchar(255) default null,
+    to_unit varchar(255) default null,
     reftxt_tran_gid varchar(32),
     reftxt_tranbrkp_gid varchar(32),
     valid_flag char(1) not null default 'N',
@@ -186,7 +188,7 @@ me:BEGIN
     set b.valid_flag = 'Y',
         b.tran_gid = a.tran_gid,
         b.bill_no = a.col19,
-        b.ipop_no = a.col21 
+        b.ipop_no = a.col21
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -219,7 +221,9 @@ me:BEGIN
     inner join recon_tmp_treftxtgid as b on a.ref_tran_gid = b.ref_tran_gid and a.ref_tranbrkp_gid = b.ref_tranbrkp_gid
     set
       a.bill_no = b.bill_no,
-      a.ipop_no = b.ipop_no
+      a.ipop_no = b.ipop_no,
+      b.from_unit = a.from_unit_name,
+      b.to_unit = a.to_unit_name
     where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N';
 
@@ -299,6 +303,44 @@ me:BEGIN
           a.col47 = 'IUT - MANUAL',
           a.col51 = b.entry_ref_no,
           a.col53 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar)
+			");
+
+		call pr_run_sql2(v_sql,@msg,@result);
+
+    -- recon field
+    -- col22 - IUT Type/Flag
+    -- col23 - IUT Entry Value
+    -- col24 - Closing Balance Value
+    -- col25 - From Unit
+    -- col26 - To Unit
+    -- col27 - Entry Reference No
+
+    -- update in pd tran table
+		set v_sql = concat("update ",v_tran_table," as a
+			inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
+				and b.ref_tranbrkp_gid = 0
+        and b.valid_flag = 'Y'
+			set a.col23 = cast(b.entry_value*-1 as nchar),
+          a.col22 = 'IUT - MANUAL',
+          a.col27 = b.entry_ref_no,
+          a.col24 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar),
+          a.col25 = b.from_unit,
+          a.col26 = b.to_unit
+			");
+
+		call pr_run_sql2(v_sql,@msg,@result);
+
+    -- update in pd tranbrkp table
+		set v_sql = concat("update ",v_tranbrkp_table," as a
+			inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
+				and a.tranbrkp_gid = b.ref_tranbrkp_gid
+        and b.valid_flag = 'Y'
+			set a.col23 = cast(b.entry_value*-1 as nchar),
+          a.col22 = 'IUT - MANUAL',
+          a.col27 = b.entry_ref_no,
+          a.col24 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar),
+          a.col25 = b.from_unit,
+          a.col26 = b.to_unit
 			");
 
 		call pr_run_sql2(v_sql,@msg,@result);

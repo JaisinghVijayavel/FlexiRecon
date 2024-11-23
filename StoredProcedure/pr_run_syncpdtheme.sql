@@ -17,10 +17,16 @@ me:BEGIN
   declare v_iutflag_field text default '';
   declare v_iutvalue_field text default '';
   declare v_closingbalance_field text default '';
+  declare v_fromunit_field text default '';
+  declare v_tounit_field text default '';
+  declare v_iutrefno_field text default '';
 
   declare v_recon_iutflag_field text default '';
   declare v_recon_iutvalue_field text default '';
   declare v_recon_closingbalance_field text default '';
+  declare v_recon_fromunit_field text default '';
+  declare v_recon_tounit_field text default '';
+  declare v_recon_iutrefno_field text default '';
 
   /*
     set v_tran_table = concat(in_recon_code,'_tran');
@@ -43,10 +49,16 @@ me:BEGIN
   set v_iutvalue_field = fn_get_reconfieldfromdesc(in_recon_code,'IUT Value');
   set v_iutflag_field = fn_get_reconfieldfromdesc(in_recon_code,'IUT IP/OP');
   set v_closingbalance_field = fn_get_reconfieldfromdesc(in_recon_code,'Closing Balance');
+  set v_fromunit_field = fn_get_reconfieldfromdesc(in_recon_code,'From Unit');
+  set v_tounit_field = fn_get_reconfieldfromdesc(in_recon_code,'To Unit');
+  set v_iutrefno_field = fn_get_reconfieldfromdesc(in_recon_code,'Entry Ref No');
 
   set v_recon_iutflag_field = fn_get_reconfieldfromdesc('RE170','IUT Flag');
-  set v_recon_iutvalue_field = fn_get_reconfieldfromdesc('RE170','IUT Value');
+  set v_recon_iutvalue_field = fn_get_reconfieldfromdesc('RE170','Entry Value');
   set v_recon_closingbalance_field = fn_get_reconfieldfromdesc('RE170','Closing Balance');
+  set v_recon_fromunit_field = fn_get_reconfieldfromdesc('RE170','From Unit');
+  set v_recon_tounit_field = fn_get_reconfieldfromdesc('RE170','To Unit');
+  set v_recon_iutrefno_field = fn_get_reconfieldfromdesc('RE170','IUT Ref No');
 
   drop temporary table if exists recon_tmp_tiuttheme;
 
@@ -58,18 +70,102 @@ me:BEGIN
     noniut_theme text,
     iut_value text,
     closing_balance text,
+    from_unit text,
+    to_unit text,
+    entry_ref_no text,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
+  -- clear theme & iut related fields in recon table
+  set v_sql = concat("update recon_mst_tpdrecon as a
+    inner join ",v_tran_table," as b on a.pdrecon_code = b.recon_code
+      and b.",v_recon_iutflag_field," in ('IUT - IP','IUT - OP')
+      and b.tran_remark2 like 'IUT%'
+      and b.tran_remark2 not like '%manual%'
+      and b.delete_flag = 'N'
+    set
+      b.theme_code = '',
+      b.tran_remark2 = '',
+      b.",v_recon_iutflag_field," = '',
+      b.",v_recon_iutvalue_field," = '',
+      b.",v_recon_closingbalance_field," = '',
+      b.",v_recon_fromunit_field," = '',
+      b.",v_recon_tounit_field," = '',
+      b.",v_recon_iutrefno_field," = ''
+    where a.active_status = 'Y'
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  set v_sql = concat("update recon_mst_tpdrecon as a
+    inner join ",v_tranbrkp_table," as b on a.pdrecon_code = b.recon_code
+      and b.",v_recon_iutflag_field," in ('IUT - IP','IUT - OP')
+      and b.tran_remark2 like 'IUT%'
+      and b.tran_remark2 not like '%manual%'
+      and b.delete_flag = 'N'
+    set
+      b.theme_code = '',
+      b.tran_remark2 = '',
+      b.",v_recon_iutflag_field," = '',
+      b.",v_recon_iutvalue_field," = '',
+      b.",v_recon_closingbalance_field," = '',
+      b.",v_recon_fromunit_field," = '',
+      b.",v_recon_tounit_field," = '',
+      b.",v_recon_iutrefno_field," = ''
+    where a.active_status = 'Y'
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- clear IUT related fields
+  set v_sql = concat("update recon_mst_tpdrecon as a
+    inner join ",v_tran_table," as b on a.pdrecon_code = b.recon_code
+      and b.",v_recon_iutvalue_field," <> ''
+      and b.delete_flag = 'N'
+    set
+      b.",v_recon_iutflag_field," = '',
+      b.",v_recon_iutvalue_field," = '',
+      b.",v_recon_closingbalance_field," = '',
+      b.",v_recon_fromunit_field," = '',
+      b.",v_recon_tounit_field," = '',
+      b.",v_recon_iutrefno_field," = ''
+    where a.active_status = 'Y'
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  set v_sql = concat("update recon_mst_tpdrecon as a
+    inner join ",v_tranbrkp_table," as b on a.pdrecon_code = b.recon_code
+      and b.",v_recon_iutvalue_field," <> ''
+      and b.delete_flag = 'N'
+    set
+      b.",v_recon_iutflag_field," = '',
+      b.",v_recon_iutvalue_field," = '',
+      b.",v_recon_closingbalance_field," = '',
+      b.",v_recon_fromunit_field," = '',
+      b.",v_recon_tounit_field," = '',
+      b.",v_recon_iutrefno_field," = ''
+    where a.active_status = 'Y'
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
   -- move iut theme in temp table
-  set v_sql = concat("insert into recon_tmp_tiuttheme(tran_gid,tranbrkp_gid,iut_theme,iut_flag,iut_value,closing_balance)
+  set v_sql = concat("insert into recon_tmp_tiuttheme
+    (
+      tran_gid,tranbrkp_gid,iut_theme,iut_flag,iut_value,closing_balance,
+      from_unit,to_unit,entry_ref_no
+    )
     select
       cast(col1 as signed),
       cast(col2 as signed),
       ",v_iuttheme_field,",
       ",v_iutflag_field,",
       ",v_iutvalue_field,",
-      ",v_closingbalance_field,"
+      ",v_closingbalance_field,",
+      ",v_fromunit_field,",
+      ",v_tounit_field,",
+      ",v_iutrefno_field,"
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and ",v_iuttheme_field," <> ''
@@ -79,13 +175,20 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- move noniut theme in temp table
-  set v_sql = concat("insert ignore into recon_tmp_tiuttheme(tran_gid,tranbrkp_gid,noniut_theme,iut_value,closing_balance)
+  set v_sql = concat("insert ignore into recon_tmp_tiuttheme
+    (
+      tran_gid,tranbrkp_gid,noniut_theme,iut_value,closing_balance,
+      from_unit,to_unit,entry_ref_no
+    )
     select
       cast(col1 as signed),
       cast(col2 as signed),
       ",v_noniuttheme_field,",
       ",v_iutvalue_field,",
-      ",v_closingbalance_field,"
+      ",v_closingbalance_field,",
+      ",v_fromunit_field,",
+      ",v_tounit_field,",
+      ",v_iutrefno_field,"
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and ",v_noniuttheme_field," <> ''
@@ -104,7 +207,10 @@ me:BEGIN
       a.tran_remark2 = b.iut_theme,
       a.",v_recon_iutflag_field," = b.iut_flag,
       a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance
+      a.",v_recon_closingbalance_field," = b.closing_balance,
+      a.",v_recon_fromunit_field," = b.from_unit,
+      a.",v_recon_tounit_field," = b.to_unit,
+      a.",v_recon_iutrefno_field," = b.entry_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -119,7 +225,10 @@ me:BEGIN
       a.tran_remark2 = b.iut_theme,
       a.",v_recon_iutflag_field," = b.iut_flag,
       a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance
+      a.",v_recon_closingbalance_field," = b.closing_balance,
+      a.",v_recon_fromunit_field," = b.from_unit,
+      a.",v_recon_tounit_field," = b.to_unit,
+      a.",v_recon_iutrefno_field," = b.entry_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -132,7 +241,10 @@ me:BEGIN
     set
       a.",v_recon_iutflag_field," = b.noniut_theme,
       a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance
+      a.",v_recon_closingbalance_field," = b.closing_balance,
+      a.",v_recon_fromunit_field," = b.from_unit,
+      a.",v_recon_tounit_field," = b.to_unit,
+      a.",v_recon_iutrefno_field," = b.entry_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -145,7 +257,10 @@ me:BEGIN
     set
       a.",v_recon_iutflag_field," = b.iut_flag,
       a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance
+      a.",v_recon_closingbalance_field," = b.closing_balance,
+      a.",v_recon_fromunit_field," = b.from_unit,
+      a.",v_recon_tounit_field," = b.to_unit,
+      a.",v_recon_iutrefno_field," = b.entry_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);

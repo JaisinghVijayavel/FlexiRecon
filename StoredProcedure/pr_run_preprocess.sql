@@ -15,6 +15,7 @@ me:BEGIN
   declare v_get_recon_field text default '';
   declare v_set_recon_field text default '';
   declare v_cumulative_flag text default '';
+  declare v_opening_flag text default '';
   declare v_preprocess_code text default '';
   declare v_preprocess_desc text default '';
   declare v_process_method text default '';
@@ -37,6 +38,7 @@ me:BEGIN
   declare v_recon_date_condition text default '';
   declare v_recon_condition text default '';
 
+  declare v_field_expression text default '';
   declare v_field text default '';
   declare v_orderby_field text default '';
   declare v_grp_field text default '';
@@ -159,6 +161,7 @@ me:BEGIN
         process_function,
         process_expression,
         cumulative_flag,
+        opening_flag,
         lookup_dataset_code,
         lookup_return_field,
         lookup_group_flag,
@@ -186,6 +189,7 @@ me:BEGIN
         v_process_function,
         v_process_expression,
         v_cumulative_flag,
+        v_opening_flag,
         v_lookup_dataset_code,
         v_lookup_return_field,
         v_lookup_group_flag,
@@ -203,6 +207,7 @@ me:BEGIN
       set v_process_function = ifnull(v_process_function,'');
       set v_process_expression = ifnull(v_process_expression,'');
       set v_cumulative_flag = ifnull(v_cumulative_flag,'N');
+      set v_opening_flag = ifnull(v_opening_flag,'N');
       set v_lookup_dataset_code = ifnull(v_lookup_dataset_code,'');
       set v_lookup_return_field = ifnull(v_lookup_return_field,'');
       set v_lookup_group_flag = ifnull(v_lookup_group_flag,'N');
@@ -667,6 +672,24 @@ me:BEGIN
 
         set @cumulative_value := 0;
         call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid'),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+        if v_opening_flag = 'Y' then
+          set v_field_expression = concat(fn_get_fieldnamecast(in_recon_code,v_set_recon_field),'-',
+                               fn_get_castexpression(in_recon_code,v_process_expression));
+
+          set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_field_expression,false);
+
+          set v_sql = 'update $TABLENAME$ set ';
+          set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_field_expression,'$FIELD$',v_get_recon_field),' ');
+          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+          set v_sql = concat(v_sql,v_recon_date_condition);
+          set v_sql = concat(v_sql,v_preprocess_filter);
+          set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+          set v_sql = concat(v_sql,v_orderby_field,' ');
+
+          call pr_run_sql(replace(concat(v_sql,',tran_gid'),'$TABLENAME$',v_tran_table),@msg,@result);
+          call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid'),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
       elseif v_process_method = 'A' then
         set v_aggjoin_condition = ' 1 = 1 ';
         set v_grp_field = '';
@@ -763,9 +786,11 @@ me:BEGIN
         set v_sql = concat("create index idx_grp_field on recon_tmp_ttranbrkpagg(",v_idx_grp_field,")");
         call pr_run_sql2(v_sql,@msg,@result);
 
+        set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
+
         -- insert records in agg table
-        set v_sql = concat("insert into recon_tmp_ttranagg(",v_grp_field,",",v_set_recon_field,")
-          select ",v_grp_field,",",v_process_function," from ",v_tran_table,"
+        set v_sql = concat("insert into recon_tmp_ttranagg(",v_grp_field,",",v_set_recon_field,",col128)
+          select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tran_table,"
           where 1 = 1
           ",replace(v_recon_condition,'a.',''),"
           group by ",v_grp_field,"
@@ -773,8 +798,8 @@ me:BEGIN
 
         call pr_run_sql2(v_sql,@msg,@result);
 
-        set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_grp_field,",",v_set_recon_field,")
-          select ",v_grp_field,",",v_process_function," from ",v_tranbrkp_table,"
+        set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_grp_field,",",v_set_recon_field,",col128)
+          select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tranbrkp_table,"
           where 1 = 1
           ",replace(v_recon_condition,'a.',''),"
           group by ",v_grp_field,"
@@ -800,6 +825,25 @@ me:BEGIN
 					set v_sql = concat(v_sql,'order by agg_gid ');
 
 					set @cumulative_value := 0;
+					call pr_run_sql2(v_sql,@msg,@result);
+        end if;
+
+        if v_opening_flag = 'Y' then
+          set v_field_expression = concat(fn_get_fieldnamecast(in_recon_code,v_set_recon_field),
+                               ' - cast(col128 as decimal(15,2))');
+
+          set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_field_expression,false);
+
+					set v_sql = 'update recon_tmp_ttranagg set ';
+					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_field_expression,' ');
+					set v_sql = concat(v_sql,'order by agg_gid ');
+
+					call pr_run_sql2(v_sql,@msg,@result);
+
+					set v_sql = 'update recon_tmp_ttranbrkpagg set ';
+					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_field_expression,' ');
+					set v_sql = concat(v_sql,'order by agg_gid ');
+
 					call pr_run_sql2(v_sql,@msg,@result);
         end if;
 

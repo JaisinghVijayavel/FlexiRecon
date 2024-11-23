@@ -175,7 +175,8 @@ me:begin
   elseif v_dataset_code = 'POSTMANUAL' then
     set v_sql = concat("insert into recon_trn_tmanualtranbrkp
       (
-        scheduler_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
+        scheduler_gid,recon_code,dataset_code,
+        tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode
       )
       select
         scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,tranbrkp_value,tranbrkp_acc_mode

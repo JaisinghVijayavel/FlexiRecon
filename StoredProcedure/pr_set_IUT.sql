@@ -942,15 +942,17 @@ me:begin
 				where recon_code = '",in_recon_code,"'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_cr_recon_code,"'
-        and col12 = '1'
         and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
+        and col12 = '1'
 				and col2 <> '0'
 				and col2 <> ''
         and col44 = 'Y'
-        and col22 <> 'CREDIT NOTE REFUND'
+        and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
 				and delete_flag = 'N'
 				");
+
+        -- and col12 = '1'
 
         call pr_run_sql2(v_sql,@msg,@result);
 
@@ -964,17 +966,19 @@ me:begin
 				  where recon_code = '",in_recon_code,"'
 				  and col20 = '",cast(v_uhid_no as nchar),"'
 				  and col38 = '",v_cr_recon_code,"'
-          and col12 = '1'
           and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
+          and col12 = '1'
 				  and col2 <> '0'
 				  and col2 <> ''
-          and col22 <> 'CREDIT NOTE REFUND'
+          and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
           and col44 = 'Y'
 				  and col47 is null
 				  and delete_flag = 'N'
           order by cast(col4 as date) asc
           limit 0,1
 				  ");
+
+          -- and col12 = '1'
 
           call pr_run_sql2(v_sql,@msg,@result);
 
@@ -1008,7 +1012,7 @@ me:begin
 						and col38 = '",v_dr_recon_code,"'
 						and col2 <> '0'
 						and col2 <> ''
-            and col22 <> 'CREDIT NOTE REFUND'
+            and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
             and col44 = 'Y'
 						and delete_flag = 'N'
@@ -1185,9 +1189,9 @@ me:begin
 						where recon_code = '",in_recon_code,"'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
-						and col2 <> '0'
+						and ((col2 <> '0'
 						and col2 <> ''
-						and col22 <> 'CREDIT NOTE REFUND'
+						and col22 <> 'CREDIT NOTE REFUND') or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
 						and delete_flag = 'N'
@@ -1209,13 +1213,13 @@ me:begin
 						set v_sql = concat("update ",v_tran_table," set
               col45 = '",v_dr_recon_code,"',
 							col47 = 'IUT - OP',
-              col50 = '",v_dr_loc_code,"' 
+              col50 = '",v_dr_loc_code,"'
 						where recon_code = '",in_recon_code,"'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
-						and col2 <> '0'
+						and ((col2 <> '0'
 						and col2 <> ''
-						and col22 <> 'CREDIT NOTE REFUND'
+						and col22 <> 'CREDIT NOTE REFUND') or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
 						and delete_flag = 'N'
@@ -1291,9 +1295,9 @@ me:begin
 				where recon_code = '",in_recon_code,"'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
-				and col2 <> '0'
-				and col2 <> ''
-        and col22 <> 'CREDIT NOTE REFUND'
+        and ((col2 <> '0'
+        and col2 <> ''
+        and col22 <> 'CREDIT NOTE REFUND') or col22 is null)
 				and col47 is null
         and col44 = 'Y'
 				and delete_flag = 'N'
