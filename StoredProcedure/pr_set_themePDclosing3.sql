@@ -99,11 +99,11 @@ me:begin
   -- col2 = balance_type col3 = uhid_no, col5 = ipop_no, col6 = outstanding amount
   set v_sql = concat("update recon_tmp_tuhidoutstanding as a
     inner join ",v_ds_table," as b on a.uhid_no = b.col3
-    and a.os_amount = cast(col6 as decimal(15,2))
-    and b.col1 = '",in_unit_name,"'
-    and b.col2 <> 'UHID - Deposit CB'
-    and b.col9 <> 'TALLIED'
-    and b.delete_flag = 'N'
+      and a.os_amount = cast(col6 as decimal(15,2))
+      and b.col1 = '",in_unit_name,"'
+      and b.col2 <> 'UHID - Deposit CB'
+      and b.col9 <> 'TALLIED'
+      and b.delete_flag = 'N'
     set
       b.col8 = cast(os_amount as nchar),
       b.col9 = 'TALLIED',
@@ -115,12 +115,12 @@ me:begin
   -- not tallied
   set v_sql = concat("update recon_tmp_tuhidoutstanding as a
     inner join ",v_ds_table," as b on a.uhid_no = b.col3
-    and a.os_amount <> cast(col6 as decimal(15,2))
-    and b.col1 = '",in_unit_name,"'
-    and b.col2 <> 'UHID - Deposit CB'
-    and b.col9 <> 'TALLIED'
-    and b.col9 <> 'NOT POSTED'
-    and b.delete_flag = 'N'
+      and a.os_amount <> cast(col6 as decimal(15,2))
+      and b.col1 = '",in_unit_name,"'
+      and b.col2 <> 'UHID - Deposit CB'
+      and b.col9 <> 'TALLIED'
+      and b.col9 <> 'NOT POSTED'
+      and b.delete_flag = 'N'
     set
       b.col8 = cast(os_amount as nchar),
       b.col9 = 'NOT TALLIED',
@@ -141,7 +141,8 @@ me:begin
   -- update in tran table
   set v_sql = concat("
     update ",v_tran_table," as a
-    inner join recon_tmp_ttranwithbrkp1 as b on a.tran_gid=b.tran_gid and b.tranbrkp_gid = 0
+    inner join recon_tmp_ttranwithbrkp1 as b on a.tran_gid=b.tran_gid
+      and b.tranbrkp_gid = 0
     set a.theme_code = b.balance_type
     where 1 = 1
     and b.tally_status = 'TALLIED'

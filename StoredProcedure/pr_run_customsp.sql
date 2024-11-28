@@ -27,7 +27,8 @@ begin
   from recon_mst_treportresultset
   where report_code = in_report_code
   and active_status = 'Y'
-  and delete_flag = 'N';
+  and delete_flag = 'N'
+  order by resultset_order;
 
   -- include sp name
   set v_sql = concat('call ',in_sp_name,'( ');

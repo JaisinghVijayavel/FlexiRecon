@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_set_themePDclosing2` $$
-CREATE PROCEDURE `pr_set_themePDclosing2`
+DROP PROCEDURE IF EXISTS `pr_set_themePDclosing20` $$
+CREATE PROCEDURE `pr_set_themePDclosing20`
 (
   in in_recon_code varchar(32),
   in in_dataset_code varchar(32),
@@ -57,12 +57,18 @@ me:begin
     PRIMARY KEY (uhid_no,ipop_no)
   ) ENGINE = MyISAM;
 
+  -- Recon Field
+  -- col2 - Bill No
+  -- col3 - Registration No
+  -- col4 - IP/OP No
+
   -- insert records from tran table
   set v_sql = concat("insert into recon_tmp_ttranwithbrkp1
     (tran_gid,tranbrkp_gid,bill_no,ipop_no,uhid_no,excp_value,tran_mult,unit_name)
     select tran_gid,0,col2,col4,col3,excp_value,tran_mult,'",in_unit_name,"' from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
+    and (col4 = col3 or col4 = '')
     and theme_code = ''
     and delete_flag = 'N'");
 
@@ -73,6 +79,7 @@ me:begin
     select tran_gid,tranbrkp_gid,col2,col4,col3,excp_value,tran_mult,'",in_unit_name,"' from ",v_tranbrkp_table,"
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
+    and (col4 = col3 or col4 = '')
     and tran_gid > 0
     and theme_code = ''
 

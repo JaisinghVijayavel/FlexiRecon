@@ -199,9 +199,9 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  call pr_set_themePDclosing20(in_recon_code,in_dataset_code,in_unit_name);
   call pr_set_themePDclosing2(in_recon_code,in_dataset_code,in_unit_name);
   call pr_set_themePDclosing3(in_recon_code,in_dataset_code,in_unit_name);
-
 
   call pr_set_themePDclosing7(in_recon_code,in_dataset_code,in_unit_name);
 

@@ -67,7 +67,7 @@ me:begin
   and (period_to >= curdate()
   or until_active_flag = 'Y')
   and active_status = 'Y'
-  and delete_flag = 'N'
+  and delete_flag = 'N';
 
   -- OCR mini bill no
   select col2 into v_bill_no from recon_trn_ttranbrkp

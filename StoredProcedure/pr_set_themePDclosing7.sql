@@ -26,6 +26,11 @@ me:begin
     set v_ds_table = concat(v_ds_dbname,'.',in_dataset_code);
   end if;
 
+  -- Recon Field
+  -- col2 - Bill No
+  -- col3 - Registration No
+  -- col4 - IP/OP No
+
   -- not tallied based on uhid and ip
   set v_sql = concat("update ",v_tran_table," as a
     inner join ",v_ds_table," as b on a.col3 = b.col3
@@ -61,6 +66,7 @@ me:begin
     set
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
+    and (a.col4 = a.col3 or a.col4 = '')
     and a.theme_code = ''
     and a.delete_flag = 'N'");
 
@@ -73,6 +79,7 @@ me:begin
     set
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
+    and (a.col4 = a.col3 or a.col4 = '')
     and a.theme_code = ''
     and a.delete_flag = 'N'");
 

@@ -24,6 +24,7 @@ me:begin
   declare v_recon_code text default '';
   declare v_recon_field_desc text default '';
   declare v_field_value text default '';
+  declare v_old_field_value text default '';
 
   declare v_recon_field text default '';
   declare v_recon_field_type text default '';
@@ -79,13 +80,28 @@ me:begin
           set v_field_value = concat("'",v_field_value,"'");
         end if;
 
+        set @old_field_value = '';
+
         if v_tran_gid > 0 and v_tranbrkp_gid > 0 then
+          set v_sql = concat("select ",v_recon_field," into @old_field_value from ",v_tranbrkp_table,"
+              where tran_gid = ",cast(v_tran_gid as nchar),"
+              and tranbrkp_gid = ",cast(v_tranbrkp_gid as nchar),"
+              and delete_flag = 'N'");
+
+          call pr_run_sql1(v_sql,@msg,@result);
+
           set v_sql = concat("update ",v_tranbrkp_table," set
                 ",v_recon_field," = ",v_field_value,"
               where tran_gid = ",cast(v_tran_gid as nchar),"
               and tranbrkp_gid = ",cast(v_tranbrkp_gid as nchar),"
               and delete_flag = 'N'");
         elseif v_tran_gid > 0 and v_tranbrkp_gid = 0 then
+          set v_sql = concat("select ",v_recon_field," into @old_field_value from ",v_tran_table,"
+              where tran_gid = ",cast(v_tran_gid as nchar),"
+              and delete_flag = 'N'");
+
+          call pr_run_sql1(v_sql,@msg,@result);
+
           set v_sql = concat("update ",v_tran_table," set
                 ",v_recon_field," = ",v_field_value,"
               where tran_gid = ",cast(v_tran_gid as nchar),"
@@ -98,6 +114,7 @@ me:begin
 
         -- update completed cases
         update recon_trn_tfieldupdate set
+          old_field_value = @old_field_value,
           update_status = 'C'
         where scheduler_gid = in_scheduler_gid
         and tran_gid = v_tran_gid
@@ -118,6 +135,11 @@ me:begin
 
     close updatefield_cursor;
   end updatefield_block;
+
+  insert into recon_trn_tfieldupdatepost
+    select * from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N';
 
   set out_msg = 'Success';
   set out_result = 1;

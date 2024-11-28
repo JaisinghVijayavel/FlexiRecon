@@ -25,6 +25,7 @@ me:BEGIN
   declare v_table_name text default '';
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
+  declare v_report_condition text default '';
   declare v_report_default_condition text default '';
   declare v_sorting_field text default '';
   declare v_dataset_db_name text default '';
@@ -238,11 +239,20 @@ me:BEGIN
 
     -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_dynamicreport',v_sorting_field,@msg,@result);
 
+    set v_report_condition = concat(' and job_gid = ', cast(v_job_gid as nchar) ,' ');
+
+    if v_job_gid = 0 then
+      -- add user_code for job_gid zero cases for that user selection filter purpose (vijay 28-11-2024)
+      set v_report_condition = concat(v_report_condition," and user_code = '",in_user_code,"' and rptsession_gid = 0 ");
+    end if;
+
+    set v_report_condition = concat(v_report_condition,' ',v_sorting_field,' ');
+
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,
                            v_report_code,
                            v_table_name,
-                           concat(' and job_gid = ', cast(v_job_gid as nchar) ,' ',v_sorting_field),
+                           v_report_condition,
                            v_job_gid,
                            in_outputfile_flag,
                            in_outputfile_type,
@@ -290,7 +300,9 @@ me:BEGIN
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
   set out_result = v_job_gid;
 
-  select out_result as result, out_msg as msg;
+  if in_outputfile_flag = true then
+    select out_result as result, out_msg as msg;
+  end if;
 end $$
 
 DELIMITER ;

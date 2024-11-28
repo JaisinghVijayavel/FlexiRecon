@@ -201,6 +201,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'concat(theme_code,',char(39),',',char(39),',');
         set v_sql = concat(v_sql,char(39),v_theme_desc,char(39),'))) ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+        set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql, v_theme_filter);
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
