@@ -17,6 +17,8 @@ me:BEGIN
   declare v_recon_code text default '';
   declare v_report_code text default '';
   declare v_recon_code_field text default '';
+  declare v_recon_flag text default '';
+  declare v_multi_recon_flag text default '';
   declare v_table_name text default '';
   declare v_condition text default '';
   declare v_start_rec_no int default 0;
@@ -75,16 +77,22 @@ me:BEGIN
 	select
 		report_exec_type,
     recon_code_field,
-		table_name
+		table_name,
+    recon_flag,
+    multi_recon_flag
 	into
 		v_report_exec_type,
     v_recon_code_field,
-		v_table_name
+		v_table_name,
+    v_recon_flag,
+    v_multi_recon_flag
 	from recon_mst_treport
 	where report_code = in_report_code
 	and delete_flag = 'N';
 
   set v_condition = ifnull(v_condition,'');
+  set v_recon_flag = ifnull(v_recon_flag,'N');
+  set v_multi_recon_flag = ifnull(v_multi_recon_flag,'N');
 
   -- session
   if exists(select rptsession_gid from recon_trn_treportsession
@@ -166,7 +174,7 @@ me:BEGIN
   else
     set v_condition = ifnull(in_condition,'');
 
-    if v_recon_code_field <> '' then
+    if v_recon_code_field <> '' and v_recon_flag = 'Y' and v_multi_recon_flag = 'N' then
       set v_condition = concat(' and ',v_recon_code_field,' = ',char(34),v_recon_code,char(34),' ', v_condition);
     end if;
   end if;

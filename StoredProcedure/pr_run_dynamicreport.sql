@@ -25,6 +25,7 @@ me:BEGIN
   declare v_table_name text default '';
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
+  declare v_multi_recon_flag text default '';
   declare v_report_condition text default '';
   declare v_report_default_condition text default '';
   declare v_sorting_field text default '';
@@ -103,7 +104,8 @@ me:BEGIN
       table_name,
       recon_code_field,
       default_condition,
-      recon_flag
+      recon_flag,
+      multi_recon_flag
     into
       v_report_desc,
       v_report_exec_type,
@@ -111,7 +113,8 @@ me:BEGIN
       v_table_name,
       v_recon_code_field,
       v_report_default_condition,
-      v_recon_flag
+      v_recon_flag,
+      v_multi_recon_flag
     from recon_mst_treport
     where report_code = v_report_code
     and delete_flag = 'N';
@@ -128,10 +131,12 @@ me:BEGIN
   set v_table_name = ifnull(v_table_name,'');
   set v_recon_code_field = ifnull(v_recon_code_field,'recon_code');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
+  set v_recon_flag = ifnull(v_recon_flag,'N');
+  set v_multi_recon_flag = ifnull(v_multi_recon_flag,'N');
 
   set in_report_condition = ifnull(in_report_condition,'');
 
-  if v_recon_code <> '' and v_recon_flag = 'Y' then
+  if v_recon_code <> '' and v_recon_flag = 'Y' and v_multi_recon_flag = 'N' then
     set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(39),v_recon_code,char(39),' ', in_report_condition);
   end if;
 
@@ -217,7 +222,7 @@ me:BEGIN
     call pr_ins_job(v_recon_code,'R',0,v_report_desc,in_report_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
 
     update recon_trn_tjob set
-      file_type = in_outputfile_type 
+      file_type = in_outputfile_type
     where job_gid = v_job_gid
     and delete_flag = 'N';
   end if;

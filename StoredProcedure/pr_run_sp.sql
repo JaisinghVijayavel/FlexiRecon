@@ -37,6 +37,16 @@ begin
     call pr_run_errorlogreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_accbalreport' then
     call pr_run_accbalreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_pdtranreport' then
+    call pr_run_pdtranreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_pdtranbrkpreport' then
+    call pr_run_pdtranbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_pdtranwithbrkpreport' then
+    call pr_run_pdtranwithbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_pdtranwithbrkpexcprpt' then
+    call pr_run_pdtranwithbrkpexcprpt(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_pdkoreport' then
+    call pr_run_pdkoreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   end if;
 
   set out_msg = @msg;

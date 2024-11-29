@@ -120,8 +120,10 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and split(col2,'-',2) = '",v_bill_type,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
+      */
       and delete_flag = 'N'");
 
     call pr_run_sql(v_sql,@msg,@result);
@@ -178,8 +180,10 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and split(col2,'-',2) = '",v_bill_type,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
+      */
       and delete_flag = 'N'");
 
     call pr_run_sql(v_sql,@msg,@result);
@@ -225,8 +229,10 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and split(col2,'-',2) = '",v_bill_type,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
+      */
       and delete_flag = 'N'");
 
     call pr_run_sql(v_sql,@msg,@result);
@@ -283,8 +289,10 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and split(col2,'-',2) = '",v_bill_type,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
+      */
       and delete_flag = 'N'");
 
     call pr_run_sql(v_sql,@msg,@result);

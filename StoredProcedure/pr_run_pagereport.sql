@@ -25,6 +25,8 @@ me:BEGIN
   declare v_src_table_name text default '';
   declare v_sql text default '';
   declare v_recon_code_field text default '';
+  declare v_recon_flag text default '';
+  declare v_multi_recon_flag text default '';
   declare v_report_default_condition text default '';
   declare v_sorting_order text default '';
   declare v_dataset_db_name text default '';
@@ -89,7 +91,9 @@ me:BEGIN
       src_table_name,
       sp_name,
       recon_code_field,
-      default_condition
+      default_condition,
+      recon_flag,
+      multi_recon_flag
     into
       v_report_code,
       v_report_desc,
@@ -98,7 +102,9 @@ me:BEGIN
       v_src_table_name,
       v_sp_name,
       v_recon_code_field,
-      v_report_default_condition
+      v_report_default_condition,
+      v_recon_flag,
+      v_multi_recon_flag
     from recon_mst_treport
     where report_code = v_report_code
     and delete_flag = 'N';
@@ -118,6 +124,9 @@ me:BEGIN
   set v_recon_code_field = ifnull(v_recon_code_field,'');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
 
+  set v_recon_flag = ifnull(v_recon_flag,'N');
+  set v_multi_recon_flag = ifnull(v_multi_recon_flag,'N');
+
   if v_table_name = '' and v_report_exec_type <> 'D' then
     set out_msg = 'Invalid table name';
     set out_result = 0;
@@ -127,7 +136,7 @@ me:BEGIN
 
   set in_report_condition = ifnull(in_report_condition,'');
 
-  if v_recon_code_field <> '' then
+  if v_recon_code_field <> '' and v_recon_flag = 'Y' and v_multi_recon_flag = 'N' then
     set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(34),v_recon_code,char(34),' ', in_report_condition);
   end if;
 
