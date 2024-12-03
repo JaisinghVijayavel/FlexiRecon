@@ -189,6 +189,7 @@ me:BEGIN
     set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
   end if;
 
+  /*
   -- blank the theme code
 	set v_sql = 'update $TABLENAME$ set ';
 	set v_sql = concat(v_sql,'theme_code = '''' ');
@@ -198,6 +199,7 @@ me:BEGIN
 
 	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
 	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+  */
 
   -- preprocess
   call pr_run_preprocess(in_recon_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
@@ -619,6 +621,18 @@ me:BEGIN
   if in_automatch_flag = 'Y' then
     -- postprocess
     -- call pr_run_preprocess(in_recon_code,v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+
+    -- blank the theme code
+	  set v_sql = 'update $TABLENAME$ set ';
+	  set v_sql = concat(v_sql,'theme_code = '''' ');
+	  set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+	  set v_sql = concat(v_sql,v_recon_date_condition);
+	  set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+	  call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
+	  call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+    -- set theme
     call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
 
     call pr_run_dynamicreport('',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',in_ip_addr,in_user_code,@msg,@result);

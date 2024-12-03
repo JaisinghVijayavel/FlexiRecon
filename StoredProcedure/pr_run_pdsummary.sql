@@ -52,7 +52,7 @@ me:BEGIN
 
 	-- KO formatted
 	call pr_run_dynamicreport(v_reporttemplate_code_ko, in_recon_code,v_report_code_ko,
-        in_recon_code, "AND  a.ko_gid > '0'  ", false, '', '', in_user_code, @out_msg, @out_result);
+        in_recon_code, "AND  a.ko_gid > '0' ", false, '', '', in_user_code, @out_msg, @out_result);
 
 	-- pd closing balance v_closing_balance_conditon by filtering based on PD location
   select fn_get_configvalue('dataset_db_name')into v_dataset_db_name;
@@ -91,11 +91,11 @@ me:BEGIN
     v_closingbalance_table_name from recon_mst_trecondataset T1,recon_mst_tdataset T2
 	where T1.recon_code=in_recon_code
 	and T1.dataset_code=T2.dataset_code
-  and T2.dataset_name like 'PD Recon - Closing Balance%'
+  and (T2.dataset_name like 'PD Recon - Closing Balance%' or T2.dataset_name like 'Closing Balance%')
   and T1.active_status='Y'
   and T1.delete_flag='N'
   and T2.active_status='Y'
-  and T2.delete_flag='N';
+  and T2.delete_flag='N' limit 1;
 
   /*
 	if v_dataset_db_name !='' then
