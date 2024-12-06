@@ -61,7 +61,7 @@ me:BEGIN
       and (t.display_flag = 'Y' or f.display_flag = 'Y')
       -- and (t.display_flag = 'Y' or (f.display_flag = 'Y' and f.recon_field_name like 'col%'))
       and t.delete_flag = 'N'
-      order by if(ifnull(f.display_order,999)>t.display_order,t.display_order,f.display_order);
+      order by if(ifnull(f.display_order,999)>t.display_order,if(t.display_order = 0,999,t.display_order),f.display_order);
       -- order by if(t.field_name like 'col%',ifnull(f.display_order,128),t.display_order);
 
     set v_table_stru_flag := true;

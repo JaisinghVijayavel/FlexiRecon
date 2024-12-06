@@ -232,8 +232,6 @@ me:BEGIN
         set v_process_method = 'C';
       elseif v_process_method = 'QCD_AGGEXP' then
         set v_process_method = 'A';
-      else
-        set v_process_method = '';
       end if;
 
       if in_postprocess_flag = 'Y' then
@@ -781,33 +779,53 @@ me:BEGIN
 				create index idx_recon_code on recon_tmp_ttranbrkpagg(recon_code);
 				create index idx_dataset_code on recon_tmp_ttranbrkpagg(recon_code,dataset_code);
 
-        -- create index
-        set v_sql = concat("create index idx_grp_field on recon_tmp_ttranagg(",v_idx_grp_field,")");
-        call pr_run_sql2(v_sql,@msg,@result);
-
-        set v_sql = concat("create index idx_grp_field on recon_tmp_ttranbrkpagg(",v_idx_grp_field,")");
-        call pr_run_sql2(v_sql,@msg,@result);
-
         set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
 
-        -- insert records in agg table
-        set v_sql = concat("insert into recon_tmp_ttranagg(",v_grp_field,",",v_set_recon_field,",col128)
-          select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tran_table,"
-          where 1 = 1
-          ",replace(v_recon_condition,'a.',''),"
-          group by ",v_grp_field,"
-          ");
+        -- create index
+        if v_idx_grp_field <> '' then
+          set v_sql = concat("create index idx_grp_field on recon_tmp_ttranagg(",v_idx_grp_field,")");
+          call pr_run_sql2(v_sql,@msg,@result);
 
-        call pr_run_sql2(v_sql,@msg,@result);
+          set v_sql = concat("create index idx_grp_field on recon_tmp_ttranbrkpagg(",v_idx_grp_field,")");
+          call pr_run_sql2(v_sql,@msg,@result);
 
-        set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_grp_field,",",v_set_recon_field,",col128)
-          select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tranbrkp_table,"
-          where 1 = 1
-          ",replace(v_recon_condition,'a.',''),"
-          group by ",v_grp_field,"
-          ");
+          -- insert records in agg table
+          set v_sql = concat("insert into recon_tmp_ttranagg(",v_grp_field,",",v_set_recon_field,",col128)
+            select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tran_table,"
+            where 1 = 1
+            ",replace(v_recon_condition,'a.',''),"
+            group by ",v_grp_field,"
+            ");
 
-        call pr_run_sql2(v_sql,@msg,@result);
+          call pr_run_sql2(v_sql,@msg,@result);
+
+          set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_grp_field,",",v_set_recon_field,",col128)
+            select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tranbrkp_table,"
+            where 1 = 1
+            ",replace(v_recon_condition,'a.',''),"
+            group by ",v_grp_field,"
+            ");
+
+          call pr_run_sql2(v_sql,@msg,@result);
+        else
+          -- insert records in agg table
+          set v_sql = concat("insert into recon_tmp_ttranagg(",v_set_recon_field,",col128)
+            select ",v_process_function,",",v_field_expression," from ",v_tran_table,"
+            where 1 = 1
+            ",replace(v_recon_condition,'a.',''),"
+            ");
+
+          call pr_run_sql2(v_sql,@msg,@result);
+
+          set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_set_recon_field,",col128)
+            select ",v_process_function,",",v_field_expression," from ",v_tranbrkp_table,"
+            where 1 = 1
+            ",replace(v_recon_condition,'a.',''),"
+            ");
+
+          call pr_run_sql2(v_sql,@msg,@result);
+        end if;
+
 
         if v_cumulative_flag = 'Y' then
           set v_cumulative_expression = fn_get_expressionformat(in_recon_code,
@@ -920,6 +938,16 @@ me:BEGIN
         end if;
 
         set @base_count = 0;
+      elseif v_process_method = 'QCD_COMPARISONEXP' then
+        call pr_run_preprocess_comparison(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          @msg1,
+                                          @result1);
       end if;
     end loop process_loop;
 

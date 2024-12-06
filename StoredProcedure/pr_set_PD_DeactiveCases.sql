@@ -20,7 +20,7 @@ begin
       set delete_flag = 'N'
       where recon_code = '",in_recon_code,"'
       and tran_gid = 0
-      and col11 = 'DEACTIVE'
+      and col11 in ('DEACTIVE','')
       and delete_flag = 'V'");
 
     set @sql = v_sql;
@@ -34,7 +34,7 @@ begin
       set delete_flag = 'V'
       where recon_code = '",in_recon_code,"'
       and tran_gid = 0
-      and col11 = 'DEACTIVE'
+      and col11 in ('DEACTIVE','')
       and delete_flag = 'N'");
 
     set @sql = v_sql;

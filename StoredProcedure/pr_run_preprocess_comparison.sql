@@ -5,8 +5,8 @@ CREATE PROCEDURE `pr_run_preprocess_comparison`
 (
   in in_recon_code text,
   in in_preprocess_code text,
-  in in_postprocess_flag text,
   in in_job_gid int,
+  in in_postprocess_flag text,
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
