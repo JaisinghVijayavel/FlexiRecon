@@ -22,6 +22,7 @@ me:BEGIN
   declare v_process_query text default '';
   declare v_process_function text default '';
   declare v_process_expression text default '';
+  declare v_recorderby_type text default '';
 
   declare v_dataset_db_name text default '';
   declare v_table_name text default '';
@@ -166,7 +167,8 @@ me:BEGIN
         lookup_return_field,
         lookup_group_flag,
         lookup_multi_return_flag,
-        lookup_agg_return_function
+        lookup_agg_return_function,
+        recorderby_type
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
       and postprocess_flag = in_postprocess_flag
@@ -194,7 +196,8 @@ me:BEGIN
         v_lookup_return_field,
         v_lookup_group_flag,
         v_lookup_multi_return_flag,
-        v_lookup_agg_return_function;
+        v_lookup_agg_return_function,
+        v_recorderby_type;
 
       if process_done = 1 then leave process_loop; end if;
 
@@ -213,6 +216,7 @@ me:BEGIN
       set v_lookup_group_flag = ifnull(v_lookup_group_flag,'N');
       set v_lookup_multi_return_flag = ifnull(v_lookup_multi_return_flag,'N');
       set v_lookup_agg_return_function = ifnull(v_lookup_agg_return_function,'');
+      set v_recorderby_type = ifnull(v_recorderby_type,'asc');
 
       if v_dataset_db_name <> '' then
         set v_lookup_dataset_code = concat(v_dataset_db_name,'.',v_lookup_dataset_code);
@@ -656,7 +660,9 @@ me:BEGIN
         end if;
 
         if v_orderby_field <> '' then
-          set v_orderby_field = concat('order by ',v_orderby_field);
+          set v_orderby_field = concat('order by ',v_orderby_field,',');
+        else
+          set v_orderby_field = 'order by ';
         end if;
 
         set v_sql = 'update $TABLENAME$ set ';
@@ -668,10 +674,10 @@ me:BEGIN
         set v_sql = concat(v_sql,v_orderby_field,' ');
 
         set @cumulative_value := 0;
-        call pr_run_sql(replace(concat(v_sql,',tran_gid'),'$TABLENAME$',v_tran_table),@msg,@result);
+        call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
 
         set @cumulative_value := 0;
-        call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid'),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
 
         if v_opening_flag = 'Y' then
           set v_field_expression = concat(fn_get_fieldnamecast(in_recon_code,v_set_recon_field),'-',
@@ -687,8 +693,8 @@ me:BEGIN
           set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
           set v_sql = concat(v_sql,v_orderby_field,' ');
 
-          call pr_run_sql(replace(concat(v_sql,',tran_gid'),'$TABLENAME$',v_tran_table),@msg,@result);
-          call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid'),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          call pr_run_sql(replace(concat(v_sql,',tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
+          call pr_run_sql(replace(concat(v_sql,',tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
         end if;
       elseif v_process_method = 'A' then
         set v_aggjoin_condition = ' 1 = 1 ';

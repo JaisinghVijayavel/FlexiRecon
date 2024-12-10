@@ -40,7 +40,7 @@ me:begin
     set
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
-    and a.theme_code = ''
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund')
     and a.delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -53,7 +53,7 @@ me:begin
     set
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
-    and a.theme_code = ''
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund')
     and a.delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -67,7 +67,7 @@ me:begin
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
     and (a.col4 = a.col3 or a.col4 = '')
-    and a.theme_code = ''
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund')
     and a.delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -80,7 +80,7 @@ me:begin
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
     and (a.col4 = a.col3 or a.col4 = '')
-    and a.theme_code = ''
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund') 
     and a.delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);

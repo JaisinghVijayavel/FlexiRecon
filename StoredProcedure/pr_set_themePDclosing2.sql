@@ -63,7 +63,7 @@ me:begin
     select tran_gid,0,col2,col4,col3,excp_value,tran_mult,'",in_unit_name,"' from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
-    and theme_code = ''
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund')
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -74,7 +74,7 @@ me:begin
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
     and tran_gid > 0
-    and theme_code = ''
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund')
 
     /*
     and col1 <> 'DIGITAL  TESTING'
@@ -146,7 +146,7 @@ me:begin
     set a.theme_code = b.balance_type
     where 1 = 1
     and b.tally_status = 'TALLIED'
-    and a.theme_code = ''");
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund') ");
 
   call pr_run_sql(v_sql,@msg,@result);
 
@@ -158,7 +158,7 @@ me:begin
     set a.theme_code = b.balance_type
     where 1 = 1
     and b.tally_status = 'TALLIED'
-    and a.theme_code = ''");
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund') ");
 
   call pr_run_sql(v_sql,@msg,@result);
 

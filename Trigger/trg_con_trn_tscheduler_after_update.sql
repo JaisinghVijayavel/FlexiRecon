@@ -21,7 +21,22 @@ begin
     and job_ref_gid = New.scheduler_gid
     and delete_flag = 'N' limit 0,1;
 
-    call pr_upd_job(@job_gid,'F','Failed in connector',@msg1,@result1);
+    set @job_gid = ifnull(@job_gid,0);
+
+    if @job_gid > 0 then
+      call pr_upd_job(@job_gid,'F','Failed in connector',@msg1,@result1);
+    else
+      -- insert into scheduler as failed one
+		  insert ignore into recon_trn_tscheduler
+		  (
+			  scheduler_gid,scheduler_status,insert_by,insert_date
+		  )
+		  select New.scheduler_gid,'F',New.scheduler_initiated_by,sysdate();
+
+      -- insert as failed job
+      call pr_ins_job('','S',New.scheduler_gid,concat('Processing Scheduler ',ifnull(New.file_name,'')),'',
+        New.scheduler_initiated_by,'','F','Failed',@job_gid,@msg,@result);
+    end if;
   else
     if exists (select scheduler_gid from recon_trn_tscheduler
       where scheduler_gid = New.scheduler_gid

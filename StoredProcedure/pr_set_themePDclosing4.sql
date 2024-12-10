@@ -72,7 +72,7 @@ me:begin
     and tran_gid = 0
     and col4 <> ''
     and col3 <> ''
-    and theme_code = ''
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund')
 
     /*
     and col1 <> 'DIGITAL  TESTING'
@@ -110,7 +110,7 @@ me:begin
     and excp_value <> 0
     and tran_gid > 0
     and (col3,col4) in (select uhid_no,ipop_no from recon_tmp_tnotposted)
-    and theme_code = '' 
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund') 
 
     /*
     and col1 <> 'DIGITAL  TESTING'
