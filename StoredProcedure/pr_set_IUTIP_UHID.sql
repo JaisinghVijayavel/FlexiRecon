@@ -1,11 +1,10 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS pr_set_IUTIP $$
-CREATE PROCEDURE pr_set_IUTIP(in_recon_code varchar(32))
+DROP PROCEDURE IF EXISTS pr_set_IUTIP_UHID $$
+CREATE PROCEDURE pr_set_IUTIP_UHID(in_recon_code varchar(32))
 me:begin
   declare v_tran_gid int default 0;
   declare v_uhid_no text default '';
-  declare v_ip_no text default '';
   declare v_dr_amount decimal(15,2) default 0;
   declare v_cr_amount decimal(15,2) default 0;
   declare v_recon_code text default '';
@@ -28,9 +27,6 @@ me:begin
   declare v_transfer_table text default '';
   declare v_tranbrkp_ds_code text default '';
   declare v_ds_code text default '';
-  declare v_ipiud_code text default '';
-  declare v_ipiud_amount decimal(15,2) default 0;
-  declare v_ip_theme text default '';
 
   declare v_ref_no text default '';
 
@@ -40,10 +36,8 @@ me:begin
 
   set v_tran_table = 'recon_trn_ttran';
   set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-
   set v_ds_code = 'DS274';
   set v_tranbrkp_ds_code = 'DS277';
-  set v_ipiud_code = 'DS269';
 
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
@@ -51,7 +45,6 @@ me:begin
     set v_transfer_table = 'recon_trn_tiutentry';
   else
     set v_transfer_table = concat(v_dataset_db_name,'.recon_trn_tiutentry');
-    set v_ipiud_code = concat(v_dataset_db_name,'.',v_ipiud_code);
   end if;
 
   drop temporary table if exists recon_tmp_tuhid;
@@ -114,24 +107,22 @@ me:begin
   -- unid cr table
   CREATE temporary TABLE recon_tmp_tuhidcr1(
     uhid_no varchar(255),
-    ip_no varchar(255),
     recon_code varchar(32),
     loc_code varchar(32),
     tran_date date,
     cr_amount double(15,2) not null default 0,
     min_tran_gid int not null default 0,
-    PRIMARY KEY (uhid_no,ip_no,recon_code)
+    PRIMARY KEY (uhid_no,recon_code)
   ) ENGINE = MyISAM;
 
   -- unid dr table
   CREATE temporary TABLE recon_tmp_tuhiddr1(
     uhid_no varchar(255),
-    ip_no varchar(255),
     recon_code varchar(32),
     loc_code varchar(32),
     dr_amount double(15,2) not null default 0,
     min_tran_gid int not null default 0,
-    PRIMARY KEY (uhid_no,ip_no,recon_code)
+    PRIMARY KEY (uhid_no,recon_code)
   ) ENGINE = MyISAM;
 
   -- unid table
@@ -241,7 +232,6 @@ me:begin
   -- col38 - Recon Code
   -- col44 - UHID Multi Location Flag
   -- col47 - IUT IP/OP
-  -- col52 - IP Flag
 
   -- update UHID involved in multiple location
   set v_sql = concat("insert into recon_tmp_tuhid (uhid_no)
@@ -322,7 +312,6 @@ me:begin
   -- col4 - Tran Date
   -- col9 - Exception Value
   -- col12 - Mult
-  -- col13 - Theme
   -- col19 - Bill No
   -- col20 - uhid
   -- col38 - Recon Code
@@ -338,10 +327,9 @@ me:begin
   -- col22 - Event
 
   -- find agg negative values uhid wise
-  set v_sql = concat("insert into recon_tmp_tuhiddr1 (uhid_no,ip_no,recon_code,loc_code,dr_amount)
+  set v_sql = concat("insert into recon_tmp_tuhiddr1 (uhid_no,recon_code,loc_code,dr_amount)
     select
       col20,
-      col21,
       col38,
       col43,
       sum(cast(col9 as decimal(15,2))*cast(col12 as signed))
@@ -350,34 +338,30 @@ me:begin
     and col13 <> 'Current Period Bills not interfaced'
     and col20 <> ''
     and col20 <> 'AC01.0005284627'
-    and col21 <> ''
-    and col21 <> col20
     and col38 <> ''
     and col44 = 'Y'
     and col47 is null
     and col52 = 'Y'
     and delete_flag = 'N'
-    group by col20,col21,col38,col43
+    group by col20,col38,col43
     having sum(cast(col9 as decimal(15,2))*cast(col12 as signed)) < 0
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- calculate uhid cr unit wise
-  set v_sql = concat("insert into recon_tmp_tuhidcr1 (uhid_no,ip_no,recon_code,loc_code,cr_amount,min_tran_gid)
-    select col20,col21,col38,col43,sum(cast(col9 as decimal(15,2))*cast(col12 as signed)),min(tran_gid) from ",v_tran_table,"
+  set v_sql = concat("insert into recon_tmp_tuhidcr1 (uhid_no,recon_code,loc_code,cr_amount,min_tran_gid)
+    select col20,col38,col43,sum(cast(col9 as decimal(15,2))*cast(col12 as signed)),min(tran_gid) from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and col13 <> 'Current Period Bills not interfaced'
     and col20 <> ''
     and col20 <> 'AC01.0005284627'
-    and col21 <> ''
-    and col21 <> col20
     and col38 <> ''
     and col44 = 'Y'
     and col47 is null
     and col52 = 'Y'
     and delete_flag = 'N'
-    group by col20,col21,col38,col43
+    group by col20,col38,col43
     having sum(cast(col9 as decimal(15,2))*cast(col12 as signed)) > 0
     ");
 
@@ -387,32 +371,18 @@ me:begin
 	dr3_block:begin
 		declare dr3_done int default 0;
 		declare dr3_cursor cursor for
-		  select uhid_no,ip_no,dr_amount,recon_code,loc_code from recon_tmp_tuhiddr1;
+		  select uhid_no,dr_amount,recon_code,loc_code from recon_tmp_tuhiddr1;
 		declare continue handler for not found set dr3_done=1;
 
 		open dr3_cursor;
 
 		dr3_loop: loop
-			fetch dr3_cursor into v_uhid_no,v_ip_no,v_dr_amount,v_dr_recon_code,v_dr_loc_code;
+			fetch dr3_cursor into v_uhid_no,v_dr_amount,v_dr_recon_code,v_dr_loc_code;
 
 			if dr3_done = 1 then leave dr3_loop; end if;
 
       set v_dr_amount = abs(v_dr_amount);
       set v_succ_flag = false;
-
-      -- chk in IP IUD Dump
-			set v_sql = concat("select
-					cast(col12 as decimal(15,2))
-				into
-					@tran_amount
-				from ",v_ipiud_code,"
-				where col7 = '",v_uhid_no,"'
-				and col9 = '",v_ip_no,"'
-				and delete_flag = 'N' limit 1");
-
-			call pr_run_sql2(v_sql,@msg,@result);
-
-			set v_ipiud_amount = ifnull(@tran_amount,0);
 
       if exists(select * from recon_tmp_tuhidcr1
         where uhid_no = v_uhid_no
@@ -420,12 +390,9 @@ me:begin
         and cr_amount = v_dr_amount) then
 
         select
-          recon_code,loc_code,min_tran_gid
-        into
-          v_cr_recon_code,v_cr_loc_code,v_tran_cr_gid
+          recon_code,loc_code,min_tran_gid into v_cr_recon_code,v_cr_loc_code,v_tran_cr_gid
         from recon_tmp_tuhidcr1
         where uhid_no = v_uhid_no
-        and ip_no = v_ip_no
         and recon_code <> v_dr_recon_code
         and cr_amount = v_dr_amount
         limit 0,1;
@@ -442,7 +409,6 @@ me:begin
 				where recon_code = '",in_recon_code,"'
         and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",cast(v_uhid_no as nchar),"'
-				and col21 = '",cast(v_ip_no as nchar),"'
 				and col38 = '",v_cr_recon_code,"'
 				and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
@@ -463,7 +429,6 @@ me:begin
 				where recon_code = '",in_recon_code,"'
         and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",cast(v_uhid_no as nchar),"'
-				and col21 = '",cast(v_ip_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
 				and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
@@ -606,24 +571,15 @@ me:begin
       -- dr breakup
       if exists(select * from recon_tmp_tuhidcr1
         where uhid_no = v_uhid_no
-        and ip_no = v_ip_no
         and recon_code <> v_dr_recon_code
         and cr_amount >= v_dr_amount) and v_succ_flag = false then
 
         set v_ref_no = fn_get_autocode('IUT');
 
-        -- chk in IP IUD Dump
-        if v_ipiud_amount > 0 then
-          set v_dr_amount = v_ipiud_amount;
-        end if;
-
         select
-          recon_code,loc_code,cr_amount,min_tran_gid
-        into
-          v_cr_recon_code,v_cr_loc_code,v_cr_amount,v_tran_cr_min_gid
+          recon_code,loc_code,cr_amount,min_tran_gid into v_cr_recon_code,v_cr_loc_code,v_cr_amount,v_tran_cr_min_gid
         from recon_tmp_tuhidcr1
         where uhid_no = v_uhid_no
-        and ip_no = v_ip_no
         and recon_code <> v_dr_recon_code
         and cr_amount >= v_dr_amount
         order by cr_amount
@@ -650,7 +606,6 @@ me:begin
 						where recon_code = '",in_recon_code,"'
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
-						and col21 = '",cast(v_ip_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
 						and col2 <> '0'
 						and col2 <> ''
@@ -679,7 +634,6 @@ me:begin
 						where recon_code = '",in_recon_code,"'
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
-						and col21 = '",cast(v_ip_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
 						and col2 <> '0'
 						and col2 <> ''
@@ -770,7 +724,6 @@ me:begin
 				where recon_code = '",in_recon_code,"'
         and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",cast(v_uhid_no as nchar),"'
-        and col21 = '",cast(v_ip_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
         and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
@@ -896,11 +849,11 @@ me:begin
 		close dr3_cursor;
 	end dr3_block;
 
-  /*
   -- update IUT - IP based on IP Flag = 'Y'
   set v_sql = concat("update ",v_tran_table," as a
     set a.col47 = 'IUT - IP'
     where a.recon_code = '",in_recon_code,"'
+    and a.col13 <> 'Current Period Bills not interfaced'
     and a.col20 <> a.col21
     and a.col47 is null
     and a.col52 = 'Y'
@@ -908,7 +861,6 @@ me:begin
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
-  */
 
   drop temporary table if exists recon_tmp_tgid1;
   drop temporary table if exists recon_tmp_tuhiddr;

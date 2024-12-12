@@ -54,6 +54,7 @@ me:BEGIN
   declare v_lookup_agg_return_function text default '';
   declare v_lookup_update_fields text default '';
   declare v_lookup_filter text default '';
+  declare v_reverse_update_flag text default '';
 
   declare v_filter_applied_on text default '';
   declare v_filter_field text default '';
@@ -369,7 +370,8 @@ me:BEGIN
 						declare updfield_cursor cursor for
 							select
 								set_recon_field,
-								lookup_return_field
+								lookup_return_field,
+                reverse_update_flag
 							from recon_mst_tpreprocesslookup
 							where preprocess_code = v_preprocess_code
 							and active_status = 'Y'
@@ -381,15 +383,21 @@ me:BEGIN
 						open updfield_cursor;
 
 						updfield_loop: loop
-							fetch updfield_cursor into v_set_recon_field,v_lookup_return_field;
+							fetch updfield_cursor into v_set_recon_field,v_lookup_return_field,v_reverse_update_flag;
 
 							if updfield_done = 1 then leave updfield_loop; end if;
 
 							set v_set_recon_field = ifnull(v_set_recon_field,'');
 							set v_lookup_return_field = ifnull(v_lookup_return_field,'');
+							set v_reverse_update_flag = ifnull(v_reverse_update_flag,'N');
 
 							if v_set_recon_field <> '' and v_lookup_return_field <> '' then
-								set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field);
+                if v_reverse_update_flag = 'Y' then
+                  -- update lookup dataset field
+								  set v_lookup_update_fields = concat(v_lookup_update_fields,',b.',v_lookup_return_field,'=a.',v_set_recon_field);
+                else
+								  set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field);
+                end if;
 							end if;
 						end loop updfield_loop;
 

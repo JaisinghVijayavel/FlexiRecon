@@ -157,8 +157,9 @@ me:begin
   -- col50 - IUT Loc Code
   -- col9 - Exception Value
   -- col12 - Dr/Cr Mult
+  -- col13 - Theme
 
-
+  /*
   set v_sql = concat("update ",v_tran_table," set
     col44 = 'Y',
     col46 = col37,
@@ -171,7 +172,6 @@ me:begin
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
-
 
   -- get the credits
 	set v_sql = concat(" insert into recon_tmp_tuhidcr
@@ -278,7 +278,8 @@ me:begin
 								col47,
 								col48,
 								col50,
-								col51
+								col51,
+                col13
               )
               select
                 1,
@@ -306,7 +307,8 @@ me:begin
 								'IUT - IP',
 								col48,
 								'",v_cr_loc_code,"',
-								'",v_ref_no,"'
+								'",v_ref_no,"',
+                'UHID - Deposit CB'
             from ",v_tran_table,"
             where tran_gid = ",cast(v_tran_dr_gid as nchar),"
             and delete_flag = 'N'
@@ -471,6 +473,7 @@ me:begin
     ");
 
 	call pr_run_sql2(v_sql,@msg,@result);
+  */
 
   /*
   set v_sql = concat("insert into ",v_transfer_table,"
@@ -507,6 +510,7 @@ me:begin
     select col20 from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and col42 is null
+    and col13 <> 'Current Period Bills not interfaced'
     and col20 <> ''
     and col20 <> 'AC01.0005284627'
     and col22 <> 'CREDIT NOTE REFUND'
@@ -528,6 +532,7 @@ me:begin
     inner join recon_tmp_tuhid as b on  a.col20 = b.uhid_no
     where a.recon_code = '",in_recon_code,"'
     and a.col42 is null
+    and a.col13 <> 'Current Period Bills not interfaced'
     and a.col20 <> ''
     and a.col20 <> 'AC01.0005284627'
     and a.col38 <> ''
@@ -550,6 +555,7 @@ me:begin
       set a.col44 = 'Y'
     where a.recon_code = '",in_recon_code,"'
     and a.col42 is null
+    and a.col13 <> 'Current Period Bills not interfaced'
     and a.col20 <> ''
     and a.col20 <> 'AC01.0005284627'
     and a.col38 <> ''
@@ -584,6 +590,7 @@ me:begin
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and col12 = '-1'
+    and col13 <> 'Current Period Bills not interfaced'
     and col20 <> ''
     and col20 <> 'AC01.0005284627'
     and col22 = 'REFUND'
@@ -617,6 +624,7 @@ me:begin
 				from ",v_tran_table,"
 				where recon_code = '",in_recon_code,"'
 				and col12 = '1'
+        and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",v_uhid_no,"'
 				and col38 <> '",v_dr_recon_code,"'
         and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
@@ -645,6 +653,7 @@ me:begin
 					from ",v_tran_table,"
 					where recon_code = '",in_recon_code,"'
 					and col12 = '1'
+          and col13 <> 'Current Period Bills not interfaced'
 					and col20 = '",v_uhid_no,"'
 					and col38 <> '",v_dr_recon_code,"'
 					and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
@@ -862,8 +871,10 @@ me:begin
   -- col41 - IUT Entry Flag
   -- col42 - IUT Location
   -- col44 - UHID Multi Location Flag
+  -- col43 - Location Code
   -- col45 - IUT recon_code
   -- col46 - IUT amount
+  -- col47 - IUT IP/OP
 
   -- col23 - PayMode
   -- col22 - Event
@@ -877,6 +888,7 @@ me:begin
       sum(cast(col9 as decimal(15,2))*cast(col12 as signed))
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
+    and col13 <> 'Current Period Bills not interfaced'
     and col20 <> ''
     and col20 <> 'AC01.0005284627'
     and col38 <> ''
@@ -893,6 +905,7 @@ me:begin
   set v_sql = concat("insert into recon_tmp_tuhidcr1 (uhid_no,recon_code,loc_code,cr_amount,min_tran_gid)
     select col20,col38,col43,sum(cast(col9 as decimal(15,2))*cast(col12 as signed)),min(tran_gid) from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
+    and col13 <> 'Current Period Bills not interfaced'
     and col20 <> ''
     and col20 <> 'AC01.0005284627'
     and col38 <> ''
@@ -940,6 +953,7 @@ me:begin
 				-- cr side
 				set v_sql = concat("select count(*) into @rec_count from ",v_tran_table,"
 				where recon_code = '",in_recon_code,"'
+        and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_cr_recon_code,"'
         and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
@@ -964,6 +978,7 @@ me:begin
 				  set v_sql = concat(" insert into recon_tmp_tuhidcr (tran_gid,cr_amount)
           select tran_gid,cast(col9 as decimal(15,2)) from ",v_tran_table,"
 				  where recon_code = '",in_recon_code,"'
+          and col13 <> 'Current Period Bills not interfaced'
 				  and col20 = '",cast(v_uhid_no as nchar),"'
 				  and col38 = '",v_cr_recon_code,"'
           and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
@@ -1008,6 +1023,7 @@ me:begin
               col50 = '", v_cr_loc_code ,"',
               col51 = '",v_ref_no,"'
 						where recon_code = '",in_recon_code,"'
+            and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_dr_recon_code,"'
 						and col2 <> '0'
@@ -1187,6 +1203,7 @@ me:begin
 							col50 = '",v_dr_loc_code,"',
 							col51 = '",v_ref_no,"'
 						where recon_code = '",in_recon_code,"'
+            and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
 						and ((col2 <> '0'
@@ -1215,6 +1232,7 @@ me:begin
 							col47 = 'IUT - OP',
               col50 = '",v_dr_loc_code,"'
 						where recon_code = '",in_recon_code,"'
+            and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
 						and ((col2 <> '0'
@@ -1255,7 +1273,8 @@ me:begin
 							col47,
 							col48,
 							col50,
-							col51
+							col51,
+              col13
 						)
 						select
               1,
@@ -1283,7 +1302,8 @@ me:begin
 							'IUT - OP',
 							col48,
 							'",v_dr_loc_code,"',
-							'",v_ref_no,"'
+							'",v_ref_no,"',
+              'UHID - Deposit CB'
 					from ",v_tran_table,"
 					where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
 					and delete_flag = 'N'
@@ -1301,6 +1321,7 @@ me:begin
           col50 = '", v_cr_loc_code ,"',
           col51 = '",v_ref_no,"'
 				where recon_code = '",in_recon_code,"'
+        and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
         and ((col2 <> '0'
@@ -1438,6 +1459,7 @@ me:begin
   drop temporary table if exists recon_tmp_treconuhid;
 
   call pr_set_IUTIP(in_recon_code);
+  call pr_set_IUTIP_UHID(in_recon_code);
 end $$
 
 DELIMITER ;

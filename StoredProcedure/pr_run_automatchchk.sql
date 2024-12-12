@@ -1811,6 +1811,7 @@ me:BEGIN
               where a.dup_flag = 'N';
             end if;
 
+            select 'vijay';
             leave me;
 
 						set v_sql = concat("
@@ -1868,7 +1869,7 @@ me:BEGIN
 										a.theme_code = ''
 								where ((a.excp_value <> 0 and a.mapped_value = 0) or a.mapped_value > 0)
 								and a.delete_flag = 'N'");
-							
+
 							call pr_run_sql(v_sql,@msg,@result);
 
 							set v_sql = concat("

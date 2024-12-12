@@ -58,6 +58,35 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  -- not tallied based on uhid only - first preference UHID Deposits
+  set v_sql = concat("update ",v_tran_table," as a
+    inner join ",v_ds_table," as b on a.col3 = b.col3
+      and b.col1 = '",in_unit_name,"'
+      and b.col2 = 'UHID - Deposit CB'
+      and b.delete_flag = 'N'
+    set
+      a.theme_code = b.col2
+    where a.recon_code = '",in_recon_code,"'
+    and (a.col4 = a.col3 or a.col4 = '')
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund')
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("update ",v_tranbrkp_table," as a
+    inner join ",v_ds_table," as b on a.col3 = b.col3
+      and b.col1 = '",in_unit_name,"'
+      and b.col2 = 'UHID - Deposit CB'
+      and b.delete_flag = 'N'
+    set
+      a.theme_code = b.col2
+    where a.recon_code = '",in_recon_code,"'
+    and (a.col4 = a.col3 or a.col4 = '')
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund')
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
   -- not tallied based on uhid only
   set v_sql = concat("update ",v_tran_table," as a
     inner join ",v_ds_table," as b on a.col3 = b.col3
@@ -80,7 +109,7 @@ me:begin
       a.theme_code = b.col2
     where a.recon_code = '",in_recon_code,"'
     and (a.col4 = a.col3 or a.col4 = '')
-    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund') 
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund')
     and a.delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
