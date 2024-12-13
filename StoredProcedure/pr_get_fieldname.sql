@@ -46,13 +46,13 @@ begin
   end if;
 
   if v_field_type = 'INTEGER' then
-    set v_field_name = concat("cast (",v_field_name," as unsigned)");
+    set v_field_name = concat("cast(",v_field_name," as unsigned)");
   elseif v_field_type = 'NUMERIC' then
-    set v_field_name = concat("cast (",v_field_name," as decimal(15,3))");
+    set v_field_name = concat("cast(",v_field_name," as decimal(15,3))");
   elseif v_field_type = 'DATE' then
-    set v_field_name = concat("cast (",v_field_name," as date)");
+    set v_field_name = concat("cast(",v_field_name," as date)");
   elseif v_field_type = 'DATRETIME' then
-    set v_field_name = concat("cast (",v_field_name," as datetime)");
+    set v_field_name = concat("cast(",v_field_name," as datetime)");
   end if;
 
   set out_field_name = v_field_name;

@@ -274,14 +274,14 @@ me:BEGIN
 				'Entry',
 				'Entry',
 				cast(entry_value as nchar),
-				to_recon_code,
 				from_recon_code,
-				to_loc_code,
+				to_recon_code,
 				from_loc_code,
+				to_loc_code,
 				cast(entry_value as nchar),
-				'IUT - IP',
-				to_unit_name,
+				iut_ipop,
 				from_unit_name,
+				to_unit_name,
 				entry_ref_no,
         '0'
 			from recon_trn_tiutentry

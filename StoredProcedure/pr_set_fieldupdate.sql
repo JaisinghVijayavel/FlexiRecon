@@ -62,7 +62,8 @@ me:begin
       set v_field_value = ifnull(v_field_value,'');
 
       -- get recon field and type
-      call pr_get_fieldname(v_recon_code,v_recon_field_desc,v_recon_field,v_recon_field_type);
+      -- call pr_get_fieldname(v_recon_code,v_recon_field_desc,v_recon_field,v_recon_field_type);
+      set v_recon_field = fn_get_reconfieldfromdesc(v_recon_code,v_recon_field_desc);
 
       if v_tran_gid = 0 and v_tranbrkp_gid = 0 then
         set v_recon_field = '';
