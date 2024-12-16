@@ -196,13 +196,25 @@ me:begin
   elseif v_dataset_code = 'FIELDUPDATE' then
     set v_sql = concat("insert into recon_trn_tfieldupdate
       (
-        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,recon_field_desc,field_value
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,field_desc,field_value
       )
       select
         scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,recon_field_desc,field_value
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
+  elseif v_dataset_code = 'DATASETUPDATE' then
+    set v_sql = concat("insert into recon_trn_tfieldupdate
+      (
+        scheduler_gid,dataset_code,dataset_gid,field_desc,field_value
+      )
+      select
+        scheduler_gid,dataset_code,dataset_gid,dataset_field_desc,field_value
+      from ",v_dataset_table_name,"
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
+
+      set v_dataset_code = 'FIELDUPDATE';
   elseif v_dataset_code = 'IUTENTRY' then
     set v_sql = concat("insert into recon_trn_tiutentry
       (

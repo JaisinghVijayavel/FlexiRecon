@@ -142,6 +142,22 @@ me:BEGIN
     and delete_flag = 'N'
     order by dataset_field_sno;
 
+    -- dataset_gid
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    select
+      'dataset_gid',
+      'Dataset Id',
+      'INTEGER',
+      '999';
+
+    -- scheduler_gid
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
+    select
+      'scheduler_gid',
+      'Scheduler Id',
+      'INTEGER',
+      '999';
+
     set in_table_name = v_table_name;
   elseif exists(select field_name from recon_mst_tsystemfield
     where table_name = in_table_name

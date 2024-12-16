@@ -614,6 +614,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
+        set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
 
         call pr_run_sql('set @sno := 0',@msg,@result);
@@ -678,6 +679,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
+        set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
         set v_sql = concat(v_sql,v_orderby_field,' ');
 
@@ -698,6 +700,7 @@ me:BEGIN
           set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
           set v_sql = concat(v_sql,v_recon_date_condition);
           set v_sql = concat(v_sql,v_preprocess_filter);
+          set v_sql = concat(v_sql,'and tran_gid > 0 ');
           set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
           set v_sql = concat(v_sql,v_orderby_field,' ');
 
@@ -817,6 +820,7 @@ me:BEGIN
             select ",v_grp_field,",",v_process_function,",",v_field_expression," from ",v_tranbrkp_table,"
             where 1 = 1
             ",replace(v_recon_condition,'a.',''),"
+            and tran_gid > 0
             group by ",v_grp_field,"
             ");
 
@@ -827,6 +831,7 @@ me:BEGIN
             select ",v_process_function,",",v_field_expression," from ",v_tran_table,"
             where 1 = 1
             ",replace(v_recon_condition,'a.',''),"
+            and tran_gid > 0
             ");
 
           call pr_run_sql2(v_sql,@msg,@result);
@@ -835,6 +840,7 @@ me:BEGIN
             select ",v_process_function,",",v_field_expression," from ",v_tranbrkp_table,"
             where 1 = 1
             ",replace(v_recon_condition,'a.',''),"
+            and tran_gid > 0
             ");
 
           call pr_run_sql2(v_sql,@msg,@result);
@@ -896,6 +902,7 @@ me:BEGIN
         set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
         set v_sql = concat(v_sql,'where 1 = 1 ');
         set v_sql = concat(v_sql,v_recon_condition);
+        set v_sql = concat(v_sql,'and a.tran_gid ');
 
         call pr_run_sql2(v_sql,@msg,@result);
 
@@ -929,12 +936,14 @@ me:BEGIN
         set v_sql = concat(v_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_sql = concat(v_sql,v_recon_date_condition);
         set v_sql = concat(v_sql,v_preprocess_filter);
+        set v_sql = concat(v_sql,'and a.tran_gid > 0 ');
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
         set v_count_sql = 'select count(*) into @base_count from $TABLENAME$ as a ';
         set v_count_sql = concat(v_count_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_count_sql = concat(v_count_sql,v_recon_date_condition);
         set v_count_sql = concat(v_count_sql,v_preprocess_filter);
+        set v_count_sql = concat(v_count_sql,'and a.tran_gid > 0 ');
         set v_count_sql = concat(v_count_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
         call pr_run_sql(replace(v_count_sql,'$TABLENAME$',v_tran_table),@msg,@result);

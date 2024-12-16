@@ -155,7 +155,7 @@ me:BEGIN
 		inner join recon_trn_ttranbrkp as b on a.tranbrkp_gid = a.tranbrkp_gid
 			and b.delete_flag = 'N'
 		inner join recon_mst_tdataset as c on b.dataset_code = c.dataset_code and c.delete_flag = 'N'
-		inner join recon_mst_trecondataset as d on b.dataset_code = d.dataset_code
+		inner join recon_mst_trecondataset as d on b.recon_code = d.recon_code and b.dataset_code = d.dataset_code
 			and d.delete_flag = 'N'
 		where a.scheduler_gid = in_scheduler_gid
 		and a.delete_flag = 'N'
@@ -169,20 +169,21 @@ me:BEGIN
 		inner join recon_trn_ttranbrkp as b on a.tranbrkp_gid = a.tranbrkp_gid
 			and b.delete_flag = 'N'
 		inner join recon_mst_tdataset as c on b.tranbrkp_dataset_code = c.dataset_code and c.delete_flag = 'N'
-		inner join recon_mst_trecondataset as d on c.dataset_code = d.dataset_code
+		inner join recon_mst_trecondataset as d on b.recon_code = d.recon_code and c.dataset_code = d.dataset_code
 			and d.delete_flag = 'N'
 		where a.scheduler_gid = in_scheduler_gid
 		and a.delete_flag = 'N';
 
     -- return value
     select
-      count(distinct a.tran_gid) as 'Match Count',
+      count(distinct a.tran_gid) as 'Tran Count',
       count(*) as 'Tranbrkp Count',
       format(abs(sum(b.excp_value*b.tran_mult)),2,'en_IN') as 'Tranbrkp Total'
     from recon_trn_tmanualtranbrkp as a
     inner join recon_trn_ttranbrkp as b on a.tranbrkp_gid = b.tranbrkp_gid
       and b.recon_code = v_recon_code
       and b.excp_value > 0
+      and b.tran_gid = 0
       and b.delete_flag = 'N'
     inner join recon_mst_trecondataset as c on b.recon_code = c.recon_code
       and b.dataset_code = c.dataset_code
