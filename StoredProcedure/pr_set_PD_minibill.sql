@@ -18,7 +18,16 @@ me:begin
       from recon_trn_ttranbrkp
       where recon_code = in_recon_code
       and split(col2,'-',2) in ('OCS','OCR','ICS','ICR')
+      and delete_flag = 'N'
+      union
+      select
+        distinct split(col2,'-',1)
+      from recon_trn_ttran
+      where recon_code = in_recon_code
+      and split(col2,'-',2) in ('OCS','OCR','ICS','ICR')
+      and col14 <> '' 
       and delete_flag = 'N';
+
     declare continue handler for not found set pdunit_done=1;
 
     open pdunit_cursor;
@@ -31,6 +40,7 @@ me:begin
       set v_pdunit_code = ifnull(v_pdunit_code,'');
 
       call pr_set_PDunit_minibill(in_recon_code,v_pdunit_code);
+      call pr_set_PDunit_tranminibill(in_recon_code,v_pdunit_code);
     end loop pdunit_loop;
 
     close pdunit_cursor;

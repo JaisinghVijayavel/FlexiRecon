@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP procedure IF EXISTS `pr_set_PDunit_minibill` $$
-CREATE procedure `pr_set_PDunit_minibill`
+DROP procedure IF EXISTS `pr_set_PDunit_tranminibill` $$
+CREATE procedure `pr_set_PDunit_tranminibill`
 (
   in_recon_code varchar(32),
   in_pdunit_code varchar(32)
@@ -71,10 +71,11 @@ me:begin
   and delete_flag = 'N';
 
   -- OCR mini bill no
-  select col2 into v_bill_no from recon_trn_ttranbrkp
+  select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
   and split(col2,'-',1) = in_pdunit_code
   and split(col2,'-',2) = 'OCR'
+  and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
 
@@ -118,11 +119,12 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttranbrkp set
+    set v_sql = concat("update recon_trn_ttran set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and split(col2,'-',2) = '",v_bill_type,"'
+      and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
@@ -133,10 +135,11 @@ me:begin
   end if;
 
   -- OCS mini bill no
-  select col2 into v_bill_no from recon_trn_ttranbrkp
+  select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
   and split(col2,'-',1) = in_pdunit_code
   and split(col2,'-',2) = 'OCS'
+  and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
 
@@ -180,11 +183,12 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttranbrkp set
+    set v_sql = concat("update recon_trn_ttran set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and split(col2,'-',2) = '",v_bill_type,"'
+      and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
@@ -195,10 +199,11 @@ me:begin
   end if;
 
   -- ICR mini bill no
-  select col2 into v_bill_no from recon_trn_ttranbrkp
+  select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
   and split(col2,'-',1) = in_pdunit_code
   and split(col2,'-',2) = 'ICR'
+  and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
 
@@ -231,11 +236,12 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttranbrkp set
+    set v_sql = concat("update recon_trn_ttran set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and split(col2,'-',2) = '",v_bill_type,"'
+      and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
@@ -246,10 +252,11 @@ me:begin
   end if;
 
   -- ICS mini bill no
-  select col2 into v_bill_no from recon_trn_ttranbrkp
+  select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
   and split(col2,'-',1) = in_pdunit_code
   and split(col2,'-',2) = 'ICS'
+  and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
 
@@ -293,11 +300,12 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttranbrkp set
+    set v_sql = concat("update recon_trn_ttran set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and split(col2,'-',2) = '",v_bill_type,"'
+      and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')

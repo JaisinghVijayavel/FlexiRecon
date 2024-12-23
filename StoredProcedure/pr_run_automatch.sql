@@ -1822,7 +1822,7 @@ me:BEGIN
 								and m.ko_flag = 'Y'
 								group by a.tran_gid,b.tran_mult
 								having b.excp_value >= sum(a.ko_value*a.tran_mult)*b.tran_mult");
-							
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               update recon_tmp_t1matchdtl as a
@@ -1836,6 +1836,25 @@ me:BEGIN
               where a.dup_flag = 'N';
             end if;
 
+            -- trucate pseudo_rows1
+						select
+              max(JSON_LENGTH(matched_json))
+            into
+              v_count
+            from recon_tmp_t1match
+            where ko_flag = 'Y';
+
+						set v_count = ifnull(v_count,0);
+
+						truncate recon_tmp_t1pseudorows;
+
+						if v_count >= 2 then
+							insert into recon_tmp_t1pseudorows select row from pseudo_rows1 where row <= v_count;
+						else
+							insert into recon_tmp_t1pseudorows select 0 union select 1;
+            end if;
+
+            -- insert in ko table
 						set v_sql = concat("
 							insert into ",v_ko_table,"
 							(
@@ -1850,7 +1869,7 @@ me:BEGIN
 								'N',matched_json,'N',sysdate(),'",in_user_code,"'
 							from recon_tmp_t1match
 							where ko_flag = 'Y'");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
@@ -1868,13 +1887,13 @@ me:BEGIN
 							and kodtl_post_flag = 'N'
 							HAVING tran_gid IS NOT NULL
 							order by ko_gid");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
             insert into ",v_kodtl_table," (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
               select ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_t1kodtl");
-							
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             insert into recon_tmp_t1kodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
@@ -1891,7 +1910,7 @@ me:BEGIN
 										a.theme_code = ''
 								where ((a.excp_value <> 0 and a.mapped_value = 0) or a.mapped_value > 0)
 								and a.delete_flag = 'N'");
-							
+
 							call pr_run_sql(v_sql,@msg,@result);
 
 							set v_sql = concat("
@@ -1903,7 +1922,7 @@ me:BEGIN
 										a.theme_code = ''
 								where a.excp_value <> 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
             else
 							set v_sql = concat("

@@ -84,11 +84,15 @@ me:begin
             set v_sql = concat("select recon_code into @recon_code from ",v_tran_table,"
               where tran_gid = ",cast(v_tran_gid as nchar),"
               and delete_flag = 'N'");
-
-            call pr_run_sql1(v_sql,@msg,@result);
-
-            set v_recon_code = ifnull(@recon_code,'');
+          else
+            set v_sql = concat("select recon_code into @recon_code from ",v_tranbrkp_table,"
+              where tran_gid = ",cast(v_tran_gid as nchar),"
+              and delete_flag = 'N'");
           end if;
+
+          call pr_run_sql1(v_sql,@msg,@result);
+
+          set v_recon_code = ifnull(@recon_code,'');
         end if;
 
         set v_recon_field_desc = v_field_desc;
@@ -126,7 +130,7 @@ me:begin
 
       -- check valid recon field
       if v_recon_field <> '' or v_dataset_field_name <> '' then
-        if v_tran_gid > 0 and v_tranbrkp_gid > 0 then
+        if v_tranbrkp_gid > 0 then
           set v_sql = concat("select ",v_recon_field," into @old_field_value from ",v_tranbrkp_table,"
               where tran_gid = ",cast(v_tran_gid as nchar),"
               and tranbrkp_gid = ",cast(v_tranbrkp_gid as nchar),"

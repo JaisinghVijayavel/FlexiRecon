@@ -675,6 +675,7 @@ me:begin
 							col48,
 							col50,
 							col51,
+              col53,
               col13
 						)
 						select
@@ -704,7 +705,8 @@ me:begin
 							col48,
 							'",v_dr_loc_code,"',
 							'",v_ref_no,"',
-              'IP Deposit'
+							'",cast(v_dr_amount*-1 as nchar),"',
+              ''
 					from ",v_tran_table,"
 					where tran_gid = ",cast(v_tran_cr_min_gid as nchar),"
 					and delete_flag = 'N'

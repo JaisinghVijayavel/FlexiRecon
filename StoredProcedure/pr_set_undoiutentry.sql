@@ -36,10 +36,10 @@ me:begin
   -- col53 = Closing Balance
 
   set v_sql = concat("update ",v_tran_table," set
-      col46 = col37,
+      col46 = '0.00',
       col47 = '',
       col51 = null,
-      col53 = '0.00'
+      col53 = col37
     where recon_code = '",in_recon_code,"'
     and ",v_entryrefno_field," = '",in_iutentryref_no,"'
     and delete_flag = 'N'");
