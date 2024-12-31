@@ -10,23 +10,25 @@ begin
 
   -- kodtl
   delete from recon_trn_tkodtl
-  where ko_gid in
+  where recon_trn_tkodtl.ko_gid in
   (
-    select ko_gid from recon_trn_tko
-    where recon_code = in_recon_code
-    and delete_flag = 'N'
+    select b.ko_gid from recon_trn_tko as b
+    where b.recon_code = in_recon_code
+    and b.ko_gid = recon_trn_tkodtl.ko_gid
+    and b.delete_flag = 'N'
   )
-  and delete_flag = 'N';
+  and recon_trn_tkodtl.delete_flag = 'N';
 
   -- koroundoff
   delete from recon_trn_tkoroundoff
-  where ko_gid in
+  where recon_trn_tkoroundoff.ko_gid in
   (
-    select ko_gid from recon_trn_tko
-    where recon_code = in_recon_code
-    and delete_flag = 'N'
+    select b.ko_gid from recon_trn_tko as b
+    where b.recon_code = in_recon_code
+    and b.ko_gid = recon_trn_tkoroundoff.ko_gid
+    and b.delete_flag = 'N'
   )
-  and delete_flag = 'N';
+  and recon_trn_tkoroundoff.delete_flag = 'N';
 
   -- ko
   delete from recon_trn_tko

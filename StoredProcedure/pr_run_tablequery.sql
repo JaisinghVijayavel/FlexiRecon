@@ -85,11 +85,13 @@ me:BEGIN
     select
       report_desc,
 		  report_exec_type,
-		  table_name
+		  table_name,
+      rpt_table_name
     into
       v_report_name,
 		  v_report_exec_type,
-		  v_table_name
+		  v_table_name,
+      v_rpt_table_name
     from recon_mst_treport
     where report_code = in_report_code
     and delete_flag = 'N';
@@ -97,6 +99,11 @@ me:BEGIN
     set v_report_name = ifnull(v_report_name,'');
     set v_report_exec_type = ifnull(v_report_exec_type,'');
     set v_table_name = ifnull(v_table_name,'');
+    set v_rpt_table_name = ifnull(v_rpt_table_name,'');
+
+    if v_rpt_table_name <> '' then
+      set v_table_name = v_rpt_table_name;
+    end if;
   end if;
 
   set v_report_name = GET_ALPHANUM(v_report_name);

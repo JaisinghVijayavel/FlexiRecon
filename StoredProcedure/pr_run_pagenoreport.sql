@@ -20,6 +20,7 @@ me:BEGIN
   declare v_recon_flag text default '';
   declare v_multi_recon_flag text default '';
   declare v_table_name text default '';
+  declare v_rpt_table_name text default '';
   declare v_condition text default '';
   declare v_start_rec_no int default 0;
   declare v_sortby_code varchar(32);
@@ -78,12 +79,14 @@ me:BEGIN
 		report_exec_type,
     recon_code_field,
 		table_name,
+    rpt_table_name,
     recon_flag,
     multi_recon_flag
 	into
 		v_report_exec_type,
     v_recon_code_field,
 		v_table_name,
+    v_rpt_table_name,
     v_recon_flag,
     v_multi_recon_flag
 	from recon_mst_treport
@@ -94,18 +97,32 @@ me:BEGIN
   set v_recon_flag = ifnull(v_recon_flag,'N');
   set v_multi_recon_flag = ifnull(v_multi_recon_flag,'N');
 
+  set v_table_name = ifnull(v_table_name,'');
+  set v_rpt_table_name = ifnull(v_rpt_table_name,'');
+
+  if v_rpt_table_name <> '' then
+    set v_table_name = v_rpt_table_name;
+  end if;
+
   -- session
   if exists(select rptsession_gid from recon_trn_treportsession
      where rptsession_gid = in_rptsession_gid
      and delete_flag = 'N') and v_report_exec_type = 'S' then
     select
-      b.table_name
+      b.table_name,b.rpt_table_name
     into
-      v_table_name
+      v_table_name,v_rpt_table_name
     from recon_trn_treportsession as a
     inner join recon_mst_treport as b on a.report_code = b.report_code and b.delete_flag = 'N'
     where a.rptsession_gid = in_rptsession_gid
     and a.delete_flag = 'N';
+
+    set v_table_name = ifnull(v_table_name,'');
+    set v_rpt_table_name = ifnull(v_rpt_table_name,'');
+
+    if v_rpt_table_name <> '' then
+      set v_table_name = v_rpt_table_name;
+    end if;
 
 		-- sort order
     if in_reporttemplate_code <> '' then

@@ -23,8 +23,10 @@ me:BEGIN
   declare v_report_desc text default '';
   declare v_sp_name text default '';
   declare v_table_name text default '';
+  declare v_rpt_table_name text default '';
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
+  declare v_clear_flag text default '';
   declare v_multi_recon_flag text default '';
   declare v_report_condition text default '';
   declare v_report_default_condition text default '';
@@ -102,18 +104,22 @@ me:BEGIN
       report_exec_type,
       sp_name,
       table_name,
+      rpt_table_name,
       recon_code_field,
       default_condition,
       recon_flag,
+      clear_flag,
       multi_recon_flag
     into
       v_report_desc,
       v_report_exec_type,
       v_sp_name,
       v_table_name,
+      v_rpt_table_name,
       v_recon_code_field,
       v_report_default_condition,
       v_recon_flag,
+      v_clear_flag,
       v_multi_recon_flag
     from recon_mst_treport
     where report_code = v_report_code
@@ -129,12 +135,19 @@ me:BEGIN
   set v_report_exec_type = ifnull(v_report_exec_type,'');
   set v_sp_name = ifnull(v_sp_name,'');
   set v_table_name = ifnull(v_table_name,'');
+  set v_rpt_table_name = ifnull(v_rpt_table_name,'');
   set v_recon_code_field = ifnull(v_recon_code_field,'recon_code');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
+
   set v_recon_flag = ifnull(v_recon_flag,'N');
   set v_multi_recon_flag = ifnull(v_multi_recon_flag,'N');
+  set v_clear_flag = ifnull(v_clear_flag,'Y');
 
   set in_report_condition = ifnull(in_report_condition,'');
+
+  if v_rpt_table_name <> '' then
+    set v_table_name = v_rpt_table_name;
+  end if;
 
   if v_recon_code <> '' and v_recon_flag = 'Y' and v_multi_recon_flag = 'N' then
     set in_report_condition = concat(' and ',v_recon_code_field,' = ',char(39),v_recon_code,char(39),' ', in_report_condition);
@@ -227,7 +240,7 @@ me:BEGIN
     and delete_flag = 'N';
   end if;
 
-  if v_report_exec_type = 'S' and v_sp_name <> '' then
+  if v_report_exec_type = 'S' and v_sp_name <> '' and v_clear_flag = 'Y' then
     if v_job_gid = 0 then
       set v_sql = "delete from  recon_trn_tpreview where job_gid = 0 and rptsession_gid = 0";
       call pr_run_sql(v_sql,@msg,@result);

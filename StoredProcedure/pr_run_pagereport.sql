@@ -23,6 +23,7 @@ me:BEGIN
   declare v_sp_name text default '';
   declare v_table_name text default '';
   declare v_src_table_name text default '';
+  declare v_rpt_table_name text default '';
   declare v_sql text default '';
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
@@ -89,6 +90,7 @@ me:BEGIN
       report_exec_type,
       table_name,
       src_table_name,
+      rpt_table_name,
       sp_name,
       recon_code_field,
       default_condition,
@@ -100,6 +102,7 @@ me:BEGIN
       v_report_exec_type,
       v_table_name,
       v_src_table_name,
+      v_rpt_table_name,
       v_sp_name,
       v_recon_code_field,
       v_report_default_condition,
@@ -118,14 +121,21 @@ me:BEGIN
   set v_report_code = ifnull(v_report_code,'');
   set v_report_desc = ifnull(v_report_desc,v_report_code);
   set v_report_exec_type = ifnull(v_report_exec_type,'');
+
   set v_table_name = ifnull(v_table_name,'');
   set v_src_table_name = ifnull(v_src_table_name,'');
+  set v_rpt_table_name = ifnull(v_rpt_table_name,'');
+
   set v_sp_name = ifnull(v_sp_name,'');
   set v_recon_code_field = ifnull(v_recon_code_field,'');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
 
   set v_recon_flag = ifnull(v_recon_flag,'N');
   set v_multi_recon_flag = ifnull(v_multi_recon_flag,'N');
+
+  if v_rpt_table_name <> '' then
+    set v_table_name = v_rpt_table_name;
+  end if;
 
   if v_table_name = '' and v_report_exec_type <> 'D' then
     set out_msg = 'Invalid table name';

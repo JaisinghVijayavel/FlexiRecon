@@ -18,8 +18,10 @@ me:BEGIN
   declare v_report_desc text default '';
   declare v_sp_name text default '';
   declare v_table_name text default '';
+  declare v_rpt_table_name text default '';
   declare v_recon_code_field text default '';
   declare v_recon_flag text default '';
+  declare v_clear_flag text default '';
   declare v_report_default_condition text default '';
   declare v_sort_order text default '';
   declare v_sql text default '';
@@ -60,19 +62,23 @@ me:BEGIN
       report_exec_type,
       sp_name,
       table_name,
+      rpt_table_name,
       recon_code_field,
       default_condition,
       sort_order,
-      recon_flag
+      recon_flag,
+      clear_flag
     into
       v_report_desc,
       v_report_exec_type,
       v_sp_name,
       v_table_name,
+      v_rpt_table_name,
       v_recon_code_field,
       v_report_default_condition,
       v_sort_order,
-      v_recon_flag
+      v_recon_flag,
+      v_clear_flag
     from recon_mst_treport
     where report_code = in_report_code
     and delete_flag = 'N';
@@ -84,17 +90,21 @@ me:BEGIN
       report_exec_type,
       sp_name,
       table_name,
+      rpt_table_name,
       recon_code_field,
       default_condition,
-      sort_order
+      sort_order,
+      clear_flag
     into
       v_report_desc,
       v_report_exec_type,
       v_sp_name,
       v_table_name,
+      v_rpt_table_name,
       v_recon_code_field,
       v_report_default_condition,
-      v_sort_order
+      v_sort_order,
+      v_clear_flag
     from recon_mst_treport
     where report_gid = cast(in_report_code as unsigned)
     and delete_flag = 'N';
@@ -109,9 +119,16 @@ me:BEGIN
   set v_report_exec_type = ifnull(v_report_exec_type,'');
   set v_sp_name = ifnull(v_sp_name,'');
   set v_table_name = ifnull(v_table_name,'');
+  set v_rpt_table_name = ifnull(v_rpt_table_name,'');
   set v_recon_code_field = ifnull(v_recon_code_field,'recon_code');
   set v_report_default_condition = ifnull(v_report_default_condition,'');
   set v_sort_order = ifnull(v_sort_order,'');
+  set v_clear_flag = ifnull(v_clear_flag,'Y');
+
+  if v_rpt_table_name <> '' then
+    set v_table_name = v_rpt_table_name;
+  end if;
+
 
   if v_sort_order <> '' then
     set v_sort_order = concat('order by ',v_sort_order);
@@ -136,7 +153,7 @@ me:BEGIN
     call pr_ins_job(v_recon_code,'R',0,v_report_desc,in_report_param,in_user_code,in_ip_addr,'I','Initiated...',v_job_gid,@msg,@result);
   end if;
 
-  if v_report_exec_type = 'S' and v_sp_name <> '' then
+  if v_report_exec_type = 'S' and v_sp_name <> '' and v_clear_flag = 'Y' then
     if v_job_gid = 0 then
       set v_sql = "delete from  recon_trn_tpreview where job_gid = 0 and rptsession_gid = 0";
       call pr_run_sql(v_sql,@msg,@result);

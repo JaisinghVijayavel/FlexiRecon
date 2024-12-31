@@ -20,6 +20,10 @@ me:BEGIN
   declare v_fromunit_field text default '';
   declare v_tounit_field text default '';
   declare v_iutrefno_field text default '';
+  declare v_actiontaken_field text default '';
+  declare v_entryflag_field text default '';
+  declare v_entryrefno_field text default '';
+
 
   declare v_recon_iutflag_field text default '';
   declare v_recon_iutvalue_field text default '';
@@ -27,6 +31,9 @@ me:BEGIN
   declare v_recon_fromunit_field text default '';
   declare v_recon_tounit_field text default '';
   declare v_recon_iutrefno_field text default '';
+  declare v_recon_actiontaken_field text default '';
+  declare v_recon_entryflag_field text default '';
+  declare v_recon_entryrefno_field text default '';
 
   /*
     set v_tran_table = concat(in_recon_code,'_tran');
@@ -52,6 +59,9 @@ me:BEGIN
   set v_fromunit_field = fn_get_reconfieldfromdesc(in_recon_code,'From Unit');
   set v_tounit_field = fn_get_reconfieldfromdesc(in_recon_code,'To Unit');
   set v_iutrefno_field = fn_get_reconfieldfromdesc(in_recon_code,'Entry Ref No');
+  set v_actiontaken_field = fn_get_reconfieldfromdesc(in_recon_code,'Action To Be Taken');
+  set v_entryflag_field = fn_get_reconfieldfromdesc(in_recon_code,'Entry Pass Flag');
+  set v_entryrefno_field = fn_get_reconfieldfromdesc(in_recon_code,'Entry Pass Ref No');
 
   set v_recon_iutflag_field = fn_get_reconfieldfromdesc('RE170','IUT Flag');
   set v_recon_iutvalue_field = fn_get_reconfieldfromdesc('RE170','Entry Value');
@@ -59,6 +69,9 @@ me:BEGIN
   set v_recon_fromunit_field = fn_get_reconfieldfromdesc('RE170','From Unit');
   set v_recon_tounit_field = fn_get_reconfieldfromdesc('RE170','To Unit');
   set v_recon_iutrefno_field = fn_get_reconfieldfromdesc('RE170','IUT Ref No');
+  set v_recon_actiontaken_field = fn_get_reconfieldfromdesc('RE170','Action To Be Taken');
+  set v_recon_entryflag_field = fn_get_reconfieldfromdesc('RE170','Entry Pass Flag');
+  set v_recon_entryrefno_field = fn_get_reconfieldfromdesc('RE170','Entry Ref No');
 
   drop temporary table if exists recon_tmp_tiuttheme;
 
@@ -72,7 +85,10 @@ me:BEGIN
     closing_balance text,
     from_unit text,
     to_unit text,
+    iut_ref_no text,
+    entry_flag text,
     entry_ref_no text,
+    action_tobe_taken text,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
@@ -91,8 +107,12 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      b.",v_recon_actiontaken_field," = '',
+      b.",v_recon_entryflag_field," = '',
+      b.",v_recon_entryrefno_field," = '',
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
+    and a.cluster_name = 'CHENNAI'
     and a.delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -111,8 +131,12 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      b.",v_recon_actiontaken_field," = '',
+      b.",v_recon_entryflag_field," = '',
+      b.",v_recon_entryrefno_field," = '',
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
+    and a.cluster_name = 'CHENNAI'
     and a.delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -128,8 +152,12 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      b.",v_recon_actiontaken_field," = '',
+      b.",v_recon_entryflag_field," = '',
+      b.",v_recon_entryrefno_field," = '',
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
+    and a.cluster_name = 'CHENNAI'
     and a.delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -144,8 +172,12 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      b.",v_recon_actiontaken_field," = '',
+      b.",v_recon_entryflag_field," = '',
+      b.",v_recon_entryrefno_field," = '',
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
+    and a.cluster_name = 'CHENNAI'
     and a.delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -154,7 +186,7 @@ me:BEGIN
   set v_sql = concat("insert into recon_tmp_tiuttheme
     (
       tran_gid,tranbrkp_gid,iut_theme,iut_flag,iut_value,closing_balance,
-      from_unit,to_unit,entry_ref_no
+      from_unit,to_unit,iut_ref_no,entry_flag,entry_ref_no,action_tobe_taken
     )
     select
       cast(col1 as signed),
@@ -165,7 +197,10 @@ me:BEGIN
       ",v_closingbalance_field,",
       ",v_fromunit_field,",
       ",v_tounit_field,",
-      ",v_iutrefno_field,"
+      ",v_iutrefno_field,",
+      ",v_entryflag_field,",
+      ",v_entryrefno_field,",
+      ",v_actiontaken_field,"
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and ",v_iuttheme_field," <> ''
@@ -178,7 +213,7 @@ me:BEGIN
   set v_sql = concat("insert ignore into recon_tmp_tiuttheme
     (
       tran_gid,tranbrkp_gid,noniut_theme,iut_value,closing_balance,
-      from_unit,to_unit,entry_ref_no
+      from_unit,to_unit,iut_ref_no,entry_flag,entry_ref_no,action_tobe_taken
     )
     select
       cast(col1 as signed),
@@ -188,7 +223,10 @@ me:BEGIN
       ",v_closingbalance_field,",
       ",v_fromunit_field,",
       ",v_tounit_field,",
-      ",v_iutrefno_field,"
+      ",v_iutrefno_field,",
+      ",v_entryflag_field,",
+      ",v_entryrefno_field,",
+      ",v_actiontaken_field,"
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and ",v_noniuttheme_field," <> ''
@@ -210,7 +248,10 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
-      a.",v_recon_iutrefno_field," = b.entry_ref_no
+      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+      a.",v_recon_entryflag_field," = b.entry_flag,
+      a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -228,7 +269,10 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
-      a.",v_recon_iutrefno_field," = b.entry_ref_no
+      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+      a.",v_recon_entryflag_field," = b.entry_flag,
+      a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -244,7 +288,10 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
-      a.",v_recon_iutrefno_field," = b.entry_ref_no
+      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+      a.",v_recon_entryflag_field," = b.entry_flag,
+      a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
@@ -260,7 +307,10 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
-      a.",v_recon_iutrefno_field," = b.entry_ref_no
+      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+      a.",v_recon_entryflag_field," = b.entry_flag,
+      a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
