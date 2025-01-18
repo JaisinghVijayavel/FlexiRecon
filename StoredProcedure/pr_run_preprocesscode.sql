@@ -247,6 +247,8 @@ me:BEGIN
         call pr_upd_job(in_job_gid,'P',concat('Applying Preprocess - ',v_preprocess_desc),@msg,@result);
       end if;
 
+      select v_process_method;
+
       -- filter condition
       if v_process_method <> 'Q' then
         set v_preprocess_filter = ' and (';

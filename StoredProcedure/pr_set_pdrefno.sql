@@ -96,6 +96,21 @@ me:begin
     set v_themeref_no_field = fn_get_reconfieldfromdesc(in_recon_code,'Theme Ref No');
 
     if v_themeref_no_field <> '' then
+      -- blank
+      set v_sql = concat("update ",v_tran_table," set
+            ",v_themeref_no_field," = ''
+        where recon_code = '",in_recon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
+      set v_sql = concat("update ",v_tranbrkp_table," set
+            ",v_themeref_no_field," = ''
+        where recon_code = '",in_recon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
       -- update theme ref no
       set v_sql = concat("update ",v_tran_table," as a
         inner join ",v_themeds_code," as b on a.theme_code like b.col3
@@ -126,6 +141,38 @@ me:begin
     set v_entryref_no_field = fn_get_reconfieldfromdesc(in_recon_code,'Entry Ref No');
 
     if v_entrypass_field <> '' and v_entryref_no_field <> '' then
+      -- blank
+      set v_sql = concat("update ",v_tran_table," set
+            ",v_entryref_no_field," = ''
+        where recon_code = '",in_recon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
+      set v_sql = concat("update ",v_tranbrkp_table," set
+            ",v_entryref_no_field," = ''
+        where recon_code = '",in_recon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
+      -- blank entry pass flag
+      set v_sql = concat("update ",v_tran_table," set
+            ",v_entrypass_field," = null
+        where recon_code = '",in_recon_code,"'
+        and ",v_entrypass_field," = 'Y'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
+      set v_sql = concat("update ",v_tranbrkp_table," set
+            ",v_entrypass_field," = null
+        where recon_code = '",in_recon_code,"'
+        and ",v_entrypass_field," = 'Y'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
       -- set entry pass flag 'Y'
       -- update entry pass flag
       set v_sql = concat("update ",v_tran_table," as a
@@ -183,6 +230,21 @@ me:begin
     set v_action_field = fn_get_reconfieldfromdesc(in_recon_code,'Action To Be Taken');
 
     if v_action_field <> '' then
+      -- blank
+      set v_sql = concat("update ",v_tran_table," set
+            ",v_action_field," = ''
+        where recon_code = '",in_recon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
+      set v_sql = concat("update ",v_tranbrkp_table," set
+            ",v_action_field," = ''
+        where recon_code = '",in_recon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+
       -- update action to be taken
       set v_sql = concat("update ",v_tran_table," as a
         inner join ",v_themeds_code," as b on a.theme_code like b.col3

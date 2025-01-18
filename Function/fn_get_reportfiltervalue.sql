@@ -9,6 +9,8 @@ CREATE function `fn_get_reportfiltervalue`
   in_user_code text
 ) returns text
 begin
+  declare v_closure_date text default '';
+
   if in_filter_value = '$CURDATE$' then
     return cast(curdate() as nchar);
   elseif in_filter_value = '$CURDATETIME$' then
@@ -17,6 +19,18 @@ begin
     return in_recon_code;
   elseif in_filter_value = '$USERCODE$' then
     return in_user_code;
+  elseif in_filter_value = '$RECONCLOSUREDATE$' then
+    select
+      cast(recon_closure_date as nchar)
+    into
+      v_closure_date
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_closure_date = ifnull(v_clousre_date,'2000-01-01');
+
+    return v_closure_date;
   elseif in_filter_value = '$CONDITION$' then
     return in_condition;
   else

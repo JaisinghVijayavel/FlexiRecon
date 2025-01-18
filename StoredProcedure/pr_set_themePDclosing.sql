@@ -126,9 +126,12 @@ me:begin
 
   call pr_run_sql(v_sql,@msg,@result);
 
+  update recon_tmp_ttranwithbrkp1 set uhid_no = '' where uhid_no is null;
+  update recon_tmp_ttranwithbrkp1 set ipop_no = '' where ipop_no is null;
+
   -- uhid outstanding
   insert into recon_tmp_tuhidoutstanding (uhid_no,ipop_no,os_amount)
-    select ifnull(uhid_no,''),ifnull(ipop_no,''),sum(excp_value*tran_mult) from recon_tmp_ttranwithbrkp1
+    select uhid_no,ipop_no,sum(excp_value*tran_mult) from recon_tmp_ttranwithbrkp1
     group by uhid_no,ipop_no;
 
   -- update in dataset table based on uhid no and unit

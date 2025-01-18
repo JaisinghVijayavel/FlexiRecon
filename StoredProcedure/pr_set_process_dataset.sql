@@ -158,10 +158,12 @@ me:begin
   elseif v_dataset_code = 'KOMANUAL' then
     set v_sql = concat("insert into recon_trn_tmanualtran
       (
-        scheduler_gid,match_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,ko_value,ko_acc_mode,ko_mult,ko_reason
+        scheduler_gid,match_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,ko_value,roundoff_value,
+        ko_acc_mode,ko_mult,ko_reason
       )
       select
-        scheduler_gid,match_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,ko_value,ko_acc_mode,
+        scheduler_gid,match_gid,tran_gid,tranbrkp_gid,recon_code,dataset_code,ko_value,roundoff_value,
+        ko_acc_mode,
         case
           when ko_acc_mode = 'D' then -1
           when ko_acc_mode = 'C' then 1
@@ -199,7 +201,7 @@ me:begin
         scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,field_desc,field_value
       )
       select
-        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,recon_field_desc,field_value
+        scheduler_gid,recon_code,ifnull(dataset_code,''),tranbrkp_gid,tran_gid,recon_field_desc,field_value
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
@@ -209,7 +211,7 @@ me:begin
         scheduler_gid,dataset_code,dataset_gid,field_desc,field_value
       )
       select
-        scheduler_gid,dataset_code,dataset_gid,dataset_field_desc,field_value
+        scheduler_gid,ifnull(dataset_code,''),dataset_gid,dataset_field_desc,field_value
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");

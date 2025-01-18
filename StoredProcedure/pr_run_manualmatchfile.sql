@@ -36,6 +36,7 @@ me:BEGIN
 
 	declare v_ko_table text default '';
 	declare v_kodtl_table text default '';
+	declare v_koroundoff_table text default '';
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -76,6 +77,7 @@ me:BEGIN
 
 	set v_ko_table = 'recon_trn_tko';
 	set v_kodtl_table = 'recon_trn_tkodtl';
+  set v_koroundoff_table = 'recon_trn_tkoroundoff';
 
   drop temporary table if exists recon_tmp_tmanualtrangid;
   drop temporary table if exists recon_tmp_tmanualmatchgid;
@@ -89,6 +91,7 @@ me:BEGIN
     dataset_type varchar(32) default null,
     excp_value decimal(15,2) not null default 0,
     ko_value decimal(15,2) not null default 0,
+    roundoff_value decimal(15,2) not null default 0,
     tran_mult tinyint not null default 0,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
@@ -108,6 +111,7 @@ me:BEGIN
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     ko_value decimal(15,2) not null default 0,
+    roundoff_value decimal(15,2) not null default 0,
     ko_mult tinyint not null default 0,
     PRIMARY KEY (kodtl_gid),
     key idx_ko_gid(ko_gid),
@@ -120,6 +124,7 @@ me:BEGIN
     ko_gid int unsigned NOT NULL,
     tran_gid int unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
+    roundoff_value decimal(15,2) not null default 0,
     PRIMARY KEY (trankodtl_gid),
     key idx_ko_gid(ko_gid),
     key idx_tran_gid(tran_gid)
@@ -263,13 +268,14 @@ me:BEGIN
 					c.dataset_type,
 					b.excp_value,
 					sum(a.ko_value) as ko_value,
+          sum(a.roundoff_value) as roundoff_value,
 					b.tran_mult
 				from recon_trn_tmanualtran as a
 				inner join ",v_tran_table," as b
 					on a.tran_gid = b.tran_gid
 					and b.recon_code = a.recon_code
-					and a.ko_value <= b.excp_value
 					and b.excp_value <> 0
+          -- and a.ko_value <= b.excp_value
 					-- and b.mapped_value = 0
 					and b.delete_flag = 'N'
 				inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code
@@ -280,6 +286,7 @@ me:BEGIN
 				and a.tranbrkp_gid = 0
 				and a.delete_flag = 'N'
 				group by a.tran_gid,b.dataset_code,b.excp_value,b.tran_mult");
+
 
 		call pr_run_sql(v_sql,@msg,@result);
 
@@ -293,6 +300,7 @@ me:BEGIN
 					c.dataset_type,
 					b.excp_value,
 					a.ko_value,
+          a.roundoff_value,
 					b.tran_mult
 				from recon_trn_tmanualtran as a
 				inner join ",v_tranbrkp_table," as b
@@ -308,7 +316,7 @@ me:BEGIN
           and c.delete_flag = 'N'
 				where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
 				and a.delete_flag = 'N'");
-			
+
 		call pr_run_sql(v_sql,@msg,@result);
   else
 		set v_sql = concat("
@@ -319,7 +327,8 @@ me:BEGIN
 					c.dataset_type,
 					0,
 					0,
-					0
+					0,
+          0
 				from recon_trn_tmanualtran as a
 				inner join ",v_tran_table," as b
 					on a.tran_gid = b.tran_gid
@@ -328,12 +337,12 @@ me:BEGIN
 					and b.delete_flag = 'N'
 				inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code
           and b.recon_code = c.recon_code
-          and c.active_status = 'Y' 
+          and c.active_status = 'Y'
           and c.delete_flag = 'N'
 				where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
 				and a.delete_flag = 'N'
 				group by a.tran_gid,b.dataset_code,c.dataset_type");
-			
+
 		call pr_run_sql(v_sql,@msg,@result);
   end if;
 
@@ -353,11 +362,13 @@ me:BEGIN
         on a.tran_gid = b.tran_gid
         and a.tranbrkp_gid = b.tranbrkp_gid
         and b.excp_value <> 0
-        and b.excp_value >= a.ko_value
       where a.scheduler_gid = in_scheduler_gid
       and a.delete_flag = 'N'
       group by a.match_gid
       having sum(a.ko_value*b.tran_mult) = 0;
+
+      -- and b.excp_value >= (a.ko_value+a.roundoff_value)
+
   elseif v_recontype_code = 'I' or v_recontype_code = 'V' then
     insert into recon_tmp_tmanualmatchgid
       select
@@ -371,11 +382,13 @@ me:BEGIN
         on a.tran_gid = b.tran_gid
         and a.tranbrkp_gid = b.tranbrkp_gid
         and b.excp_value <> 0
-        and b.excp_value >= a.ko_value
       where a.scheduler_gid = in_scheduler_gid
       and a.delete_flag = 'N'
       group by a.match_gid
       having sum(if(b.dataset_type='B',a.ko_value*b.tran_mult,0)) = sum(if(b.dataset_type='T',a.ko_value*b.tran_mult,0));
+
+      -- and b.excp_value >= (a.ko_value+a.roundoff_value)
+
   elseif v_recontype_code = 'N' then
     insert into recon_tmp_tmanualmatchgid
       select
@@ -419,13 +432,14 @@ me:BEGIN
 
         if v_recontype_code <> 'N' then
 					set v_sql = concat("
-						insert into recon_tmp_tmanualkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
+						insert into recon_tmp_tmanualkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult,roundoff_value)
 							select
 								",cast(v_ko_gid as nchar),",
 								a.tran_gid,
 								a.tranbrkp_gid,
 								a.ko_value,
-								a.ko_mult
+								a.ko_mult,
+                a.roundoff_value
 							from recon_trn_tmanualtran as a
 							inner join ",v_tran_table," as b
 								on a.tran_gid = b.tran_gid
@@ -441,13 +455,14 @@ me:BEGIN
 					call pr_run_sql(v_sql,@msg,@result);
 
 					set v_sql = concat("
-						insert into recon_tmp_tmanualkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
+						insert into recon_tmp_tmanualkodtl (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult,roundoff_value)
 							select
 								",cast(v_ko_gid as nchar),",
 								a.tran_gid,
 								a.tranbrkp_gid,
 								a.ko_value,
-								b.tran_mult
+								b.tran_mult,
+                a.roundoff_value
 							from recon_trn_tmanualtran as a
 							inner join ",v_tranbrkp_table," as b
 								on a.tran_gid = b.tran_gid
@@ -463,11 +478,12 @@ me:BEGIN
 					call pr_run_sql(v_sql,@msg,@result);
 
 					set v_sql = concat("
-						insert into recon_tmp_tmanualtrankodtl (ko_gid,tran_gid,ko_value)
+						insert into recon_tmp_tmanualtrankodtl (ko_gid,tran_gid,ko_value,roundoff_value)
 							select
 								",cast(v_ko_gid as nchar),",
 								a.tran_gid,
-								sum(a.ko_value*a.ko_mult)
+								sum(a.ko_value*a.ko_mult),
+                a.roundoff_value
 							from recon_trn_tmanualtran as a
 							inner join ",v_tran_table," as b
 								on a.tran_gid = b.tran_gid
@@ -491,10 +507,19 @@ me:BEGIN
 
 						call pr_run_sql(v_sql,@msg,@result);
 
+            -- knockoff roundoff value
+						set v_sql = concat("
+							insert into ",v_koroundoff_table," (ko_gid,tran_gid,tranbrkp_gid,roundoff_value)
+              select ko_gid,tran_gid,tranbrkp_gid,roundoff_value from recon_tmp_tmanualkodtl
+              where roundoff_value <> 0");
+
+						call pr_run_sql(v_sql,@msg,@result);
+
 						set v_sql = concat("
 							update ",v_tran_table," as a
 							inner join recon_tmp_tmanualtrankodtl as b on a.tran_gid = b.tran_gid
 							set a.excp_value = a.excp_value - (b.ko_value)*a.tran_mult,
+                a.roundoff_value = a.roundoff_value + b.roundoff_value,
 								a.ko_gid = b.ko_gid,
 								a.ko_date = curdate(),
                 a.theme_code = ''
@@ -583,7 +608,7 @@ me:BEGIN
 							and b.delete_flag = 'N'
 						where a.tranbrkp_gid = 0
 						group by a.tran_gid");
-						
+
 				call pr_run_sql(v_sql,@msg,@result);
 
         -- move record(s) to tranko table
@@ -591,7 +616,7 @@ me:BEGIN
 					insert into ",v_tranko_table,"
 						select a.* from ",v_tran_table," as a
 						inner join recon_tmp_tmanualtrangid as b on a.tran_gid = b.tran_gid");
-						
+
 				call pr_run_sql(v_sql,@msg,@result);
 
 				set v_sql = concat("

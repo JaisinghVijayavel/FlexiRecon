@@ -20,6 +20,10 @@ begin
 	declare v_kodtl_table text default '';
 	declare v_koroundoff_table text default '';
 
+	declare v_rule_table text default '';
+	declare v_preprocess_table text default '';
+	declare v_theme_table text default '';
+
   declare v_sql text default '';
   declare v_table text default '';
   declare v_table_prefix text default '';
@@ -42,6 +46,10 @@ begin
 	set v_ko_table = 'recon_trn_tko';
 	set v_kodtl_table = 'recon_trn_tkodtl';
 	set v_koroundoff_table = 'recon_trn_tkoroundoff';
+
+	set v_rule_table = 'recon_mst_trule';
+	set v_preprocess_table = 'recon_mst_tpreprocess';
+	set v_theme_table = 'recon_mst_ttheme';
 
   -- find recon type code and its condition
   select
@@ -82,7 +90,7 @@ begin
     sysdate(),
     in_user_code;
 
-  set v_table_prefix = concat(in_recon_code,'_',v_archival_code);
+  set v_table_prefix = concat(v_archival_code,'_',in_recon_code);
 
   if v_archival_db_name <> '' then
     set v_table_prefix = concat(v_archival_db_name,'.',v_table_prefix);
@@ -270,6 +278,36 @@ begin
   set v_sql = concat('create index idx_tranbrkp_gid on ',v_table,'(tranbrkp_gid)');
   call pr_run_sql2(v_sql,@msg,@result);
 
+  -- create rule master
+  set v_table = concat(v_table_prefix,'_rule');
+  set v_sql = concat('create table ',v_table,' select * from recon_mst_trule where 1 = 2');
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- add primary key
+  set v_sql = concat('alter table ',v_table,' add primary key(rule_gid)');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- create preprocess master
+  set v_table = concat(v_table_prefix,'_preprocess');
+  set v_sql = concat('create table ',v_table,' select * from recon_mst_tpreprocess where 1 = 2');
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- add primary key
+  set v_sql = concat('alter table ',v_table,' add primary key(preprocess_gid)');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- create theme master
+  set v_table = concat(v_table_prefix,'_theme');
+  set v_sql = concat('create table ',v_table,' select * from recon_mst_ttheme where 1 = 2');
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- add primary key
+  set v_sql = concat('alter table ',v_table,' add primary key(theme_gid)');
+  call pr_run_sql2(v_sql,@msg,@result);
+
   -- transfer data
   -- tran table
   set v_table = concat(v_table_prefix,'_tran');
@@ -327,7 +365,7 @@ begin
   set v_table = concat(v_table_prefix,'_kodtl');
 
   set v_sql = concat("insert into ",v_table,"
-    select a.* from ",v_kodtl_table," as a 
+    select a.* from ",v_kodtl_table," as a
     inner join ",v_ko_table," as b on a.ko_gid = b.ko_gid
       and b.delete_flag = 'N'
     where b.recon_code = '",in_recon_code,"'
@@ -344,6 +382,36 @@ begin
       and b.delete_flag = 'N'
     where b.recon_code = '",in_recon_code,"'
     and a.delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- rule table
+  set v_table = concat(v_table_prefix,'_rule');
+
+  set v_sql = concat("insert into ",v_table,"
+    select * from ",v_rule_table,"
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- preprocess table
+  set v_table = concat(v_table_prefix,'_preprocess');
+
+  set v_sql = concat("insert into ",v_table,"
+    select * from ",v_preprocess_table,"
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- theme table
+  set v_table = concat(v_table_prefix,'_theme');
+
+  set v_sql = concat("insert into ",v_table,"
+    select * from ",v_theme_table,"
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg,@result);
 

@@ -73,8 +73,8 @@ me:begin
   -- OCR mini bill no
   select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
-  and split(col2,'-',1) = in_pdunit_code
-  and split(col2,'-',2) = 'OCR'
+  and col2 like concat(in_pdunit_code,'%')
+  and col2 like '%-OCR-%'
   and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
@@ -109,8 +109,8 @@ me:begin
       select
         min(cast(split(col2,'-',3) as unsigned)) into @min_bill
       from ",v_ds_billsummary,"
-      where split(col2,'-',1) = '",v_unit_code,"'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      where col2 like '",v_unit_code,"%'
+      and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
       ");
@@ -123,7 +123,7 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      and col2 like '%-",v_bill_type,"-%'
       and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
@@ -137,8 +137,8 @@ me:begin
   -- OCS mini bill no
   select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
-  and split(col2,'-',1) = in_pdunit_code
-  and split(col2,'-',2) = 'OCS'
+  and col2 like concat(in_pdunit_code,'%')
+  and col2 like '%-OCS-%'
   and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
@@ -173,8 +173,8 @@ me:begin
       select
         min(cast(split(col2,'-',3) as unsigned)) into @min_bill
       from ",v_ds_billsummary,"
-      where split(col2,'-',1) = '",v_unit_code,"'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      where col2 like '",v_unit_code,"%'
+      and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
       ");
@@ -187,7 +187,7 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      and col2 like '%-",v_bill_type,"-%'
       and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
@@ -201,8 +201,8 @@ me:begin
   -- ICR mini bill no
   select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
-  and split(col2,'-',1) = in_pdunit_code
-  and split(col2,'-',2) = 'ICR'
+  and col2 like concat(in_pdunit_code,'%')
+  and col2 like '%-ICR-%'
   and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
@@ -226,8 +226,8 @@ me:begin
       select
         min(cast(split(col2,'-',3) as unsigned)) into @min_bill
       from ",v_ds_billsummary,"
-      where split(col2,'-',1) = '",v_unit_code,"'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      where col2 like '",v_unit_code,"%'
+      and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
       ");
@@ -240,7 +240,7 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      and col2 like '%-",v_bill_type,"-%'
       and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
@@ -254,8 +254,8 @@ me:begin
   -- ICS mini bill no
   select col2 into v_bill_no from recon_trn_ttran
   where recon_code = in_recon_code
-  and split(col2,'-',1) = in_pdunit_code
-  and split(col2,'-',2) = 'ICS'
+  and col2 like concat(in_pdunit_code,'%')
+  and col2 like '%-ICS-%'
   and col14 <> ''
   and delete_flag = 'N'
   limit 0,1;
@@ -290,8 +290,8 @@ me:begin
       select
         min(cast(split(col2,'-',3) as unsigned)) into @min_bill
       from ",v_ds_billsummary,"
-      where split(col2,'-',1) = '",v_unit_code,"'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      where col2 like '",v_unit_code,"%'
+      and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
       ");
@@ -304,7 +304,7 @@ me:begin
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
-      and split(col2,'-',2) = '",v_bill_type,"'
+      and col2 like '%-",v_bill_type,"-%'
       and col14 <> ''
       /*
       and (col5 = 'DEPOSIT'
