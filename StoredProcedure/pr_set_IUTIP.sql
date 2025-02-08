@@ -231,7 +231,6 @@ me:begin
 
   call pr_run_sql2(v_sql,@msg,@result);
 
-
   -- col2  - support tran id
   -- col4  - Tran Date
   -- col19 - Bill No
@@ -402,7 +401,7 @@ me:begin
 
       -- chk in IP IUD Dump
 			set v_sql = concat("select
-					cast(col12 as decimal(15,2))
+					sum(cast(col12 as decimal(15,2)))
 				into
 					@tran_amount
 				from ",v_ipiud_code,"
@@ -613,7 +612,7 @@ me:begin
         set v_ref_no = fn_get_autocode('IUT');
 
         -- chk in IP IUD Dump
-        if v_ipiud_amount > 0 then
+        if v_ipiud_amount > 0 and v_ipiud_amount >= v_dr_amount then
           set v_dr_amount = v_ipiud_amount;
         end if;
 

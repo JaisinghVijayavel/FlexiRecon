@@ -10,6 +10,9 @@ CREATE PROCEDURE `pr_del_scheduler`(
 )
 me:begin
   declare v_dataset_code varchar(32) default '';
+  declare v_dataset_db_name varchar(128) default '';
+  declare v_sql text default '';
+
   declare err_msg text default '';
   declare err_flag boolean default false;
 
@@ -117,6 +120,22 @@ me:begin
     delete from recon_trn_ttran where scheduler_gid = in_scheduler_gid;
     delete from recon_trn_ttranbrkp where scheduler_gid = in_scheduler_gid;
   end if;
+
+  -- get dataset database name
+  set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+  set v_dataset_db_name = ifnull(v_dataset_db_name,'');
+
+  if v_dataset_db_name <> '' then
+    set v_dataset_code = concat(v_dataset_db_name,'.',v_dataset_code);
+  end if;
+
+  set v_sql = concat("delete from ",
+    v_dataset_code,"
+    where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+    and delete_flag = 'N'
+  ");
+
+  call pr_run_sql1(v_sql,@msg,@result);
 
   set out_result = 1;
   set out_msg = 'File deleted successfully !';

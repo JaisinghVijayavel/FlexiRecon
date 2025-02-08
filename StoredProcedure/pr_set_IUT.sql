@@ -876,8 +876,8 @@ me:begin
   -- col46 - IUT amount
   -- col47 - IUT IP/OP
 
-  -- col23 - PayMode
   -- col22 - Event
+  -- col23 - PayMode
 
   -- find agg negative values
   set v_sql = concat("insert into recon_tmp_tuhiddr1 (uhid_no,recon_code,loc_code,dr_amount)

@@ -31,6 +31,27 @@ BEGIN
     where scheduler_gid > 0 and delete_flag = 'N'
     group by scheduler_gid;
 
+  insert into recon_tmp_tscheduler (scheduler_gid,recon_code)
+    select scheduler_gid,max(recon_code) from recon_trn_tfieldupdate
+    where scheduler_gid > 0
+    and update_status = 'P' 
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+  insert into recon_tmp_tscheduler (scheduler_gid,recon_code)
+    select scheduler_gid,max(recon_code) from recon_trn_tthemeupdate
+    where scheduler_gid > 0
+    and theme_status = 'P'
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+  insert into recon_tmp_tscheduler (scheduler_gid,recon_code)
+    select scheduler_gid,max(recon_code) from recon_trn_tiutentry
+    where scheduler_gid > 0
+    and iutentry_status = 'P'
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
 	select
 		a.scheduler_gid,
     date_format(b.scheduled_date,v_app_datetime_format) as scheduled_date,
@@ -40,7 +61,14 @@ BEGIN
 		b.pipeline_code,c.pipeline_name,
 		b.file_name,
 		d.dataset_code,d.dataset_name,
-    if(d.dataset_code = 'KOMANUAL','Knockoff','Posting') as dataset_type,
+    -- if(d.dataset_code = 'KOMANUAL','Knockoff','Posting') as dataset_type,
+    case
+      when d.dataset_code = 'KOMANUAL' then 'Knockoff'
+      when d.dataset_code = 'POSTMANUAL' then 'Posting'
+      when d.dataset_code = 'THEMEMANUAL' then 'Manual Theme'
+      when d.dataset_code = 'FIELDUPDATE' then 'Recon Field Update'
+      when d.dataset_code = 'IUTENTRY' then 'IUT Entry'
+    end as dataset_type,
     s.recon_code,r.recon_name,
     date_format(j.start_date,v_app_datetime_format) as last_sync_date,
     fn_get_mastername(j.job_status,'QCD_JOB_STATUS') as last_sync_status
@@ -51,7 +79,7 @@ BEGIN
 	inner join con_trn_tscheduler as b on a.scheduler_gid = b.scheduler_gid
 	inner join con_mst_tpipeline as c on b.pipeline_code = c.pipeline_code
 	inner join recon_mst_tdataset as d on c.target_dataset_code = d.dataset_code
-    and d.dataset_code in ('KOMANUAL','POSTMANUAL')
+    and d.dataset_code in ('KOMANUAL','POSTMANUAL','THEMEMANUAL','FIELDUPDATE','IUTENTRY')
     and d.delete_flag = 'N'
   left join recon_mst_trecon as r on s.recon_code = r.recon_code and r.delete_flag = 'N'
   left join recon_trn_tjob as j on j.job_gid = d.last_job_gid and j.delete_flag = 'N'

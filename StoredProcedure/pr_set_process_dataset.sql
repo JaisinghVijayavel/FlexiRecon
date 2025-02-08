@@ -266,6 +266,11 @@ me:begin
     execute _sql;
     deallocate prepare _sql;
 
+    if v_dataset_code = 'KOMANUAL' then
+      call pr_set_manualupdate(in_scheduler_gid,@msg,@result);
+    end if;
+
+    /*
     if v_dataset_code = 'THEMEMANUAL' then
       call pr_set_themeupdate(in_scheduler_gid,in_user_code,in_role_code,in_lang_code,@msg,@result);
     elseif v_dataset_code = 'KOMANUAL' then
@@ -277,6 +282,7 @@ me:begin
 
       set v_msg = @msg;
     end if;
+    */
   end if;
 
   -- set last job_gid

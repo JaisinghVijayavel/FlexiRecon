@@ -212,7 +212,7 @@ me:begin
   where a.recon_code = in_recon_code
   and a.tran_date <= in_tran_date
   and a.excp_value <> 0
-  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -248,7 +248,7 @@ me:begin
   where a.recon_code = in_recon_code
   and a.tran_date <= in_tran_date
   and a.excp_value <> 0
-  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
   and a.tran_acc_mode = 'C'
   and a.delete_flag = 'N';
 
@@ -296,7 +296,7 @@ me:begin
   where a.recon_code = in_recon_code
   and a.tran_date <= in_tran_date
   and a.excp_value <> 0
-  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -332,7 +332,7 @@ me:begin
   where a.recon_code = in_recon_code
   and a.tran_date <= in_tran_date
   and a.excp_value <> 0
-  and (a.excp_value - a.roundoff_value * a.tran_mult) <> 0
+  and (a.excp_value - a.roundoff_value) <> 0
   and a.tran_acc_mode = 'D'
   and a.delete_flag = 'N';
 
@@ -372,14 +372,14 @@ me:begin
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
 
   -- rounding off
-  if v_threshold_value > 0 then
+  -- if v_threshold_value > 0 then
 		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_tmp_ttran as a
 		where a.recon_code = in_recon_code
     and a.tran_date <= in_tran_date
 		and a.excp_value <> 0
     and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value
-    and (a.excp_value - a.roundoff_value * a.tran_mult) = 0
+    and (a.excp_value - a.roundoff_value) = 0
 		and a.delete_flag = 'N';
 
     set v_value = ifnull(v_value,0);
@@ -411,7 +411,7 @@ me:begin
 
 			insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('','','','');
     end if;
-  end if;
+  -- end if;
 
   -- target dataset balance
   select

@@ -50,6 +50,50 @@ me:BEGIN
     where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N'
     limit 0,1;
+  elseif v_dataset_code = 'THEMEMANUAL' then
+    select
+      b.recon_code,
+      b.recon_name,
+      b.recontype_code
+    into
+      v_recon_code,
+      v_recon_name,
+      v_recontype_code
+    from recon_trn_tthemeupdate as a
+    inner join recon_trn_ttran as t on a.tran_gid = t.tran_gid and t.delete_flag = 'N'
+    inner join recon_mst_trecon as b on t.recon_code = b.recon_code and b.delete_flag = 'N'
+    where a.scheduler_gid = in_scheduler_gid
+    and a.delete_flag = 'N'
+    limit 0,1;
+  elseif v_dataset_code = 'FIELDUPDATE' then
+    select
+      b.recon_code,
+      b.recon_name,
+      b.recontype_code
+    into
+      v_recon_code,
+      v_recon_name,
+      v_recontype_code
+    from recon_trn_tfieldupdate as a
+    inner join recon_trn_ttran as t on a.tran_gid = t.tran_gid and t.delete_flag = 'N'
+    inner join recon_mst_trecon as b on t.recon_code = b.recon_code and b.delete_flag = 'N'
+    where a.scheduler_gid = in_scheduler_gid
+    and a.delete_flag = 'N'
+    limit 0,1;
+  elseif v_dataset_code = 'IUTENTRY' then
+    select
+      a.recon_code,
+      b.recon_name,
+      b.recontype_code
+    into
+      v_recon_code,
+      v_recon_name,
+      v_recontype_code
+    from recon_trn_tiutentry as a
+    inner join recon_mst_trecon as b on a.recon_code = b.recon_code and b.delete_flag = 'N'
+    where a.scheduler_gid = in_scheduler_gid
+    and a.delete_flag = 'N'
+    limit 0,1;
   end if;
 
   set v_recon_code = ifnull(v_recon_code,'');
@@ -68,7 +112,7 @@ me:BEGIN
   from con_trn_tscheduler as a
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code and b.delete_flag = 'N'
   where a.scheduler_gid = in_scheduler_gid
-  and a.scheduler_status = 'Completed'
+  -- and a.scheduler_status = 'Completed'
   and a.delete_flag = 'N';
 
   -- recon info
@@ -190,6 +234,48 @@ me:BEGIN
       and c.delete_flag = 'N'
     where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N';
+  elseif v_dataset_code = 'THEMEMANUAL' then
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tthemeupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tthemeupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+  elseif v_dataset_code = 'FIELDUPDATE' then
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+  elseif v_dataset_code = 'IUTENTRY' then
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tiutentry
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tiutentry
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
 	end if;
 end $$
 

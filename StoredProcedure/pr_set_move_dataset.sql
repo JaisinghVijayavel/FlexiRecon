@@ -31,6 +31,7 @@ me:begin
 			if scheduler_done = 1 then leave scheduler_loop; end if;
 
 			call pr_set_process_dataset(v_scheduler_gid,'localhost',v_insert_by,'','',@msg,@result);
+      call pr_get_dsinvalidrecord(v_scheduler_gid,@msg,@result);
 		end loop scheduler_loop;
 
 		close scheduler_cursor;
