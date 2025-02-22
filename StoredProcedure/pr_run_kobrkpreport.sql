@@ -20,6 +20,7 @@ me:BEGIN
   set in_user_code = ifnull(in_user_code,'');
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tko
+    select z.* from (
 		select
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
 		  ",cast(in_job_gid as nchar)," as job_gid,
@@ -898,7 +899,7 @@ me:BEGIN
     left join recon_trn_ttranko as g on c.tran_gid = g.tran_gid and g.delete_flag = 'N'
     left join recon_trn_ttran as h on c.tran_gid = h.tran_gid and h.delete_flag = 'N'
 		where true ", in_condition,"
-
+    LOCK IN SHARE MODE) as z
   ");
 
   call pr_run_sql(v_sql,@msg,@result);

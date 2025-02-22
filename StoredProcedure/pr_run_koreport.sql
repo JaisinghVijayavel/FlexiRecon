@@ -20,6 +20,7 @@ me:BEGIN
   set in_user_code = ifnull(in_user_code,'');
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tko
+    select z.* from (
 		select
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
 		  ",cast(in_job_gid as nchar)," as job_gid,
@@ -191,7 +192,7 @@ me:BEGIN
       c.value_credit,
       c.bal_value_debit,
       c.bal_value_credit,
-      a.job_gid
+      a.job_gid as job_ref_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
 		inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -375,7 +376,7 @@ me:BEGIN
       c.value_credit,
       c.bal_value_debit,
       c.bal_value_credit,
-      a.job_gid
+      a.job_gid as job_ref_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
 		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -559,7 +560,7 @@ me:BEGIN
       c.value_credit,
       0,
       0,
-      a.job_gid
+      a.job_gid as job_ref_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid
 		inner join recon_trn_ttranbrkpko as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
@@ -743,7 +744,7 @@ me:BEGIN
       c.value_credit,
       0,
       0,
-      a.job_gid 
+      a.job_gid as job_ref_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid
 		inner join recon_trn_ttranbrkp as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
@@ -753,6 +754,7 @@ me:BEGIN
     left join recon_trn_ttranko as g on c.tran_gid = g.tran_gid and g.delete_flag = 'N'
     left join recon_trn_ttran as h on c.tran_gid = h.tran_gid and h.delete_flag = 'N'
 		where true ", in_condition,"
+    LOCK IN SHARE MODE) as z
   ");
 
   call pr_run_sql(v_sql,@msg,@result);

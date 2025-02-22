@@ -26,6 +26,7 @@ me:BEGIN
       recon_code,recon_name,rule_code,rule_name,reversal_flag,manual_matchoff,
       ko_reason,ko_remark,ko_gross_value,ko_value
     )
+    select z.* from (
 		select
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
 		  ",cast(in_job_gid as nchar)," as job_gid,
@@ -47,7 +48,9 @@ me:BEGIN
 		from recon_trn_tko as a
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
-		where true ", in_condition);
+		where true ", in_condition,"
+    LOCK IN SHARE MODE) as z
+    ");
 
   call pr_run_sql(v_sql,@msg,@result);
 

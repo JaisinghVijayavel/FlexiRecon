@@ -15,10 +15,10 @@ me:BEGIN
     Created By : Vijayavel
     Created Date : 28-07-2023
 
-    Updated By :
-    updated Date :
+    Updated By : Vijayavel
+    updated Date : 22-02-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_sql text default '';
@@ -52,6 +52,7 @@ me:BEGIN
   set in_user_code = ifnull(in_user_code,'');
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tko
+    select z.* from (
 		select
 		  ",cast(in_rptsession_gid as nchar)," as rptsession_gid,
 		  ",cast(in_job_gid as nchar)," as job_gid,
@@ -84,6 +85,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+      c.mapped_value,
+      c.roundoff_value,
 		  if(ifnull(cc.tran_mult,c.tran_mult) = -1,b.ko_value,0),
 		  if(ifnull(cc.tran_mult,c.tran_mult) = 1,b.ko_value,0),
 			c.col1,
@@ -216,7 +219,12 @@ me:BEGIN
 			c.col128,
 		  c.tran_remark1,
 		  c.tran_remark2,
-      '' as tranbrkptype_name
+      '' as tranbrkptype_name,
+      c.value_debit,
+      c.value_credit,
+      c.bal_value_debit,
+      c.bal_value_credit,
+      a.job_gid as job_ref_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
 		inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -260,6 +268,8 @@ me:BEGIN
 		  c.tran_acc_mode,
 		  c.tran_value,
 		  c.excp_value,
+      c.mapped_value,
+      c.roundoff_value,
 		  if(ifnull(cc.tran_mult,c.tran_mult) = -1,b.ko_value,0),
 		  if(ifnull(cc.tran_mult,c.tran_mult) = 1,b.ko_value,0),
 			c.col1,
@@ -392,7 +402,12 @@ me:BEGIN
 			c.col128,
 		  c.tran_remark1,
 		  c.tran_remark2,
-      '' as tranbrkptype_name
+      '' as tranbrkptype_name,
+      c.value_debit,
+      c.value_credit,
+      c.bal_value_debit,
+      c.bal_value_credit,
+      a.job_gid as job_ref_gid
 		from recon_trn_tko as a
 		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
 		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
@@ -400,7 +415,9 @@ me:BEGIN
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
-		where true ", in_condition);
+		where true ", in_condition,"
+    LOCK IN SHARE MODE) as z"
+  );
 
   call pr_run_sql(v_sql,@msg,@result);
 

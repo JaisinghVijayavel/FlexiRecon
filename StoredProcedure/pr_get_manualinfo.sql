@@ -243,11 +243,12 @@ me:BEGIN
     group by scheduler_gid;
 
     select scheduler_gid as 'Scheduler Id',
-      count(*) as 'Record Count'
+      tran_gid as 'Tran Id',
+      tranbrkp_gid as 'Supporting Tran Id',
+      theme_desc as 'Manual Theme'
     from recon_trn_tthemeupdate
     where scheduler_gid = in_scheduler_gid
-    and delete_flag = 'N'
-    group by scheduler_gid;
+    and delete_flag = 'N';
   elseif v_dataset_code = 'FIELDUPDATE' then
     select scheduler_gid as 'Scheduler Id',
       count(*) as 'Record Count'
@@ -262,6 +263,17 @@ me:BEGIN
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N'
     group by scheduler_gid;
+
+    /*
+    select scheduler_gid as 'Scheduler Id',
+      tran_gid as 'Tran Id',
+      tranbrkp_gid as 'Supporting Tran Id',
+      field_desc as 'Field',
+      field_value as 'Field Value'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N';
+    */
   elseif v_dataset_code = 'IUTENTRY' then
     select scheduler_gid as 'Scheduler Id',
       count(*) as 'Record Count'
@@ -276,6 +288,28 @@ me:BEGIN
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N'
     group by scheduler_gid;
+
+    /*
+    select scheduler_gid as 'Scheduler Id',
+      entry_ref_no as 'Entry Ref No',
+      iut_ipop as 'IP/OP',
+      dr_amount as 'Dr',
+      cr_amount as 'Cr',
+      uhid_no as 'UHID',
+      bill_no as 'Bill No',
+      ipop_no as 'IP/OP No',
+      ref_tran_gid as 'Tran Id',
+      ref_tranbrkp_gid as 'Supporting Tran Id',
+      from_recon_code as 'From Recon Code',
+      from_loc_code as 'From Loc Code',
+      from_unit_name as 'From Unit Name',
+      to_recon_code as 'To Recon Code',
+      to_loc_code as 'To Loc Code',
+      to_unit_name as 'To Unit Name'
+    from recon_trn_tiutentry
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N';
+    */
 	end if;
 end $$
 

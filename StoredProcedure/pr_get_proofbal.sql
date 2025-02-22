@@ -5,6 +5,7 @@ CREATE PROCEDURE `pr_get_proofbal`
 (
   in in_recon_code varchar(32),
   in in_tran_date date,
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -184,15 +185,18 @@ me:begin
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
 
+  -- delete user records from temp table
+  delete from recon_tmp_tproofbal
+  where user_code = in_user_code;
+
   -- calculated balance
-  select v_value as arrived_closingbal,
+  insert into recon_tmp_tproofbal
+  select in_recon_code,in_user_code,
+         v_value as arrived_closingbal,
          v_count as arrived_closingbal_count,
          v_bal_value1 as acc_closingbal,
          v_bal_tran_date1 as acc_closingbal_date,
          v_value - v_bal_value1 as diff_bal;
-
-  -- dataset balance
-  select * from tb_balance;
 
   drop temporary table if exists tb_dataset;
   drop temporary table if exists tb_brs;

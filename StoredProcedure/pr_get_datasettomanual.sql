@@ -23,7 +23,9 @@ BEGIN
 
   insert into recon_tmp_tscheduler (scheduler_gid,recon_code)
     select scheduler_gid,max(recon_code) from recon_trn_tmanualtran
-    where scheduler_gid > 0 and delete_flag = 'N'
+    where scheduler_gid > 0
+    and ko_status = 'P' 
+    and delete_flag = 'N'
     group by scheduler_gid;
 
   insert into recon_tmp_tscheduler (scheduler_gid,recon_code)

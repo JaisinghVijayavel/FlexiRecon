@@ -14,6 +14,10 @@ me:begin
 	declare v_ds_table text default '';
 
 	declare v_ds_dbname text default '';
+  declare v_recon_cycle_date date;
+
+  -- get recon_cycle_date
+  set v_recon_cycle_date = fn_get_reconcycledate(in_recon_code);
 
 	set v_tran_table = 'recon_trn_ttran';
 	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
@@ -54,6 +58,7 @@ me:begin
       col8 = '',
       col9 = ''
     where col1 = '",in_unit_name,"'
+    ",if(v_recon_cycle_date is null,"",concat("and col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -143,6 +148,7 @@ me:begin
     and b.col1 = '",in_unit_name,"'
     and b.col2 <> 'UHID - Deposit CB'
     and b.col9 <> 'TALLIED'
+    ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
     and b.delete_flag = 'N'
     set
       b.col8 = cast(os_amount as nchar),
@@ -161,6 +167,7 @@ me:begin
     and b.col2 <> 'UHID - Deposit CB'
     and b.col9 <> 'TALLIED'
     and b.col9 <> 'NOT POSTED'
+    ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
     and b.delete_flag = 'N'
     set
       b.col8 = cast(os_amount as nchar),

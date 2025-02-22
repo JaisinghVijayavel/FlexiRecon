@@ -91,7 +91,12 @@ me:BEGIN
     v_closingbalance_table_name from recon_mst_trecondataset T1,recon_mst_tdataset T2
 	where T1.recon_code=in_recon_code
 	and T1.dataset_code=T2.dataset_code
-  and (T2.dataset_name like 'PD Recon - Closing Balance%' or T2.dataset_name like 'Closing Balance%')
+  and
+  (
+    T2.dataset_name like 'PD Recon - Closing Balance%' or
+    T2.dataset_name like 'Closing Balance%' or
+    T2.dataset_name like 'ClosingBalance%'
+  )
   and T1.active_status='Y'
   and T1.delete_flag='N'
   and T2.active_status='Y'

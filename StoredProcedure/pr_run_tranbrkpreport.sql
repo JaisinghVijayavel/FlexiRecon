@@ -18,9 +18,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 28-02-2024
+    updated Date : 22-02-2024
 
-    Version : 2
+    Version : 3
   */
 
   declare v_count int default 0;
@@ -53,6 +53,7 @@ me:BEGIN
 
   -- transfer to temporary table
   set v_sql = concat("insert into recon_tmp_ttranbrkp
+    select z.* from (
 		select
       a.*
 		from recon_trn_ttranbrkp as a
@@ -76,6 +77,7 @@ me:BEGIN
     left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
       and f.delete_flag = 'N'
 		where true ", in_condition," and a.delete_flag = 'N'
+    LOCK IN SHARE MODE) as z
   ");
 
   call pr_run_sql(v_sql,@msg,@result);

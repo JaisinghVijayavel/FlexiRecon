@@ -107,19 +107,13 @@ me:BEGIN
   set in_job_gid = ifnull(in_job_gid,0);
 
   -- recon validation
-  if not exists(select recon_code from recon_mst_trecon
+  if exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
     and active_status = 'Y'
     and period_from <= curdate()
     and (period_to >= curdate()
     or until_active_flag = 'Y')
     and delete_flag = 'N') then
-
-    set out_msg = 'Invalid recon !';
-    set out_result = 0;
-
-    leave me;
-  else
     select
       recon_date_flag,
       recon_date_field
@@ -132,7 +126,14 @@ me:BEGIN
 
     set v_recon_date_flag = ifnull(v_recon_date_flag,'');
     set v_recon_date_field = ifnull(v_recon_date_field,'');
+  else
+    set out_msg = 'Invalid recon !';
+    set out_result = 0;
+
+    leave me;
   end if;
+
+  select 'vijay';
 
   -- get dataset db name
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
@@ -958,6 +959,7 @@ me:BEGIN
         end if;
 
         select v_sql;
+        leave me;
 
         call pr_run_sql(replace(v_count_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
         set @base_count = ifnull(@base_count,0);

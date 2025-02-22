@@ -178,7 +178,7 @@ me:begin
     in_to_dataset_code,
 		scheduler_gid,
 		tran_date,
-		tran_value,
+		excp_value,
 		tran_acc_mode,
 		tran_mult,
 		excp_value,
@@ -337,6 +337,27 @@ me:begin
   from recon_trn_ttran
   where recon_code = in_from_recon_code
   and mapped_value = 0
+  and delete_flag = 'N';
+
+  -- Sales Invoice
+  update recon_trn_ttran set col13 = 'HIS_SETTLEMENT'
+  where recon_code = in_to_recon_code
+  and col1 = 'Sales Invoices'
+  and col13 is null
+  and delete_flag = 'N';
+
+  -- Credit Memos
+  update recon_trn_ttran set col13 = 'Credit Memos'
+  where recon_code = in_to_recon_code
+  and col1 = 'Credit Memos'
+  and col13 is null
+  and delete_flag = 'N';
+
+  -- Debit Memos
+  update recon_trn_ttran set col13 = 'Debit Memos'
+  where recon_code = in_to_recon_code
+  and col1 = 'Debit Memos'
+  and col13 is null
   and delete_flag = 'N';
 
   -- tranbrkp
@@ -512,7 +533,7 @@ me:begin
 		col10,
 		col11,
 		col12,
-		col13,
+		'HIS_COLLECTION',
 		col14,
 		col15,
 		col16,
@@ -641,6 +662,14 @@ me:begin
   from recon_trn_ttranbrkp
   where recon_code = in_from_recon_code
   and tran_gid > 0
+  and delete_flag = 'N';
+
+  update recon_trn_ttran set
+	  col49 = col32,
+	  col50 = col33,
+	  col51 = col36,
+    tran_remark2 = ''
+  where recon_code = in_to_recon_code
   and delete_flag = 'N';
 end $$
 

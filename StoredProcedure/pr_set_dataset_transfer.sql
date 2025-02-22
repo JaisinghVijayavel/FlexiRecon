@@ -14,9 +14,9 @@ me:begin
     Created Date : 06-10-2023
 
     Updated By : Vijayavel
-    Updated Date : 16-05-2024
+    Updated Date : 19-02-2025
 
-    Version : 4
+    Version : 6
   */
 
   declare v_pipeline_code text default '';
@@ -186,13 +186,14 @@ me:begin
   -- get iis server date format
   set v_iis_date_format = ifnull(fn_get_configvalue('iis_date_format'),'');
 
+  /*
   if (v_recontype_code = 'W' or v_recontype_code = 'I' or v_recontype_code = 'B')
     and v_recon_closure_date <> '' then
 
     select
       dataset_field_name into v_tran_date_field
     from recon_mst_treconfieldmapping
-    where reconcode = in_recon_code
+    where recon_code = in_recon_code
     and dataset_code = v_dataset_code
     and recon_field_name = 'tran_date'
     and active_status = 'Y'
@@ -202,6 +203,7 @@ me:begin
       set v_recon_condition = concat(" and cast(",v_tran_date_field ,"as date) > '",v_recon_closure_date,"' ");
     end if;
   end if;
+  */
 
   if v_dataset_type = 'B' or v_dataset_type = 'T' then
     set v_target_table = 'recon_trn_ttran';

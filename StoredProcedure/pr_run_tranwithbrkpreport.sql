@@ -17,9 +17,9 @@ me:BEGIN
     Created Date : 08-02-2024
 
     Updated By : Vijayavel
-    updated Date : 28-02-2024
+    updated Date : 22-02-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_tran_field text default '';
@@ -61,11 +61,14 @@ me:BEGIN
 
   -- transfer tran records to report table
   set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,dataset_type,',v_tran_field,') ');
+
+  set v_sql = concat(v_sql,'select z.* from (');
+
   set v_sql = concat(v_sql,'select ');
   set v_sql = concat(v_sql,cast(in_rptsession_gid as nchar),' as rptsession_gid,');
   set v_sql = concat(v_sql,cast(in_job_gid as nchar),' as job_gid,');
   set v_sql = concat(v_sql,char(39),in_user_code,char(39),' as user_code,');
-  set v_sql = concat(v_sql,'b.dataset_name,rd.dataset_type,');
+  set v_sql = concat(v_sql,'b.dataset_name as ds_name,rd.dataset_type,');
   set v_sql = concat(v_sql,concat('a.',replace(v_tran_field,',',',a.')),' from recon_trn_ttran as a ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_trecondataset as rd on a.recon_code = rd.recon_code and a.dataset_code = rd.dataset_code ');
@@ -85,6 +88,8 @@ me:BEGIN
 
   set v_sql = concat(v_sql,'and a.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,' ',in_sorting_order);
+
+  set v_sql = concat(v_sql,' LOCK IN SHARE MODE) as z ');
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
 
@@ -108,14 +113,15 @@ me:BEGIN
   set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,dataset_type,tranbrkp_dataset_name,');
   set v_sql = concat(v_sql,'base_tran_value,base_excp_value,base_acc_mode,');
   set v_sql = concat(v_sql,v_tranbrkp_field,') ');
+  set v_sql = concat(v_sql,'select z.* from (');
   set v_sql = concat(v_sql,'select ');
   set v_sql = concat(v_sql,cast(in_rptsession_gid as nchar),' as rptsession_gid,');
   set v_sql = concat(v_sql,cast(in_job_gid as nchar),' as job_gid,');
   set v_sql = concat(v_sql,char(39),in_user_code,char(39),' as user_code,');
-  set v_sql = concat(v_sql,'b.dataset_name,');
+  set v_sql = concat(v_sql,'b.dataset_name as ds_name,');
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
-  set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
+  set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
   set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on s.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
@@ -133,6 +139,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'and s.tran_gid > 0 ');
   set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,' ',replace(in_sorting_order,'a.','s.'));
+  set v_sql = concat(v_sql,' LOCK IN SHARE MODE) as z ');
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
 
@@ -140,14 +147,15 @@ me:BEGIN
   set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,dataset_type,tranbrkp_dataset_name,');
   set v_sql = concat(v_sql,'base_tran_value,base_excp_value,base_acc_mode,');
   set v_sql = concat(v_sql,v_tranbrkp_field,') ');
+  set v_sql = concat(v_sql,'select z.* from (');
   set v_sql = concat(v_sql,'select ');
   set v_sql = concat(v_sql,cast(in_rptsession_gid as nchar),' as rptsession_gid,');
   set v_sql = concat(v_sql,cast(in_job_gid as nchar),' as job_gid,');
   set v_sql = concat(v_sql,char(39),in_user_code,char(39),' as user_code,');
-  set v_sql = concat(v_sql,'b.dataset_name,');
+  set v_sql = concat(v_sql,'b.dataset_name as ds_name,');
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
-  set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
+  set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
   set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on s.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
@@ -165,6 +173,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'and s.tran_gid = 0 ');
   set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,' ',replace(in_sorting_order,'a.','s.'));
+  set v_sql = concat(v_sql,' LOCK IN SHARE MODE) as z ');
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
 

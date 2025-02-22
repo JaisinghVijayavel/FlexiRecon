@@ -3,7 +3,8 @@
 DROP procedure IF EXISTS `pr_get_PD_minibill` $$
 CREATE procedure `pr_get_PD_minibill`
 (
-  in_recon_code varchar(32)
+  in_recon_code varchar(32),
+  in_user_code varchar(32)
 )
 me:begin
   declare v_sql text default '';
@@ -18,16 +19,19 @@ me:begin
   declare v_recon_cycle_date text default '';
   declare v_cycle_date text default '';
 
-  drop temporary table if exists tb_minibill;
+  /*
+  drop temporary table if exists recon_tmp_tminibill;
 
-  create temporary table if not exists tb_minibill
+  create temporary table if not exists recon_tmp_tminibill
   (
     unit_code varchar(32),
     bill_type varchar(32),
+    user_code varchar(32),
     cycle_date text default null,
     mini_billno text default null,
-    PRIMARY KEY (unit_code,bill_type)
+    PRIMARY KEY (unit_code,bill_type,user_code)
   ) ENGINE = MyISAM;
+  */
 
   -- recon closure date
   if not exists(select recon_code from recon_mst_trecon
@@ -39,6 +43,10 @@ me:begin
     and delete_flag = 'N') then
     leave me;
   end if;
+
+  -- delete existing records in temp table
+  delete from recon_tmp_tminibill
+  where user_code = in_user_code;
 
   -- get recon closure date
   select
@@ -149,16 +157,12 @@ me:begin
 
 			set @min_bill = ifnull(@min_bill,0);
 
-      insert into tb_minibill(unit_code,bill_type,cycle_date,mini_billno)
-        select v_pdunit_code,v_bill_type,v_cycle_date,@min_bill;
+      insert into recon_tmp_tminibill(user_code,unit_code,bill_type,cycle_date,mini_billno)
+        select in_user_code,v_pdunit_code,v_bill_type,v_cycle_date,@min_bill;
     end loop pdunit_loop;
 
     close pdunit_cursor;
   end pdunit_block;
-
-  select * from tb_minibill;
-
-  drop temporary table if exists tb_minibill;
 end $$
 
 DELIMITER ;

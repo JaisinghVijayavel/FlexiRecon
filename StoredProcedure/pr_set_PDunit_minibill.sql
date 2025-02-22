@@ -19,7 +19,7 @@ me:begin
   -- get dataset bill summary
   if exists(select a.dataset_code from recon_mst_trecondataset as a
     inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
-      and b.dataset_name like 'bill summary%'
+      and (b.dataset_name like 'bill summary%' or b.dataset_name like 'billsummary%')
       and b.active_status = 'Y'
       and b.delete_flag = 'N'
     where a.recon_code = in_recon_code
@@ -29,7 +29,7 @@ me:begin
       a.dataset_code into v_ds_billsummary
     from recon_mst_trecondataset as a
     inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
-      and b.dataset_name like 'bill summary%'
+      and (b.dataset_name like 'bill summary%' or b.dataset_name like 'billsummary%')
       and b.active_status = 'Y'
       and b.delete_flag = 'N'
     where a.recon_code = in_recon_code
@@ -49,7 +49,6 @@ me:begin
     leave me;
   end if;
 
-  -- recon closure date
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
     and period_from <= curdate()
@@ -60,6 +59,7 @@ me:begin
     leave me;
   end if;
 
+  -- recon closure date
   select
     ifnull(date_format(recon_closure_date,'%Y-%m-%d'),'2000-01-01') into v_recon_closure_date
   from recon_mst_trecon
@@ -94,6 +94,14 @@ me:begin
 
   set v_mini_field_name = ifnull(v_mini_field_name,'');
 
+  -- blank mini bill no
+  set v_sql = concat("update recon_trn_ttranbrkp set
+    ",v_mini_field_name,"='0'
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
   if v_bill_no <> '' and v_mini_field_name <> '' then
     /*
     select
@@ -124,6 +132,7 @@ me:begin
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
       /*
+      and tran_date > '",v_recon_closure_date,"'
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */
@@ -186,6 +195,7 @@ me:begin
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
       /*
+      and tran_date > '",v_recon_closure_date,"'
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */
@@ -237,6 +247,7 @@ me:begin
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
       /*
+      and tran_date > '",v_recon_closure_date,"'
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */
@@ -299,6 +310,7 @@ me:begin
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
       /*
+      and tran_date > '",v_recon_closure_date,"'
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */

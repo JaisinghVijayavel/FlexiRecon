@@ -12,6 +12,16 @@ CREATE PROCEDURE `pr_run_preprocess`(
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date : 
+
+    Updated By : Vijayavel
+    Updated Date : 20-02-2025
+
+    Version : 1
+  */
+
   declare v_get_recon_field text default '';
   declare v_set_recon_field text default '';
   declare v_cumulative_flag text default '';
@@ -394,7 +404,7 @@ me:BEGIN
 							if v_set_recon_field <> '' and v_lookup_return_field <> '' then
                 if v_reverse_update_flag = 'Y' then
                   -- update lookup dataset field
-								  set v_lookup_update_fields = concat(v_lookup_update_fields,',b.',v_lookup_return_field,'=a.',v_set_recon_field);
+								  set v_lookup_update_fields = concat(v_lookup_update_fields,',b.',v_lookup_return_field,'=cast(a.',v_set_recon_field,' as nchar)');
                 else
 								  set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field);
                 end if;
