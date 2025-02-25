@@ -236,7 +236,7 @@ me:BEGIN
 		  c.tran_date,
 		  c.tran_acc_mode,
 		  c.tran_value,
-		  c.excp_value,
+		  (c.excp_value-c.roundoff_value) as excp_value,
       c.mapped_value,
       c.roundoff_value,
 		  if(c.tran_mult = -1,b.ko_value,0),

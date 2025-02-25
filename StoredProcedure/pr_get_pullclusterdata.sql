@@ -109,7 +109,19 @@ me:BEGIN
 					col35,
 					col36,
 					col37,
-					col38
+					col38,
+					col61,
+					col62,
+					col63,
+					col64,
+					col65,
+					col66,
+					col67,
+					col68,
+					col69,
+					col70,
+					col71,
+					col72
         )
         select
           '",in_recon_code,"',
@@ -151,7 +163,19 @@ me:BEGIN
 					col19,
 					col20,
 					col12,
-					recon_code
+					recon_code,
+					col40,
+					col41,
+					col44,
+					col7,
+					col15,
+					col46,
+					col47,
+					col48,
+					col49,
+					col50,
+					col51,
+					col39
         from ",v_tran_table,"
         where recon_code = '",v_pdrecon_code,"'
         and excp_value <> 0
@@ -203,7 +227,19 @@ me:BEGIN
 					col35,
 					col36,
 					col37,
-					col38
+					col38,
+					col61,
+					col62,
+					col63,
+					col64,
+					col65,
+					col66,
+					col67,
+					col68,
+					col69,
+					col70,
+					col71,
+					col72
         )
         select
           '",in_recon_code,"',
@@ -246,7 +282,19 @@ me:BEGIN
 					col19,
 					col20,
 					col12,
-					recon_code
+					recon_code,
+					col40,
+					col41,
+					col44,
+					col7,
+					col15,
+					col46,
+					col47,
+					col48,
+					col49,
+					col50,
+					col51,
+					col39
         from ",v_tranbrkp_table,"
         where recon_code = '",v_pdrecon_code,"'
         and excp_value <> 0

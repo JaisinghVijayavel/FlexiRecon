@@ -99,6 +99,12 @@ me:BEGIN
   where job_gid = in_job_gid
   and rptsession_gid = in_rptsession_gid;
 
+  -- delete zero excp_value
+  delete from recon_rpt_ttranwithbrkp
+  where job_gid = in_job_gid
+  and rptsession_gid = in_rptsession_gid
+  and excp_value = 0;
+
   -- update tranbrkp_dataset_code, tranbrkp_dataset_name
   set v_sql = concat('update recon_rpt_ttranwithbrkp set ');
   set v_sql = concat(v_sql,'tranbrkp_dataset_code = dataset_code,');

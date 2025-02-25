@@ -15,8 +15,23 @@ me:BEGIN
   declare v_reporttemplate_code_es text;
   declare v_closing_balance_conditon text;
   declare v_closingbalance_table_name text;
+
 	declare v_unitmaster_table_name text;
+  declare v_rr_table_name text;
+  declare v_rr_ds_code text;
   declare v_dataset_db_name text;
+
+  declare v_recon_lock_date text;
+
+  -- get recon details
+  select
+    date_format(ifnull(recon_lock_date,'2000-01-01'),'%Y-%m-%d') as lock_date
+  into
+    v_recon_lock_date
+  from recon_mst_trecon
+  where recon_code = in_recon_code
+  and active_status = 'Y'
+  and delete_flag = 'N';
 
   -- fetching reportcode and report template code for Custom report Exception Summary
 	select
@@ -52,7 +67,9 @@ me:BEGIN
 
 	-- KO formatted
 	call pr_run_dynamicreport(v_reporttemplate_code_ko, in_recon_code,v_report_code_ko,
-        in_recon_code, "AND  a.ko_gid > '0' ", false, '', '', in_user_code, @out_msg, @out_result);
+        in_recon_code,
+        concat("AND  a.ko_gid > '0' and a.ko_date > '",v_recon_lock_date,"' "),
+        false, '', '', in_user_code, @out_msg, @out_result);
 
 	-- pd closing balance v_closing_balance_conditon by filtering based on PD location
   select fn_get_configvalue('dataset_db_name')into v_dataset_db_name;
@@ -88,7 +105,8 @@ me:BEGIN
 	select
 		T1.dataset_code
 	into
-    v_closingbalance_table_name from recon_mst_trecondataset T1,recon_mst_tdataset T2
+    v_closingbalance_table_name
+  from recon_mst_trecondataset T1,recon_mst_tdataset T2
 	where T1.recon_code=in_recon_code
 	and T1.dataset_code=T2.dataset_code
   and
@@ -121,6 +139,40 @@ me:BEGIN
 	prepare stmt from @query1;
 	execute stmt;
 	deallocate prepare stmt;
+
+  -- receipt report
+	select
+		a.dataset_code
+	into
+		v_rr_ds_code
+	from recon_mst_trecondataset as a
+  inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
+    and b.dataset_name like 'ReceiptReport%'
+    and b.active_status = 'Y'
+    and b.delete_flag = 'N'
+  where a.recon_code = in_recon_code
+  and a.dataset_type = 'L'
+  and a.active_status = 'Y'
+  and a.delete_flag = 'N';
+
+  set v_rr_ds_code = ifnull(v_rr_ds_code,'');
+  set v_rr_table_name = v_rr_ds_code;
+
+  if v_rr_ds_code <> '' then
+    if v_dataset_db_name !='' then
+      set v_rr_table_name =concat(v_dataset_db_name,'.',v_rr_table_name);
+	  end if;
+
+    -- receipt report
+    -- col11 - TRA Status
+    -- col35 - PD Tran Id
+
+	  call pr_run_dynamicreport('', in_recon_code,v_rr_ds_code, 'RR Not Mapped',
+		  concat(" and col35 is null and col11 = 'ACTIVE' "),
+      false, '', '', in_user_code, @out_msg, @out_result);
+  else
+    select 'No Records Found !' as 'Result';
+  end if;
 end $$
 
 DELIMITER ;

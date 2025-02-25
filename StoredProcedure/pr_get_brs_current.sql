@@ -147,6 +147,8 @@ me:begin
       if dataset_done = 1 then leave dataset_loop; end if;
 
       insert into tb_balance(dataset_code,dataset_type,tran_date,bal_value)
+      select z.* from
+      (
         select
           a.dataset_code,b.dataset_type,a.tran_date,
           a.bal_value
@@ -155,7 +157,10 @@ me:begin
         where b.recon_code = in_recon_code
         and a.dataset_code = v_dataset_code
         and a.tran_date <= in_tran_date
-        and a.delete_flag = 'N' order by tran_date desc limit 0,1;
+        and a.delete_flag = 'N'
+        order by tran_date desc limit 0,1
+        LOCK IN SHARE MODE
+      ) as z;
     end loop dataset_loop;
 
     close dataset_cursor;
@@ -216,7 +221,8 @@ me:begin
   and a.excp_value > v_threshold_value))
   */
   and a.tran_acc_mode = 'C'
-  and a.delete_flag = 'N';
+  and a.delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
@@ -243,7 +249,11 @@ me:begin
     ''
   );
 
-  select sum(a.excp_value),count(*) into v_value,v_count from recon_trn_ttran as a
+  select
+    sum(a.excp_value),count(*)
+  into
+    v_value,v_count
+  from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
@@ -257,7 +267,8 @@ me:begin
   and a.excp_value > v_threshold_value))
   */
   and a.tran_acc_mode = 'C'
-  and a.delete_flag = 'N';
+  and a.delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
@@ -296,7 +307,11 @@ me:begin
   insert into tb_brs (particulars,tran_value,tran_acc_mode,bal_value) values ('Less','','','');
 
 
-  select sum(a.excp_value),count(*) into v_value,v_count from recon_trn_ttran as a
+  select
+    sum(a.excp_value),count(*)
+  into
+    v_value,v_count
+  from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'B'
@@ -310,7 +325,8 @@ me:begin
   and a.excp_value > v_threshold_value))
   */
   and a.tran_acc_mode = 'D'
-  and a.delete_flag = 'N';
+  and a.delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
@@ -337,7 +353,11 @@ me:begin
     ''
   );
 
-  select sum(a.excp_value),count(*) into v_value,v_count from recon_trn_ttran as a
+  select
+    sum(a.excp_value),count(*)
+  into
+    v_value,v_count
+  from recon_trn_ttran as a
   inner join tb_dataset as b
     on a.dataset_code = b.dataset_code
     and b.dataset_type = 'T'
@@ -351,7 +371,8 @@ me:begin
   and a.excp_value > v_threshold_value))
   */
   and a.tran_acc_mode = 'D'
-  and a.delete_flag = 'N';
+  and a.delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
@@ -389,14 +410,19 @@ me:begin
 
   -- rounding off
   -- if v_threshold_value > 0 then
-		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_trn_ttran as a
+		select
+      sum(a.excp_value*a.tran_mult),count(*)
+    into
+      v_value,v_count
+    from recon_trn_ttran as a
 		where a.recon_code = in_recon_code
     and a.tran_date <= in_tran_date
 		and a.excp_value <> 0
     and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value
     and (a.excp_value - a.roundoff_value) = 0
-		and a.delete_flag = 'N';
+		and a.delete_flag = 'N'
+    LOCK IN SHARE MODE;
 
     set v_value = ifnull(v_value,0);
     set v_count = ifnull(v_count,0);

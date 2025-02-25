@@ -143,7 +143,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'b.dataset_name as ds_name,');
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
-  set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
+  set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
   set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
 
   set v_sql = concat(v_sql,"inner join recon_mst_tpdrecon as p on s.recon_code = p.pdrecon_code
@@ -178,7 +178,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'b.dataset_name as ds_name,');
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
-  set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
+  set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
   set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkpko as s ');
 
   set v_sql = concat(v_sql,"inner join recon_mst_tpdrecon as p on s.recon_code = p.pdrecon_code
@@ -213,7 +213,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'b.dataset_name as ds_name,');
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
-  set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
+  set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
   set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
 
   set v_sql = concat(v_sql,"inner join recon_mst_tpdrecon as p on s.recon_code = p.pdrecon_code

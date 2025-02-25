@@ -409,7 +409,7 @@ me:BEGIN
     set v_sql = concat(v_static_fields,'select a.* from (');
     set v_sql = concat(v_sql,'select ',v_sql_field,' from ',in_table_name,' where 1=1 ',in_condition);
 
-    set v_sql = concat(v_sql,') as a ');
+    set v_sql = concat(v_sql,' LOCK IN SHARE MODE) as a ');
 
     if in_job_gid > 0 and in_outputfile_flag = true and in_outputfile_type = 'csv' then
       set v_rpt_path = fn_get_configvalue('mysql_rpt_path');

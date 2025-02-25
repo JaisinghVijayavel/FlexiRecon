@@ -15,7 +15,7 @@ me:begin
   declare v_txt text default '';
 	declare v_ko_gid int default 0;
 	declare v_count int default 0;
-	
+
   declare v_ko_date date;
   declare v_ko_undo_period int default 0;
 
@@ -28,6 +28,8 @@ me:begin
 	declare v_ko_table text default '';
 	declare v_kodtl_table text default '';
 	declare v_koroundoff_table text default '';
+
+  declare v_recon_lock_date date;
 
 	-- set tran table
   /*
@@ -79,12 +81,25 @@ me:begin
 	set v_sql = concat("select ko_gid into @ko_gid from ",v_ko_table,"
     where ko_gid = ",cast(in_ko_gid as nchar),"
     and delete_flag = 'N'");
-		
+
 	call pr_run_sql(v_sql,@msg,@result);
 
 	set v_ko_gid = ifnull(@ko_gid,0);
 
   if v_ko_gid > 0 then
+    -- get recon_lock_date
+    select
+      ifnull(recon_lock_date,'2000-01-01')
+    into
+      v_recon_lock_date
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and active_status = 'Y'
+    and delete_flag = 'N';
+
+    set v_recon_lock_date = ifnull(v_recon_lock_date,'2000-01-01');
+
+    -- get ko date
 		set v_sql = concat("
 			select ko_date into @ko_date from ",v_ko_table,"
 			where ko_gid = ",cast(in_ko_gid as nchar),"
@@ -95,9 +110,15 @@ me:begin
     set v_txt = fn_get_configvalue('ko_undo_period');
     set v_ko_undo_period = cast(ifnull(v_txt,'0') as unsigned);
 
-
     if curdate() > adddate(v_ko_date,interval v_ko_undo_period day) then
       set out_msg = concat('Undo ko failed ! It should be done with in ',cast(v_ko_undo_period as nchar),' day(s) !)');
+      leave me;
+    end if;
+
+    -- validate recon_lock_date
+    if datediff(v_ko_date,v_recon_lock_date) < 0 then
+      set out_msg = concat('Undo job failed ! KO date ',cast(v_ko_date as nchar),' ! Recon Lock Date ',
+        cast(v_recon_lock_date as nchar),' !');
       leave me;
     end if;
 
@@ -116,7 +137,7 @@ me:begin
 				where a.ko_gid = ",cast(in_ko_gid as nchar),"
 				and a.delete_flag = 'N'
 				group by b.tran_gid");
-				
+
 		call pr_run_sql(v_sql,@msg,@count);
 
     insert into recon_tmp_ttrangid

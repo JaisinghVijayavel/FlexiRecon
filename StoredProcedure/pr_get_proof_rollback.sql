@@ -202,14 +202,19 @@ me:begin
 
   -- insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Exception','','','');
 
-  select sum(excp_value),count(*) into v_value,v_count from recon_tmp_ttran
+  select
+    sum(excp_value),count(*)
+  into
+    v_value,v_count
+  from recon_tmp_ttran
   where recon_code = in_recon_code
   and excp_value <> 0
   and tran_date <= in_tran_date
   and (excp_value - roundoff_value) <> 0
   and tran_acc_mode = 'D'
   and tran_date <= in_tran_date
-  and delete_flag = 'N';
+  and delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
@@ -236,14 +241,19 @@ me:begin
     ''
   );
 
-  select sum(excp_value),count(*) into v_value,v_count from recon_tmp_ttran
+  select
+    sum(excp_value),count(*)
+  into
+    v_value,v_count
+  from recon_tmp_ttran
   where recon_code = in_recon_code
   and tran_date <= in_tran_date
   and excp_value <> 0
   and (excp_value - roundoff_value) <> 0
   and tran_acc_mode = 'C'
   and tran_date <= in_tran_date
-  and delete_flag = 'N';
+  and delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   set v_value = ifnull(v_value,0);
   set v_count = ifnull(v_count,0);
@@ -274,14 +284,19 @@ me:begin
 
   -- rounding off
   -- if v_threshold_value > 0 then
-		select sum(a.excp_value*a.tran_mult),count(*) into v_value,v_count from recon_tmp_ttran as a
+		select
+      sum(a.excp_value*a.tran_mult),count(*)
+    into
+      v_value,v_count
+    from recon_tmp_ttran as a
 		where a.recon_code = in_recon_code
     and a.tran_date <= in_tran_date
 		and a.excp_value <> 0
     and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value
 		and (a.excp_value - a.roundoff_value) = 0
-		and a.delete_flag = 'N';
+		and a.delete_flag = 'N'
+    LOCK IN SHARE MODE;
 
     set v_value = ifnull(v_value,0);
     set v_count = ifnull(v_count,0);

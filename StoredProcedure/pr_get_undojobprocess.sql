@@ -12,7 +12,7 @@ CREATE PROCEDURE `pr_get_undojobprocess`
 begin
   declare v_mysql_rpt_path text default '';
 
-  set v_mysql_rpt_path = fn_get_configvalue('mysql_rpt_path');
+  set @mysql_rpt_path = fn_get_configvalue('mysql_rpt_path');
 
 	set @sql = concat("
 	select
@@ -29,7 +29,7 @@ begin
 		date_format(ifnull(a.end_date,''),'%d-%m-%Y %h:%i:%s') as end_date,
 		ifnull(a.ip_addr,'') as ip_addr,
 		ifnull(a.job_remark,'')as job_remark,
-		v_mysql_rpt_path as file_path
+		@mysql_rpt_path as file_path
 	from recon_trn_tjob a 
 	left join recon_mst_tjobtype b on a.jobtype_code = b.jobtype_code
 		and b.delete_flag = 'N'

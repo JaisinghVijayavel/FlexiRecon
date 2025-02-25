@@ -34,6 +34,8 @@ me:begin
 	declare v_kodtl_table text default '';
 	declare v_koroundoff_table text default '';
 
+  declare v_recon_lock_date date;
+
 	-- set tran table
   /*
 	set v_tran_table = concat(in_recon_code,'_tran');
@@ -113,6 +115,18 @@ me:begin
     and job_status in ('C','F')
     and delete_flag = 'N';
 
+    -- get recon_lock_date
+    select
+      ifnull(recon_lock_date,'2000-01-01')
+    into
+      v_recon_lock_date
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and active_status = 'Y'
+    and delete_flag = 'N';
+
+    set v_recon_lock_date = ifnull(v_recon_lock_date,'2000-01-01');
+
     -- get undo job threshold
     set v_txt = fn_get_configvalue('job_undo_period');
     set v_job_undo_period = cast(ifnull(v_txt,'0') as unsigned);
@@ -120,6 +134,13 @@ me:begin
     -- validate
     if curdate() > adddate(v_job_date,interval v_job_undo_period day) then
       set out_msg = ('Undo job failed ! It should be done with in ',cast(v_job_undo_period as nchar),' day(s) !)');
+      leave me;
+    end if;
+
+    -- validate recon_lock_date
+    if datediff(v_job_date,v_recon_lock_date) < 0 then
+      set out_msg = concat('Undo job failed ! Job date ',cast(v_job_date as nchar),' ! Recon Lock Date ',
+        cast(v_recon_lock_date as nchar),' !');
       leave me;
     end if;
 

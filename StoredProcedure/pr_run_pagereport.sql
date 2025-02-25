@@ -202,6 +202,7 @@ me:BEGIN
 
     set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
     set v_sql = concat(v_sql,'where rptsession_gid = ',cast(v_rptsession_gid as nchar),' ');
+    set v_sql = concat(v_sql,'LOCK IN SHARE MODE');
 
     call pr_run_sql(v_sql,@msg,@result);
   elseif v_report_exec_type = 'D' then
@@ -215,11 +216,13 @@ me:BEGIN
 
     set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
     set v_sql = concat(v_sql,'where true ',in_report_condition);
+    set v_sql = concat(v_sql,'LOCK IN SHARE MODE');
 
     call pr_run_sql(v_sql,@msg,@result);
   elseif v_report_exec_type = 'T' then
     set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');
     set v_sql = concat(v_sql,'where true ',in_report_condition);
+    set v_sql = concat(v_sql,'LOCK IN SHARE MODE');
 
     call pr_run_sql(v_sql,@msg,@result);
   end if;

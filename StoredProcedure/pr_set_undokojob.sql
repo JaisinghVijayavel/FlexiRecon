@@ -31,6 +31,8 @@ me:begin
 	declare v_kodtl_table text default '';
 	declare v_koroundoff_table text default '';
 
+  declare v_recon_lock_date date;
+
 	-- set tran table
   /*
 	set v_tran_table = concat(in_recon_code,'_tran');
@@ -82,7 +84,7 @@ me:begin
     where job_gid = in_job_gid
     and recon_code = in_recon_code
     and jobtype_code in ('A','S','M')
-    and job_status = 'C'
+    and job_status in ('C','F')
     and delete_flag = 'N') then
     select
       jobtype_code,cast(start_date as date)
@@ -92,8 +94,20 @@ me:begin
     where job_gid = in_job_gid
     and recon_code = in_recon_code
     and jobtype_code in ('A','S','M')
-    and job_status = 'C'
+    and job_status in ('C','F')
     and delete_flag = 'N';
+
+    -- get recon_lock_date
+    select
+      ifnull(recon_lock_date,'2000-01-01')
+    into
+      v_recon_lock_date
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and active_status = 'Y'
+    and delete_flag = 'N';
+
+    set v_recon_lock_date = ifnull(v_recon_lock_date,'2000-01-01');
 
     -- get undo job threshold
     set v_txt = fn_get_configvalue('job_undo_period');
@@ -101,7 +115,14 @@ me:begin
 
     -- validate
     if curdate() > adddate(v_job_date,interval v_job_undo_period day) then
-      set out_msg = ('Undo job failed ! It should be done with in ',cast(v_job_undo_period as nchar),' day(s) !)');
+      set out_msg = concat('Undo job failed ! It should be done with in ',cast(v_job_undo_period as nchar),' day(s) !)');
+      leave me;
+    end if;
+
+    -- validate recon_lock_date
+    if datediff(v_job_date,v_recon_lock_date) < 0 then
+      set out_msg = concat('Undo job failed ! Job date ',cast(v_job_date as nchar),' ! Recon Lock Date ',
+        cast(v_recon_lock_date as nchar),' !');
       leave me;
     end if;
 
@@ -151,7 +172,7 @@ me:begin
 					inner join ",v_tranbrkpko_table," as b on a.ko_gid = b.ko_gid and b.excp_value = 0 and b.delete_flag = 'N'
 					where a.job_gid = ",cast(in_job_gid as nchar),"
 					and a.delete_flag = 'N'");
-					
+
 			call pr_run_sql(v_sql,@msg,@result);
 
 			set v_sql = concat("

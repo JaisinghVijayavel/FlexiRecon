@@ -313,10 +313,11 @@ begin
   set v_table = concat(v_table_prefix,'_tran');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     ",v_condition,"
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -324,9 +325,10 @@ begin
   set v_table = concat(v_table_prefix,'_tranko');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_tranko_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -334,9 +336,10 @@ begin
   set v_table = concat(v_table_prefix,'_tranbrkp');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_tranbrkp_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -344,9 +347,10 @@ begin
   set v_table = concat(v_table_prefix,'_tranbrkpko');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_tranbrkpko_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -354,9 +358,10 @@ begin
   set v_table = concat(v_table_prefix,'_ko');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_ko_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -365,11 +370,12 @@ begin
   set v_table = concat(v_table_prefix,'_kodtl');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select a.* from ",v_kodtl_table," as a
     inner join ",v_ko_table," as b on a.ko_gid = b.ko_gid
       and b.delete_flag = 'N'
     where b.recon_code = '",in_recon_code,"'
-    and a.delete_flag = 'N'");
+    and a.delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -377,11 +383,12 @@ begin
   set v_table = concat(v_table_prefix,'_koroundoff');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select a.* from ",v_koroundoff_table," as a
     inner join ",v_ko_table," as b on a.ko_gid = b.ko_gid
       and b.delete_flag = 'N'
     where b.recon_code = '",in_recon_code,"'
-    and a.delete_flag = 'N'");
+    and a.delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -389,9 +396,10 @@ begin
   set v_table = concat(v_table_prefix,'_rule');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_rule_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -399,9 +407,10 @@ begin
   set v_table = concat(v_table_prefix,'_preprocess');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_preprocess_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -409,9 +418,10 @@ begin
   set v_table = concat(v_table_prefix,'_theme');
 
   set v_sql = concat("insert into ",v_table,"
+    select z.* from (
     select * from ",v_theme_table,"
     where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
 

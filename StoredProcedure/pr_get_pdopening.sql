@@ -664,11 +664,35 @@ me:begin
   and tran_gid > 0
   and delete_flag = 'N';
 
+  -- Legacy Reference Update, Theme Blank
+  -- col32 - Line Ref No
+  -- col33 - Theme Ref No
+  -- col34 - Entry Pass Flag
+  -- col36 - Entry Ref No
+  -- col49 - Legacy Line Ref No
+  -- col50 - Legacy Theme Ref No
+  -- col51 - Legacy Entry Ref No
+  -- tran_remark2 - Theme
+
   update recon_trn_ttran set
 	  col49 = col32,
 	  col50 = col33,
 	  col51 = col36,
     tran_remark2 = ''
+  where recon_code = in_to_recon_code
+  and delete_flag = 'N';
+
+  -- Clear Fields
+  -- col32 - Line Ref No
+  -- col33 - Theme Ref No
+  -- col34 - Entry Pass Flag
+  -- col36 - Entry Ref No
+
+  update recon_trn_ttran set
+	  col32 = '',
+	  col33 = '',
+    col34 = '',
+	  col36 = ''
   where recon_code = in_to_recon_code
   and delete_flag = 'N';
 end $$

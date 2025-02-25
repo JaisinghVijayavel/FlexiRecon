@@ -70,17 +70,25 @@ me:begin
 
   -- tran table
   insert into recon_tmp_ttran
+  select z.* from
+  (
     select * from recon_trn_ttran
     where recon_code = in_recon_code
     and tran_date < v_next_tran_date
-    and delete_flag = 'N';
+    and delete_flag = 'N'
+    LOCK IN SHARE MODE
+  ) as z;
 
   -- tranbrkp table
   insert into recon_tmp_ttranbrkp
+  select z.* from
+  (
     select * from recon_trn_ttranbrkp
     where recon_code = in_recon_code
     and tran_date < v_next_tran_date
-    and delete_flag = 'N';
+    and delete_flag = 'N'
+    LOCK IN SHARE MODE
+  ) as z;
 
   -- ko table
   /*
@@ -93,21 +101,31 @@ me:begin
 
   -- kodtl table
   insert into recon_tmp_tkodtl
+  select z.* from
+  (
     select b.* from recon_trn_tko as a
     inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
     where a.ko_date >= v_next_tran_date
     and a.recon_code = in_recon_code
-    and a.delete_flag = 'N';
+    and a.delete_flag = 'N'
+    LOCK IN SHARE MODE
+  ) as z;
 
   -- koroundoff table
   insert into recon_tmp_tkoroundoff
+  select z.* from
+  (
     select b.* from recon_trn_tko as a
     inner join recon_trn_tkoroundoff as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
     where a.ko_date >= v_next_tran_date
     and a.recon_code = in_recon_code
-    and a.delete_flag = 'N';
+    and a.delete_flag = 'N'
+    LOCK IN SHARE MODE
+  ) as z;
 
   insert into recon_tmp_ttrangid (tran_gid,ko_value,roundoff_value)
+  select z.* from
+  (
     select
       a.tran_gid,
       sum(a.ko_value*a.ko_mult),
@@ -117,17 +135,27 @@ me:begin
 			and a.tran_gid = b.tran_gid
 			and a.tranbrkp_gid = b.tranbrkp_gid
 			and b.delete_flag = 'N'
-    group by a.tran_gid;
+    group by a.tran_gid
+    LOCK IN SHARE MODE
+  ) as z;
 
   -- insert knockoff transactions
   insert into recon_tmp_ttran
+  select z.* from
+  (
     select b.* from recon_tmp_ttrangid as a
-    inner join recon_trn_ttranko as b on a.tran_gid = b.tran_gid;
+    inner join recon_trn_ttranko as b on a.tran_gid = b.tran_gid
+    LOCK IN SHARE MODE
+  ) as z;
 
   insert into recon_tmp_ttranbrkp
+  select z.* from
+  (
     select b.* from recon_tmp_tkodtl as a
     inner join recon_trn_ttranbrkpko as b on a.tranbrkp_gid = b.tranbrkp_gid
-    where b.tranbrkp_gid > 0;
+    where b.tranbrkp_gid > 0
+    LOCK IN SHARE MODE
+  ) as z;
 
   -- update in tran table
   update recon_tmp_ttran as a
