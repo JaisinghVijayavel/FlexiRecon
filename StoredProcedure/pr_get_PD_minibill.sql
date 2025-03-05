@@ -82,7 +82,7 @@ me:begin
   -- get dataset bill summary
   if exists(select a.dataset_code from recon_mst_trecondataset as a
     inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
-      and b.dataset_name like 'bill summary%'
+      and (b.dataset_name like 'bill summary%' or b.dataset_name like 'billsummary%')
       and b.active_status = 'Y'
       and b.delete_flag = 'N'
     where a.recon_code = in_recon_code
@@ -92,7 +92,7 @@ me:begin
       a.dataset_code into v_ds_billsummary
     from recon_mst_trecondataset as a
     inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
-      and b.dataset_name like 'bill summary%'
+      and (b.dataset_name like 'bill summary%' or b.dataset_name like 'billsummary%')
       and b.active_status = 'Y'
       and b.delete_flag = 'N'
     where a.recon_code = in_recon_code

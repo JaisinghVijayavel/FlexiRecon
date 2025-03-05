@@ -7,6 +7,16 @@ CREATE PROCEDURE `pr_set_themePDclosing7`(
   in in_unit_name varchar(255)
 )
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date : 27-02-2025
+
+    Updated By : Vijayavel
+    updated Date :
+
+    Version : 1
+  */
+
   declare v_sql text default '';
 
 	declare v_tran_table text default '';
@@ -42,6 +52,7 @@ me:begin
       and b.col1 = '",in_unit_name,"'
       and b.col9 <> 'TALLIED'
     ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.delete_flag = 'N'
     set
       a.theme_code = b.col2
@@ -57,6 +68,7 @@ me:begin
       and b.col1 = '",in_unit_name,"'
       and b.col9 <> 'TALLIED'
     ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.delete_flag = 'N'
     set
       a.theme_code = b.col2
@@ -74,6 +86,7 @@ me:begin
       and b.col2 = 'UHID - Deposit CB'
       and b.col9 <> 'TALLIED'
     ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.delete_flag = 'N'
     set
       a.theme_code = b.col2
@@ -90,6 +103,7 @@ me:begin
       and b.col2 = 'UHID - Deposit CB'
       and b.col9 <> 'TALLIED'
     ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.delete_flag = 'N'
     set
       a.theme_code = b.col2
@@ -107,6 +121,7 @@ me:begin
       and b.col1 = '",in_unit_name,"'
       and b.col9 <> 'TALLIED'
     ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.delete_flag = 'N'
     set
       a.theme_code = b.col2
@@ -123,6 +138,7 @@ me:begin
       and b.col1 = '",in_unit_name,"'
       and b.col9 <> 'TALLIED'
     ",if(v_recon_cycle_date is null,"",concat("and b.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.delete_flag = 'N'
     set
       a.theme_code = b.col2

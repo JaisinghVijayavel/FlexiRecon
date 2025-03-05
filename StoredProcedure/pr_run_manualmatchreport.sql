@@ -5,12 +5,20 @@ CREATE PROCEDURE `pr_run_manualmatchreport`(
   in in_job_gid int,
   in in_rptsession_gid int,
   in in_condition text,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
 
+    Updated By : Vijayavel
+    updated Date : 05-03-2025
+
+    Version : 1
+  */
 
   declare v_sql text default '';
 
@@ -103,6 +111,7 @@ me:BEGIN
 			file_name,
 			tran_gid,
 			dataset_code,
+      dataset_name,
 			tran_date,
 			tran_value,
 			tran_mult,
@@ -260,6 +269,7 @@ me:BEGIN
 			a.file_name,
 			b.tran_gid,
 			b.dataset_code,
+      c.dataset_name,
 			b.tran_date,
 			b.tran_value,
 			b.tran_mult,
@@ -400,6 +410,8 @@ me:BEGIN
 			b.ko_date
 		from recon_tmp_tmanualmatch as a
     inner join recon_tmp_ttran as b on a.tran_gid = b.tran_gid
+    left join recon_mst_tdataset as c on a.dataset_code = c.dataset_code
+      and c.delete_flag = 'N'
 		where a.delete_flag = 'N' ", in_condition,"
   ");
 
@@ -408,7 +420,7 @@ me:BEGIN
   set out_msg = 'Success';
   set out_result = 1;
 
-  
+
   drop temporary table if exists recon_tmp_tmanualmatch;
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttrangid;

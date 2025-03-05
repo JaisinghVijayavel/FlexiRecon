@@ -9,6 +9,16 @@ CREATE PROCEDURE `pr_run_pdsummary`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date : 27-02-2025
+
+    Updated By : Vijayavel
+    updated Date :
+
+    Version : 1
+  */
+
   declare v_report_code_ko text;
   declare v_reporttemplate_code_ko text;
 	declare v_report_code_es text;
@@ -129,6 +139,9 @@ me:BEGIN
   -- select v_closingbalance_table_name,v_closing_balance_conditon;
 
   -- v_unitmaster_table_name DS255
+  -- clossing balance remove zero value
+  set v_closing_balance_conditon = concat(v_closing_balance_conditon,' and cast(col6 as decimal(15,2)) <> 0 ');
+
 	call pr_run_dynamicreport('', in_recon_code,v_closingbalance_table_name, 'PD Recon - Closing Balance',
 		v_closing_balance_conditon, false, '', '', in_user_code, @out_msg, @out_result);
 

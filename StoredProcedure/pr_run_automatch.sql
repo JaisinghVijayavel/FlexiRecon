@@ -14,6 +14,16 @@ CREATE PROCEDURE `pr_run_automatch`(
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 05-03-2025
+
+    Version : 1
+  */
+
   declare v_acc_mode varchar(32) default '';
   declare v_source_acc_mode varchar(32) default '';
   declare v_comparison_acc_mode varchar(32) default '';
@@ -678,6 +688,8 @@ me:BEGIN
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_source_head_sql = concat(v_source_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tran table
       set v_comparison_head_sql = concat('insert into recon_tmp_t1comparison (',v_tran_fields,') ');
 
@@ -700,6 +712,8 @@ me:BEGIN
       else
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
+
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' and auto_match_flag = ''Y'' ');
 
       -- source head for tranbrkp table
       set v_source_headbrkp_sql = concat('insert into recon_tmp_t1source (',v_tranbrkp_fields,') ');
@@ -724,6 +738,8 @@ me:BEGIN
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tranbrkp table
       set v_comparison_headbrkp_sql = concat('insert into recon_tmp_t1comparison (',v_tranbrkp_fields,') ');
 
@@ -746,6 +762,8 @@ me:BEGIN
       else
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and ko_gid = 0 ');
       end if;
+
+      set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and auto_match_flag = ''Y'' ');
 
           basefilter_block:begin
             declare basefilter_done int default 0;

@@ -8,6 +8,16 @@ CREATE PROCEDURE `pr_set_themePDclosing20`
   in in_unit_name varchar(255)
 )
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date : 27-02-2025
+
+    Updated By : Vijayavel
+    updated Date :
+
+    Version : 1
+  */
+
   declare v_sql text default '';
 
 	declare v_tran_table text default '';
@@ -110,7 +120,8 @@ me:begin
   -- col2 = balance_type col3 = uhid_no, col5 = ipop_no, col6 = outstanding amount
   set v_sql = concat("update recon_tmp_tuhidoutstanding as a
     inner join ",v_ds_table," as b on a.uhid_no = b.col3
-      and a.os_amount = cast(col6 as decimal(15,2))
+      and a.os_amount = cast(b.col6 as decimal(15,2))
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.col1 = '",in_unit_name,"'
       and b.col2 = 'UHID - Deposit CB'
       and b.col9 <> 'TALLIED'
@@ -127,7 +138,8 @@ me:begin
   -- not tallied
   set v_sql = concat("update recon_tmp_tuhidoutstanding as a
     inner join ",v_ds_table," as b on a.uhid_no = b.col3
-      and a.os_amount <> cast(col6 as decimal(15,2))
+      and a.os_amount <> cast(b.col6 as decimal(15,2))
+      and cast(b.col6 as decimal(15,2)) <> 0
       and b.col1 = '",in_unit_name,"'
       and b.col2 = 'UHID - Deposit CB'
       and b.col9 <> 'TALLIED'

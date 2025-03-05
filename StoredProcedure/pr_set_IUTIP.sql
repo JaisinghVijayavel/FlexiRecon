@@ -651,8 +651,11 @@ me:begin
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col21 = '",cast(v_ip_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
+            and col29 like '%COLLECTION%'
+            /*
 						and col2 <> '0'
 						and col2 <> ''
+            */
 						and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
@@ -680,8 +683,11 @@ me:begin
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col21 = '",cast(v_ip_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
+            and col29 like '%COLLECTION%'
+            /*
 						and col2 <> '0'
 						and col2 <> ''
+            */
 						and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
 						and col44 = 'Y'

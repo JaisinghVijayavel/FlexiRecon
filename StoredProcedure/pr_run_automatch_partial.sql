@@ -759,6 +759,8 @@ me:BEGIN
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_source_head_sql = concat(v_source_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tran table
       set v_comparison_head_sql = concat('insert into recon_tmp_t2comparison (',v_tran_fields,') ');
 
@@ -783,6 +785,8 @@ me:BEGIN
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- source head for tranbrkp table
       set v_source_headbrkp_sql = concat('insert into recon_tmp_t2source (',v_tranbrkp_fields,') ');
 
@@ -806,6 +810,8 @@ me:BEGIN
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and 1 = 2 ');
       end if;
 
+      set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tranbrkp table
       set v_comparison_headbrkp_sql = concat('insert into recon_tmp_t2comparison (',v_tranbrkp_fields,') ');
 
@@ -828,6 +834,8 @@ me:BEGIN
       else
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and 1 = 2 ');
       end if;
+
+      set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and auto_match_flag = ''Y'' ');
 
           basefilter_block:begin
             declare basefilter_done int default 0;

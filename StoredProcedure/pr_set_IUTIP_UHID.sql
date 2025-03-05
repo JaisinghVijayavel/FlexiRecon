@@ -41,11 +41,13 @@ me:begin
 
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
+  /*
   if v_dataset_db_name = '' then
     set v_transfer_table = 'recon_trn_tiutentry';
   else
     set v_transfer_table = concat(v_dataset_db_name,'.recon_trn_tiutentry');
   end if;
+  */
 
   drop temporary table if exists recon_tmp_tuhid;
   drop temporary table if exists recon_tmp_tuhidrecon;
@@ -607,8 +609,11 @@ me:begin
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
+            and col29 like '%COLLECTION%'
+            /*
 						and col2 <> '0'
 						and col2 <> ''
+            */
 						and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
@@ -635,8 +640,11 @@ me:begin
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
+            and col29 like '%COLLECTION%'
+            /*
 						and col2 <> '0'
 						and col2 <> ''
+            */
 						and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
 						and col44 = 'Y'

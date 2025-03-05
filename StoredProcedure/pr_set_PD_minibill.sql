@@ -8,6 +8,38 @@ CREATE procedure `pr_set_PD_minibill`
 me:begin
   declare v_sql text default '';
   declare v_pdunit_code text default '';
+  declare v_mini_field_name text default '';
+
+  -- get mini field name
+  select
+    recon_field_name into v_mini_field_name
+  from recon_mst_treconfield
+  where recon_code = in_recon_code
+  and recon_field_desc = 'Mini Bill No'
+  and active_status = 'Y'
+  and delete_flag = 'N';
+
+  set v_mini_field_name = ifnull(v_mini_field_name,'');
+
+  if v_mini_field_name = '' then
+    leave me;
+  end if;
+
+  -- blank mini bill no
+  set v_sql = concat("update recon_trn_ttranbrkp set
+    ",v_mini_field_name,"='0'
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  -- blank mini bill no
+  set v_sql = concat("update recon_trn_ttran set
+    ",v_mini_field_name,"='0'
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
 
   -- pdunit
   pdunit_block:begin
@@ -25,8 +57,8 @@ me:begin
       from recon_trn_ttran
       where recon_code = in_recon_code
       and split(col2,'-',2) in ('OCS','OCR','ICS','ICR')
-      and col14 <> '' 
-      and delete_flag = 'N';
+      and delete_flag = 'N'
+      LOCK IN SHARE MODE;
 
     declare continue handler for not found set pdunit_done=1;
 

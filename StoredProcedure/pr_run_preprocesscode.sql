@@ -64,11 +64,11 @@ me:BEGIN
   declare v_filter_value text default '';
 
   declare v_extraction_criteria text default '';
-  declare v_extraction_filter int default '';
+  declare v_extraction_filter int default 0;
   declare v_extraction_value text default '';
 
   declare v_comparison_criteria text default '';
-  declare v_comparison_filter int default '';
+  declare v_comparison_filter int default 0;
   declare v_comparison_value text default '';
 
   declare v_open_parentheses_flag text default '';
@@ -623,6 +623,9 @@ me:BEGIN
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
 
         call pr_run_sql('set @sno := 0',@msg,@result);
+
+        select v_sql;
+        leave me;
 
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);

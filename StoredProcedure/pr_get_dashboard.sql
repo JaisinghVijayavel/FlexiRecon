@@ -6,19 +6,22 @@ CREATE PROCEDURE `pr_get_dashboard`(
   in in_period_from date,
   in in_period_to date,
   in in_user_code varchar(32),
+  in in_conversion_type varchar(5),
   out out_msg text,
   out out_result int
 )
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 20-08-2024
+    Created Date : 24-11-2023
 
-    Updated By :
-    updated Date :
+    Updated By : Vijayavel
+    updated Date : 26-02-2025
 
-    Version : 3
+    Version : 2
   */
+
+  leave me;
 
   declare v_recontype_code text default '';
   declare v_recon_count int default 0;
@@ -32,23 +35,13 @@ me:BEGIN
   declare v_ko_zeroexcp_count int default 0;
   declare v_openingexcp_count int default 0;
   declare v_excp_count int default 0;
+  declare v_ko_value decimal(18,2) default 0.00;
+  declare v_excp_value decimal(18,2) default 0.00;
+  declare v_trnko_value decimal(18,2) default 0.00;
+  declare v_openingexcp_value decimal(18,2) default 0.00;
+  declare v_ko_partialexcp_value decimal(18,2) default 0.00;
 
-  /*
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION
-  BEGIN
-    GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
-    @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
-
-    set @text = concat(@text,' ',err_msg);
-
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
-
-    ROLLBACK;
-
-    set out_msg = @full_error;
-    set out_result = 0;
-  END;
-  */
+  
 
   drop temporary table if exists recon_tmp_trecon;
   drop temporary table if exists recon_tmp_ttrangid;
@@ -93,8 +86,13 @@ me:BEGIN
     PRIMARY KEY (gid)
   ) Engine = MyISAM;
 
+  set in_recon_code = ifnull(in_recon_code,'');
+
   if in_recon_code = '' then
+    leave me;
+
     insert into recon_tmp_trecon
+    select b.* from (
       select a.recon_code from admin_mst_tusercontext as u
       inner join admin_mst_treconcontext as r on u.master_syscode = r.master_syscode
         and u.parent_master_syscode = r.parent_master_syscode
@@ -107,23 +105,27 @@ me:BEGIN
         and a.delete_flag = 'N'
       where u.user_code = in_user_code
       and u.active_status = 'Y'
-      and u.delete_flag = 'N';
+      and u.delete_flag = 'N' 
+      LOCK IN SHARE MODE) as b;
   else
     insert into recon_tmp_trecon
+    select a.* from (
       select recon_code from recon_mst_trecon
       where recon_code = in_recon_code
       and active_status = 'Y'
       and period_from <= curdate()
       and (period_to >= curdate()
       or until_active_flag = 'Y')
-      and delete_flag = 'N';
+      and delete_flag = 'N'
+      LOCK IN SHARE MODE) as a;
   end if;
 
-  -- insert in trangid table
+  
   insert into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
+  select a.* from(
   select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_mst_trecon as c on r.recon_code = c.recon_code
     and c.recontype_code in ('W','B','I')
@@ -131,13 +133,15 @@ me:BEGIN
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
-    and t.delete_flag = 'N';
+    and t.delete_flag = 'N'
+    LOCK IN SHARE MODE) as a;
 
   insert into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,cast(s.insert_date as date),1,1,1,t.roundoff_value from recon_tmp_trecon as r
+  select a.* from(
+  select t.tran_gid,cast(s.insert_date as date),1 as tran_mult,1 as tran_value,1 as excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_mst_trecon as c on r.recon_code = c.recon_code
     and c.recontype_code in ('V','N')
     and c.delete_flag = 'N'
@@ -145,13 +149,15 @@ me:BEGIN
     and t.delete_flag = 'N'
   inner join recon_trn_tscheduler as s on t.scheduler_gid = s.scheduler_gid
     and s.insert_date >= in_period_from
-    and s.insert_date < date_add(in_period_to,interval 1 day);
+    and s.insert_date < date_add(in_period_to,interval 1 day)
+    LOCK IN SHARE MODE) as a;
 
-  -- get knockoff cases
+  
   insert into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
+  select a.* from (
   select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_mst_trecon as c on r.recon_code = c.recon_code
     and c.recontype_code in ('W','B','I')
@@ -159,13 +165,15 @@ me:BEGIN
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date >= in_period_from
     and t.tran_date <= in_period_to
-    and t.delete_flag = 'N';
+    and t.delete_flag = 'N'
+    LOCK IN SHARE MODE) as a;
 
   insert into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
-  select t.tran_gid,cast(s.insert_date as date),1,0,0,0 from recon_tmp_trecon as r
+  select a.* from (
+  select t.tran_gid,cast(s.insert_date as date),1 as tran_mult,0 as tran_value,0 as excp_value,0 as roundoff_value from recon_tmp_trecon as r
   inner join recon_mst_trecon as c on r.recon_code = c.recon_code
     and c.recontype_code in ('V','N')
     and c.delete_flag = 'N'
@@ -173,48 +181,55 @@ me:BEGIN
     and t.delete_flag = 'N'
   inner join recon_trn_tscheduler as s on t.scheduler_gid = s.scheduler_gid
     and s.insert_date >= in_period_from
-    and s.insert_date < date_add(in_period_to,interval 1 day);
+    and s.insert_date < date_add(in_period_to,interval 1 day)
+    LOCK IN SHARE MODE) as a;
 
-  -- insert old excption
+  
   insert into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
+  select a.* from(
   select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttran as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
     and t.excp_value <> 0
     and (t.excp_value - t.roundoff_value * t.tran_mult) <> 0
-    and t.delete_flag = 'N';
+    and t.delete_flag = 'N'
+    LOCK IN SHARE MODE) as a;
 
   insert into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
+  select a.* from (
   select t.tran_gid,t.tran_date,t.tran_mult,t.tran_value,t.excp_value,t.roundoff_value from recon_tmp_trecon as r
   inner join recon_trn_ttranko as t on r.recon_code = t.recon_code
     and t.tran_date < in_period_from
     and t.excp_value <> 0
     and (t.excp_value - t.roundoff_value * t.tran_mult) <> 0
-    and t.delete_flag = 'N';
+    and t.delete_flag = 'N'
+    LOCK IN SHARE MODE) as a;
 
-  -- insert in kodtlgid table
+  
   insert into recon_tmp_tkodtlgid
   (
     kodtl_gid,ko_gid,ko_date,manual_matchoff,tran_gid,tran_date
   )
+  select a.* from (
   select
     d.kodtl_gid,k.ko_gid,k.ko_date,k.manual_matchoff,d.tran_gid,t.tran_date
   from recon_tmp_ttrangid as t
   inner join recon_trn_tkodtl as d on t.tran_gid = d.tran_gid and d.delete_flag = 'N'
   inner join recon_trn_tko as k on d.ko_gid = k.ko_gid and k.delete_flag = 'N'
   where t.tran_date >= in_period_from
-  group by d.kodtl_gid,k.ko_gid,k.ko_date,k.manual_matchoff,d.tran_gid,t.tran_date;
+  group by d.kodtl_gid,k.ko_gid,k.ko_date,k.manual_matchoff,d.tran_gid,t.tran_date
+  LOCK IN SHARE MODE) as a;
 
-  -- get recon count
+  
   select count(*) into v_recon_count from recon_tmp_trecon;
 
-  -- get a/c count
+  
   select
     count(distinct b.dataset_code) into v_dataset_count
   from recon_tmp_trecon as r
@@ -222,20 +237,21 @@ me:BEGIN
     and b.active_status = 'Y'
     and b.delete_flag = 'N'
   inner join recon_mst_tdataset as d on b.dataset_code = d.dataset_code
-    and d.delete_flag = 'N';
+    and d.delete_flag = 'N'
+    LOCK IN SHARE MODE;
 
-  -- get count from tran table
+  
   select count(*) into v_tran_count from recon_tmp_ttrangid
   where tran_date >= in_period_from;
 
-  -- get exception count
+  
   select count(*) into v_excp_count from recon_tmp_ttrangid
   where excp_value <> 0
   and (excp_value - roundoff_value * tran_mult) <> 0;
 
   set v_excp_count = ifnull(v_excp_count,0);
 
-  -- get opening exception count
+  
   select count(*) into v_openingexcp_count from recon_tmp_ttrangid
   where excp_value <> 0
   and (excp_value - roundoff_value * tran_mult) <> 0
@@ -243,10 +259,10 @@ me:BEGIN
 
   set v_openingexcp_count = ifnull(v_openingexcp_count,0);
 
-  -- get knockoff count
+  
   select count(distinct tran_gid) into v_ko_count from recon_tmp_tkodtlgid;
 
-  -- get knockoff count - Manual
+  
   insert into recon_tmp_tgid (gid)
   select distinct tran_gid from recon_tmp_tkodtlgid
   where tran_date >= in_period_from
@@ -255,7 +271,7 @@ me:BEGIN
 
   select count(*) into v_ko_manual_count from recon_tmp_tgid;
 
-  -- get knockoff count - System
+  
   select count(distinct tran_gid) into v_ko_system_count from recon_tmp_tkodtlgid
   where tran_date >= in_period_from
   and tran_date <= in_period_to
@@ -265,18 +281,18 @@ me:BEGIN
     select gid from recon_tmp_tgid
   );
 
-  -- get knockoff zero excp count
+  
   select count(distinct tran_gid) into v_ko_zeroexcp_count from recon_tmp_ttrangid
   where excp_value = 0;
 
-  -- get knockoff partial excp count
+  
   select count(distinct tran_gid) into v_ko_partialexcp_count from recon_tmp_ttrangid
   where excp_value <> 0
   and tran_value <> excp_value
   and (excp_value - roundoff_value * tran_mult) <> 0
   and tran_date >= in_period_from;
 
-  -- get count
+  
   select  v_recon_count          as recon_count,
           v_dataset_count        as dataset_count,
           v_tran_count           as tran_count,
@@ -288,7 +304,7 @@ me:BEGIN
           v_ko_zeroexcp_count    as ko_zeroexcp_count,
           v_ko_partialexcp_count as ko_partialexcp_count;
 
-  -- get knockoff count monthwise
+  
   select
     '' as ko_month,
     v_ko_manual_count as manual_ko_count,
@@ -296,7 +312,7 @@ me:BEGIN
     v_ko_count as ko_count,
     '' as ko_month1;
 
-  -- get exception aging
+  
   set v_count = v_excp_count;
 
   if v_count = 0 then
@@ -320,6 +336,12 @@ me:BEGIN
     and (t.excp_value - t.roundoff_value * tran_mult) <> 0
     group by c.aging_gid,c.aging_desc
   ) as ex on ag.aging_gid = ex.aging_gid;
+  
+  
+  
+  
+    
+    call pr_get_dashboardvalue(in_recon_code, in_period_from, in_period_to,in_user_code,in_conversion_type, @out_msg, @out_result);
 
   drop temporary table if exists recon_tmp_tgid;
   drop temporary table if exists recon_tmp_ttrangid;

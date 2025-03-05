@@ -19,7 +19,7 @@ me:begin
   set v_tran_table = 'recon_trn_ttran';
   set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
-  set v_ds_code = 'DS274';
+  set v_ds_code = 'DS508';
   set v_tranbrkp_ds_code = 'DS277';
 
   drop temporary table if exists recon_tmp_tuhid;

@@ -8,10 +8,21 @@ CREATE PROCEDURE `pr_run_reconruleredirect`(
   in in_automatch_flag char(1),
   in in_ip_addr varchar(255),
   in in_user_code varchar(32),
+  out out_job_gid int,
   out out_msg text,
   out out_result int
 )
 me:BEGIN
+/*
+    Created By : Muthu
+    Created Date - 2025-02-19
+
+    Updated By : Vijayavel
+    updated Date : 05-03-2025
+
+	  Version - 2
+*/
+
   declare i int default 0;
 
   declare v_recon_name text default '';
@@ -69,10 +80,12 @@ me:BEGIN
     MESSAGE_TEXT = @text;
   END;
 
+	
+
   set v_date_format = fn_get_configvalue('web_date_format');
   set v_recon_code = SPLIT(in_recon_code,'$',1);
 
-  -- recon validation
+  
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
     and active_status = 'Y'
@@ -95,7 +108,7 @@ me:BEGIN
     set v_recon_rule_version = ifnull(v_recon_rule_version,'');
   end if;
 
-  -- get recon details
+  
   select
     recon_name,
     recontype_code,
@@ -158,7 +171,7 @@ me:BEGIN
 
   set v_job_gid = @out_job_gid;
 
-  -- within A/C or Between A/C recon validation
+  
   if v_recontype_code = 'W' or v_recontype_code = 'B' then
     if fn_get_chkbalance(in_recon_code,in_period_to) = false then
       set out_msg = 'Recon was not tallied !';
@@ -169,7 +182,7 @@ me:BEGIN
     end if;
   end if;
 
-  -- delete dataset job record
+  
   delete from recon_trn_tdatasetjob
   where recon_code = in_recon_code
   and dataset_code in
@@ -189,7 +202,7 @@ me:BEGIN
     set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
   end if;
 
-  -- blank the theme code
+  /*
 	set v_sql = 'update $TABLENAME$ set ';
 	set v_sql = concat(v_sql,'theme_code = '''' ');
 	set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -198,11 +211,11 @@ me:BEGIN
 
 	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
 	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+  */
 
-  -- preprocess
   call pr_run_preprocess(in_recon_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
 
-  -- create temporary
+
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttranbrkp;
 
@@ -223,7 +236,7 @@ me:BEGIN
   create index idx_dataset_code on recon_tmp_ttranbrkp(recon_code,dataset_code,tran_acc_mode);
   alter table recon_tmp_ttranbrkp ENGINE = MyISAM;
 
-  -- insert exception records
+  
   if in_automatch_flag = 'N' then
     if v_recon_date_flag = 'Y' then
       insert into recon_tmp_ttran
@@ -252,7 +265,7 @@ me:BEGIN
     end if;
   end if;
 
-  -- update the count
+  
   if in_automatch_flag = 'Y' then
     insert into recon_trn_tdatasetjob
     (
@@ -391,7 +404,7 @@ me:BEGIN
     group by recon_code,dataset_code;
   end if;
 
-  -- rule
+  
   rule_block:begin
     declare rule_done int default 0;
     declare rule_cursor cursor for
@@ -429,11 +442,11 @@ me:BEGIN
         if v_probable_match_flag = 'Y' then
           set v_system_match_flag = 'N';
 
-          -- clear temp table
+          
           truncate recon_tmp_ttran;
           truncate recon_tmp_ttranbrkp;
 
-          -- insert exception records
+          
           insert into recon_tmp_ttran select * from recon_trn_ttran where recon_code = in_recon_code and delete_flag = 'N';
           insert into recon_tmp_ttranbrkp select * from recon_trn_ttranbrkp where recon_code = in_recon_code and delete_flag = 'N';
         end if;
@@ -475,7 +488,7 @@ me:BEGIN
     where recon_code = v_recon_code
     and delete_flag = 'N';
 
-    -- run propable match report
+    
     call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
 
     set v_file_name = concat(cast(v_job_gid as nchar),'_',in_recon_code,'_ProbableMatchPreview.csv');
@@ -485,7 +498,7 @@ me:BEGIN
 
   end if;
 
-  -- update the count
+  
   if in_automatch_flag = 'Y' then
     update recon_trn_tdatasetjob as a
     inner join
@@ -611,14 +624,14 @@ me:BEGIN
   set out_result = 1;
   set out_msg = 'Success';
 
-  -- drop tempoaray table
+  
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttranbrkp;
 
-  -- update theme
+  
   if in_automatch_flag = 'Y' then
-    -- postprocess
-    -- call pr_run_preprocess(in_recon_code,v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+    
+    
     call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
 
     call pr_run_dynamicreport('',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',in_ip_addr,in_user_code,@msg,@result);
@@ -634,10 +647,12 @@ me:BEGIN
                            in_user_code,@msg,@result);
   end if;
 
-  -- job remark
+  
   set v_txt = concat('Rule version applied : ',v_recon_rule_version);
 
-  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
+	call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C',v_txt,@msg,@result);
+	set out_job_gid = v_job_gid;
+		
 end $$
 
 DELIMITER ;

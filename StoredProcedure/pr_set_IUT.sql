@@ -128,11 +128,12 @@ me:begin
 
   set v_tran_table = 'recon_trn_ttran';
   set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-  set v_ds_code = 'DS274';
+  set v_ds_code = 'DS508';
   set v_tranbrkp_ds_code = 'DS277';
 
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
+  /*
   if v_dataset_db_name = '' then
     set v_transfer_table = 'recon_trn_tiutentry';
   else
@@ -142,6 +143,7 @@ me:begin
   -- trucate entry table
   set v_sql = concat("truncate ",v_transfer_table);
   call pr_run_sql2(v_sql,@msg,@result);
+  */
 
   set v_sql = concat("delete from ",v_tranbrkp_table,"
             where recon_code = '",in_recon_code,"'");
@@ -500,6 +502,7 @@ me:begin
   -- col19 - Bill No
   -- col20 - uhid
   -- col21 - IP/OP No
+  -- col29 - Line Category
   -- col42 - IUT Location
   -- col38 - Recon Code
   -- col44 - UHID Multi Location Flag
@@ -515,8 +518,11 @@ me:begin
     and col20 <> 'AC01.0005284627'
     and col22 <> 'CREDIT NOTE REFUND'
     and col38 <> ''
+    and col29 like '%COLLECTION%'
+    /*
     and col2 <> '0'
     and col2 <> ''
+    */
     and col21 not like '%IP%'
     and col19 not like '%-ICR-%'
     and col19 not like '%-ICS-%'
@@ -597,8 +603,11 @@ me:begin
     and col23 = 'Deposit Adjustment/Transfer'
     and col38 <> ''
     and col44 = 'Y'
+    and col29 like '%COLLECTION%'
+    /*
     and col2 <> '0'
     and col2 <> ''
+    */
     and col47 is null
     and delete_flag = 'N'
     ");
@@ -630,8 +639,11 @@ me:begin
         and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
 				and col38 <> ''
 				and col44 = 'Y'
+        and col29 like '%COLLECTION%'
+        /*
 				and col2 <> '0'
 				and col2 <> ''
+        */
         and col22 <> 'CREDIT NOTE REFUND'
         and col47 is null
 				and delete_flag = 'N'
@@ -659,8 +671,11 @@ me:begin
 					and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
 					and col38 <> ''
 					and col44 = 'Y'
+          and col29 like '%COLLECTION%'
+          /*
 					and col2 <> '0'
 					and col2 <> ''
+          */
           and col22 <> 'CREDIT NOTE REFUND'
           and col47 is null
 					and delete_flag = 'N' limit 0,1
@@ -958,8 +973,11 @@ me:begin
 				and col38 = '",v_cr_recon_code,"'
         and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
         and col12 = '1'
+        and col29 like '%COLLECTION%'
+        /*
 				and col2 <> '0'
 				and col2 <> ''
+        */
         and col44 = 'Y'
         and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 				and col47 is null
@@ -983,8 +1001,11 @@ me:begin
 				  and col38 = '",v_cr_recon_code,"'
           and cast(col9 as decimal(15,2)) = ",cast(v_dr_amount as nchar),"
           and col12 = '1'
+          and col29 like '%COLLECTION%'
+          /*
 				  and col2 <> '0'
 				  and col2 <> ''
+          */
           and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
           and col44 = 'Y'
 				  and col47 is null
@@ -1026,8 +1047,11 @@ me:begin
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_dr_recon_code,"'
+            and col29 like '%COLLECTION%'
+            /*
 						and col2 <> '0'
 						and col2 <> ''
+            */
             and (col22 <> 'CREDIT NOTE REFUND' or col22 is null)
 						and col47 is null
             and col44 = 'Y'
@@ -1176,7 +1200,9 @@ me:begin
         set v_ref_no = fn_get_autocode('IUT');
 
         select
-          recon_code,loc_code,cr_amount,min_tran_gid into v_cr_recon_code,v_cr_loc_code,v_cr_amount,v_tran_cr_min_gid
+          recon_code,loc_code,cr_amount,min_tran_gid
+        into
+          v_cr_recon_code,v_cr_loc_code,v_cr_amount,v_tran_cr_min_gid
         from recon_tmp_tuhidcr1
         where uhid_no = v_uhid_no
         and recon_code <> v_dr_recon_code
@@ -1206,8 +1232,9 @@ me:begin
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
-						and ((col2 <> '0'
-						and col2 <> ''
+						and ((/*col2 <> '0'
+						and col2 <> ''*/
+            col29 like '%COLLECTION%'
 						and col22 <> 'CREDIT NOTE REFUND') or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
@@ -1235,8 +1262,9 @@ me:begin
             and col13 <> 'Current Period Bills not interfaced'
 						and col20 = '",cast(v_uhid_no as nchar),"'
 						and col38 = '",v_cr_recon_code,"'
-						and ((col2 <> '0'
-						and col2 <> ''
+						and ((/*col2 <> '0'
+						and col2 <> ''*/
+            col29 like '%COLLECTION%'
 						and col22 <> 'CREDIT NOTE REFUND') or col22 is null)
 						and col47 is null
 						and col44 = 'Y'
@@ -1326,8 +1354,9 @@ me:begin
         and col13 <> 'Current Period Bills not interfaced'
 				and col20 = '",cast(v_uhid_no as nchar),"'
 				and col38 = '",v_dr_recon_code,"'
-        and ((col2 <> '0'
-        and col2 <> ''
+        and ((/*col2 <> '0'
+        and col2 <> ''*/
+        col29 like '%COLLECTION%'
         and col22 <> 'CREDIT NOTE REFUND') or col22 is null)
 				and col47 is null
         and col44 = 'Y'

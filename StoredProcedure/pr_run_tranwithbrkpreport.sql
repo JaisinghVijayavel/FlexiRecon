@@ -100,10 +100,12 @@ me:BEGIN
   and rptsession_gid = in_rptsession_gid;
 
   -- delete zero excp_value
-  delete from recon_rpt_ttranwithbrkp
-  where job_gid = in_job_gid
-  and rptsession_gid = in_rptsession_gid
-  and excp_value = 0;
+  if v_recontype_code <> 'N' then
+    delete from recon_rpt_ttranwithbrkp
+    where job_gid = in_job_gid
+    and rptsession_gid = in_rptsession_gid
+    and excp_value = 0;
+  end if;
 
   -- update tranbrkp_dataset_code, tranbrkp_dataset_name
   set v_sql = concat('update recon_rpt_ttranwithbrkp set ');

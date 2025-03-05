@@ -15,16 +15,16 @@ me:begin
     set v_finyear_start_date = cast(concat(cast(year(curdate())-1 as nchar),'-04-01') as date);
   end if;
 
-  if exists(select min(tran_date) from recon_trn_ttran
+  if exists(select tran_date from recon_trn_ttran
     where recon_code = in_recon_code
     and excp_value <> 0
-    and delete_flag = 'N') then
+    and delete_flag = 'N' limit 1 LOCK IN SHARE MODE) then
     select
       ifnull(min(tran_date),curdate()) into v_min_tran_date
     from recon_trn_ttran
     where recon_code = in_recon_code
     and excp_value <> 0
-    and delete_flag = 'N';
+    and delete_flag = 'N' LOCK IN SHARE MODE;
 
     if datediff(v_finyear_start_date,v_min_tran_date) < 0 then
       set v_min_tran_date = v_finyear_start_date;

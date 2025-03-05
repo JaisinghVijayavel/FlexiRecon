@@ -70,19 +70,6 @@ me:begin
   and active_status = 'Y'
   and delete_flag = 'N';
 
-  -- OCR mini bill no
-  select col2 into v_bill_no from recon_trn_ttranbrkp
-  where recon_code = in_recon_code
-  and col2 like concat(in_pdunit_code,'%')
-  and col2 like '%-OCR-%'
-  and delete_flag = 'N'
-  limit 0,1;
-
-  set v_bill_no = ifnull(v_bill_no,'');
-
-  set v_unit_code = SPLIT(v_bill_no,'-',1);
-  set v_bill_type = SPLIT(v_bill_no,'-',2);
-
   -- get mini field name
   select
     recon_field_name into v_mini_field_name
@@ -94,13 +81,19 @@ me:begin
 
   set v_mini_field_name = ifnull(v_mini_field_name,'');
 
-  -- blank mini bill no
-  set v_sql = concat("update recon_trn_ttranbrkp set
-    ",v_mini_field_name,"='0'
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'");
+  -- OCR mini bill no
+  select col2 into v_bill_no from recon_trn_ttranbrkp
+  where recon_code = in_recon_code
+  and col2 like concat(in_pdunit_code,'%')
+  and col2 like '%-OCR-%'
+  and delete_flag = 'N'
+  limit 0,1
+  LOCK IN SHARE MODE;
 
-  call pr_run_sql(v_sql,@msg,@result);
+  set v_bill_no = ifnull(v_bill_no,'');
+
+  set v_unit_code = SPLIT(v_bill_no,'-',1);
+  set v_bill_type = SPLIT(v_bill_no,'-',2);
 
   if v_bill_no <> '' and v_mini_field_name <> '' then
     /*
@@ -120,6 +113,7 @@ me:begin
       and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
+      LOCK IN SHARE MODE
       ");
 
     call pr_run_sql2(v_sql,@msg,@result);
@@ -131,8 +125,8 @@ me:begin
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
-      /*
       and tran_date > '",v_recon_closure_date,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */
@@ -147,23 +141,13 @@ me:begin
   and col2 like concat(in_pdunit_code,'%')
   and col2 like '%-OCS-%'
   and delete_flag = 'N'
-  limit 0,1;
+  limit 0,1
+  LOCK IN SHARE MODE;
 
   set v_bill_no = ifnull(v_bill_no,'');
 
   set v_unit_code = SPLIT(v_bill_no,'-',1);
   set v_bill_type = SPLIT(v_bill_no,'-',2);
-
-  -- get mini field name
-  select
-    recon_field_name into v_mini_field_name
-  from recon_mst_treconfield
-  where recon_code = in_recon_code
-  and recon_field_desc = 'Mini Bill No'
-  and active_status = 'Y'
-  and delete_flag = 'N';
-
-  set v_mini_field_name = ifnull(v_mini_field_name,'');
 
   if v_bill_no <> '' and v_mini_field_name <> '' then
     /*
@@ -183,6 +167,7 @@ me:begin
       and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
+      LOCK IN SHARE MODE
       ");
 
     call pr_run_sql2(v_sql,@msg,@result);
@@ -194,8 +179,8 @@ me:begin
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
-      /*
       and tran_date > '",v_recon_closure_date,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */
@@ -210,7 +195,8 @@ me:begin
   and col2 like concat(in_pdunit_code,'%')
   and col2 like '%-ICR-%'
   and delete_flag = 'N'
-  limit 0,1;
+  limit 0,1
+  LOCK IN SHARE MODE;
 
   set v_bill_no = ifnull(v_bill_no,'');
 
@@ -235,6 +221,7 @@ me:begin
       and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
+      LOCK IN SHARE MODE
       ");
 
     call pr_run_sql2(v_sql,@msg,@result);
@@ -246,8 +233,8 @@ me:begin
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
-      /*
       and tran_date > '",v_recon_closure_date,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */
@@ -262,23 +249,13 @@ me:begin
   and col2 like concat(in_pdunit_code,'%')
   and col2 like '%-ICS-%'
   and delete_flag = 'N'
-  limit 0,1;
+  limit 0,1
+  LOCK IN SHARE MODE;
 
   set v_bill_no = ifnull(v_bill_no,'');
 
   set v_unit_code = SPLIT(v_bill_no,'-',1);
   set v_bill_type = SPLIT(v_bill_no,'-',2);
-
-  -- get mini field name
-  select
-    recon_field_name into v_mini_field_name
-  from recon_mst_treconfield
-  where recon_code = in_recon_code
-  and recon_field_desc = 'Mini Bill No'
-  and active_status = 'Y'
-  and delete_flag = 'N';
-
-  set v_mini_field_name = ifnull(v_mini_field_name,'');
 
   if v_bill_no <> '' and v_mini_field_name <> '' then
     /*
@@ -298,6 +275,7 @@ me:begin
       and col2 like '%-",v_bill_type,"-%'
       and cast(col8 as date) > '",v_recon_closure_date,"'
       and delete_flag = 'N'
+      LOCK IN SHARE MODE
       ");
 
     call pr_run_sql2(v_sql,@msg,@result);
@@ -309,8 +287,8 @@ me:begin
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
       and col2 like '%-",v_bill_type,"-%'
-      /*
       and tran_date > '",v_recon_closure_date,"'
+      /*
       and (col5 = 'DEPOSIT'
       or col5 = 'BILL REALIZATION')
       */

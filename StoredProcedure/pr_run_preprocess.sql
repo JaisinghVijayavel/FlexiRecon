@@ -73,11 +73,11 @@ me:BEGIN
   declare v_filter_value text default '';
 
   declare v_extraction_criteria text default '';
-  declare v_extraction_filter int default '';
+  declare v_extraction_filter int default 0;
   declare v_extraction_value text default '';
 
   declare v_comparison_criteria text default '';
-  declare v_comparison_filter int default '';
+  declare v_comparison_filter int default 0;
   declare v_comparison_value text default '';
 
   declare v_open_parentheses_flag text default '';

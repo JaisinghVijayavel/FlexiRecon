@@ -21,12 +21,12 @@ if in_jobtype_code = '0' then
 		a.job_name,
     a.recon_code,
 		d.recon_name,
-        DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
-        DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
+        -- DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
+        -- DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
        -- a.start_date,
        -- a.end_date,
-		-- date_format(a.start_date,v_app_datetime_format) as start_date,
-		-- date_format(a.end_date,v_app_datetime_format) as end_date,
+		date_format(a.start_date,v_app_datetime_format) as start_date,
+		date_format(a.end_date,v_app_datetime_format) as end_date,
 		a.job_status,
 		a.job_remark,
 		b.jobstatus_desc,
@@ -41,7 +41,7 @@ if in_jobtype_code = '0' then
 	where a.start_date >= in_start_date
 	and a.end_date < adddate(in_end_date,interval 1 day)
 	and a.delete_flag = 'N'
-	and a.job_status IN ('C', 'F')
+	and a.job_status IN ('C', 'F','R')
 	order by a.job_gid desc;
 else
 	select
@@ -50,12 +50,12 @@ else
 		a.job_name,
 		a.recon_code,
 		d.recon_name,
-    DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
-		DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
+    -- DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
+		-- DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
        -- a.start_date,
         -- a.end_date,
-		-- date_format(a.start_date,v_app_datetime_format) as start_date,
-		-- date_format(a.end_date,v_app_datetime_format) as end_date,
+		date_format(a.start_date,v_app_datetime_format) as start_date,
+		date_format(a.end_date,v_app_datetime_format) as end_date,
 		a.job_status,
 		a.job_remark,
 		b.jobstatus_desc,
@@ -71,7 +71,7 @@ else
 	and a.end_date < adddate(in_end_date,interval 1 day)
 	and a.jobtype_code = in_jobtype_code
 	and a.delete_flag = 'N'
-	and a.job_status IN ('C', 'F')
+	and a.job_status IN ('C', 'F','R')
 	order by a.job_gid desc;
 end if;
 END $$
