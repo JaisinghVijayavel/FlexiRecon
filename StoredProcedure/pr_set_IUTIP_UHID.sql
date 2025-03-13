@@ -423,6 +423,7 @@ me:begin
 
 				-- dr side
 				set v_sql = concat("update ",v_tran_table," set
+          col41 = 'Y',
 					col45 = '",v_cr_recon_code,"',
 					col46 = col37,
 					col47 = 'IUT - IP',
@@ -600,6 +601,7 @@ me:begin
         if v_iut_loc_code = '' then
 					if v_cr_amount = v_dr_amount then
 						set v_sql = concat("update ",v_tran_table," set
+              col41 = 'Y',
 							col45 = '",v_dr_recon_code,"',
 							col46 = col37,
 							col47 = 'IUT - IP',
@@ -622,6 +624,7 @@ me:begin
 						");
 					else
 						set v_sql = concat("update ",v_tran_table," set
+                col41 = 'Y',
 								col45 = '",v_dr_recon_code,"',
 								col51 = '",v_ref_no,"',
 								col50 = '",v_dr_loc_code,"',

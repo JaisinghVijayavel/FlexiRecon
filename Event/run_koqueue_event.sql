@@ -1,6 +1,7 @@
 ﻿DELIMITER $$
-
-CREATE EVENT `run_koqueue_event` ON SCHEDULE EVERY 59 SECOND STARTS '2024-11-25 15:37:22' ON COMPLETION NOT PRESERVE ENABLE
+DROP EVENT IF EXISTS run_koqueue_event;
+CREATE EVENT `run_koqueue_event`
+  ON SCHEDULE EVERY 5 Second
 DO BEGIN
     -- Call the stored procedure
     CALL pr_set_koqueue();

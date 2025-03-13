@@ -705,6 +705,7 @@ me:begin
 
 					-- cr side
 					set v_sql = concat("update ",v_tran_table," set
+						col41 = 'Y',
 						col45 = '", v_dr_recon_code ,"',
 						col46 = '",cast(v_dr_amount as nchar),"',
 						col47 = 'IUT - OP',
@@ -1038,6 +1039,7 @@ me:begin
 
 						-- dr side
 						set v_sql = concat("update ",v_tran_table," set
+              col41 = 'Y',
               col45 = '",v_cr_recon_code,"',
               col46 = col37,
 							col47 = 'IUT - OP',
@@ -1223,6 +1225,7 @@ me:begin
         if v_iut_loc_code = '' then
 					if v_cr_amount = v_dr_amount then
 						set v_sql = concat("update ",v_tran_table," set
+              col41 = 'Y',
 							col45 = '",v_dr_recon_code,"',
 							col46 = col37,
 							col47 = 'IUT - OP',
@@ -1244,6 +1247,7 @@ me:begin
 					  call pr_run_sql2(v_sql,@msg,@result);
 					else
 						set v_sql = concat("update ",v_tran_table," set
+                col41 = 'Y',
 								col45 = '",v_dr_recon_code,"',
 								col50 = '",v_dr_loc_code,"',
 								col51 = '",v_ref_no,"',
@@ -1489,6 +1493,7 @@ me:begin
   drop temporary table if exists recon_tmp_tuhid;
   drop temporary table if exists recon_tmp_treconuhid;
 
+  call pr_set_IUTIPonly(in_recon_code);
   call pr_set_IUTIP(in_recon_code);
   call pr_set_IUTIP_UHID(in_recon_code);
 end $$

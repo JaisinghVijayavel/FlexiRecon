@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS pr_set_IUTIP $$
-CREATE PROCEDURE pr_set_IUTIP(in_recon_code varchar(32))
+DROP PROCEDURE IF EXISTS pr_set_IUTIPonly $$
+CREATE PROCEDURE pr_set_IUTIPonly(in_recon_code varchar(32))
 me:begin
   declare v_tran_gid int default 0;
   declare v_uhid_no text default '';
@@ -195,6 +195,7 @@ me:begin
 
   call pr_run_sql2(v_sql,@msg,@result);
 
+  /*
   -- update IP Flag Opening Balance prior date entries
   set v_sql = concat("update ",v_tran_table,"
       set col52 = 'Y'
@@ -230,6 +231,7 @@ me:begin
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
+  */
 
   -- col2  - support tran id
   -- col4  - Tran Date
@@ -267,6 +269,7 @@ me:begin
 
   call pr_run_sql2(v_sql,@msg,@result);
 
+  /*
   -- update IP Flag = 'Y' for ip no = uhid no
   set v_sql = concat("update ",v_tran_table," as a
     inner join recon_tmp_tuhid as b on a.col20 = b.uhid_no
@@ -281,6 +284,7 @@ me:begin
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);
+  */
 
   set v_sql = concat("insert into recon_tmp_tuhidrecon (uhid_no,recon_code)
     select a.col20,a.col38 from ",v_tran_table," as a
@@ -415,6 +419,7 @@ me:begin
 
       if exists(select * from recon_tmp_tuhidcr1
         where uhid_no = v_uhid_no
+        and ip_no = v_ip_no
         and recon_code <> v_dr_recon_code
         and cr_amount = v_dr_amount) then
 
