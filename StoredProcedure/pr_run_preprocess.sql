@@ -14,12 +14,12 @@ CREATE PROCEDURE `pr_run_preprocess`(
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 
+    Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-02-2025
+    Updated Date : 19-03-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_get_recon_field text default '';
@@ -108,6 +108,8 @@ me:BEGIN
 
   declare i int default 0;
 
+  declare v_concurrent_ko_flag text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
@@ -151,9 +153,15 @@ me:BEGIN
     set v_tran_table = concat(in_recon_code,'_tran');
     set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
     */
+    set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-    set v_tran_table = 'recon_trn_ttran';
-    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+    if v_concurrent_ko_flag = 'Y' then
+	    set v_tran_table = concat(in_recon_code,'_tran');
+	    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+    else
+      set v_tran_table = 'recon_trn_ttran';
+      set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+    end if;
   else
     set v_tran_table = 'recon_tmp_ttran';
     set v_tranbrkp_table = 'recon_tmp_ttranbrkp';

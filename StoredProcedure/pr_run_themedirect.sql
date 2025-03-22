@@ -41,6 +41,8 @@ me:BEGIN
   declare v_tran_sql text default '';
   declare v_tranbrkp_sql text default '';
 
+  declare v_concurrent_ko_flag text default '';
+
   declare i int default 0;
 
   declare err_msg text default '';
@@ -82,8 +84,16 @@ me:BEGIN
   end if;
 
   if in_automatch_flag = 'Y' then
-    set v_tran_table = 'recon_trn_ttran';
-    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+    -- concurrent KO flag
+    set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+    if v_concurrent_ko_flag = 'Y' then
+	    set v_tran_table = concat(in_recon_code,'_tran');
+	    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+    else
+      set v_tran_table = 'recon_trn_ttran';
+      set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+    end if;
   else
     set v_tran_table = 'recon_tmp_ttran';
     set v_tranbrkp_table = 'recon_tmp_ttranbrkp';

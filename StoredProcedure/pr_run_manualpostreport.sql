@@ -2,20 +2,45 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_manualpostreport` $$
 CREATE PROCEDURE `pr_run_manualpostreport`(
+  in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
   in in_condition text,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
 me:BEGIN
 
-
   declare v_sql text default '';
+
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+	declare v_tranko_table text default '';
+	declare v_tranbrkpko_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+  end if;
 
   drop temporary table if exists recon_tmp_tmanualpost;
   drop temporary table if exists recon_tmp_ttran;
@@ -92,11 +117,11 @@ me:BEGIN
   call pr_run_sql(v_sql,@msg,@result);
 
   set v_sql = concat("insert into recon_tmp_ttran
-    select * from recon_trn_ttran where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
+    select * from ",v_tran_table," where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
   call pr_run_sql(v_sql,@msg,@result);
 
   set v_sql = concat("insert into recon_tmp_ttran
-    select * from recon_trn_ttranko where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
+    select * from ",v_tranko_table," where tran_gid in (select tran_gid from recon_tmp_ttrangid)");
   call pr_run_sql(v_sql,@msg,@result);
 
   -- tranbrkp table
@@ -104,11 +129,11 @@ me:BEGIN
   call pr_run_sql(v_sql,@msg,@result);
 
   set v_sql = concat("insert into recon_tmp_ttranbrkp
-    select * from recon_trn_ttranbrkp where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid)");
+    select * from ",v_tranbrkp_table," where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid)");
   call pr_run_sql(v_sql,@msg,@result);
 
   set v_sql = concat("insert into recon_tmp_ttranbrkp
-    select * from recon_trn_ttranbrkpko where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid)");
+    select * from ",v_tranbrkpko_table," where tranbrkp_gid in (select tranbrkp_gid from recon_tmp_ttranbrkpgid)");
   call pr_run_sql(v_sql,@msg,@result);
 
   set @rec_slno := 0;

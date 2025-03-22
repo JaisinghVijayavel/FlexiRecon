@@ -7,7 +7,7 @@ CREATE PROCEDURE `pr_run_amountmatchedmultiple`
   in in_job_gid int,
   in in_rptsession_gid int,
   in in_condition text,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -25,6 +25,12 @@ me:begin
   declare v_recontype_code text default '';
   declare v_user_code varchar(32) default '';
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
+
+  /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
     GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
@@ -44,6 +50,18 @@ me:begin
     MYSQL_ERRNO = @errno,
     MESSAGE_TEXT = @text;
   END;
+  */
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   SELECT
 	  group_concat(t.COLUMN_NAME) into v_tran_field
@@ -104,22 +122,24 @@ me:begin
   end if;
 
   set v_sql = concat('insert into recon_tmp_ttranvalue(',v_tran_field,') ');
-  set v_sql = concat(v_sql,'select ',v_tran_field,' from recon_trn_ttran ');
+  set v_sql = concat(v_sql,'select z.* from  (');
+  set v_sql = concat(v_sql,'select ',v_tran_field,' from ',v_tran_table,' ');
   set v_sql = concat(v_sql,'where true ');
   set v_sql = concat(v_sql,in_condition,' ');
   set v_sql = concat(v_sql,'and excp_value <> 0 ');
   set v_sql = concat(v_sql,'and mapped_value = 0 ');
-  set v_sql = concat(v_sql,'and delete_flag = ''N'' ');
+  set v_sql = concat(v_sql,'and delete_flag = ''N'' LOCK IN SHARE MODE) as z ');
 
   call pr_run_sql(v_sql,v_out_msg,v_out_result);
 
   set v_sql = concat('insert into recon_tmp_ttranvalue(',v_tranbrkp_field,') ');
-  set v_sql = concat(v_sql,'select ',v_tranbrkp_field,' from recon_trn_ttranbrkp ');
+  set v_sql = concat(v_sql,'select z.* from  (');
+  set v_sql = concat(v_sql,'select ',v_tranbrkp_field,' from ',v_tranbrkp_table,' ');
   set v_sql = concat(v_sql,'where true ');
   set v_sql = concat(v_sql,in_condition,' ');
   set v_sql = concat(v_sql,'and excp_value > 0 ');
   set v_sql = concat(v_sql,'and tran_gid > 0 ');
-  set v_sql = concat(v_sql,'and delete_flag = ''N'' ');
+  set v_sql = concat(v_sql,'and delete_flag = ''N'' LOCK IN SHARE MODE) as z ');
 
   call pr_run_sql(v_sql,v_out_msg,v_out_result);
 
@@ -265,7 +285,7 @@ me:begin
     call pr_upd_job(in_job_gid,'P','Moving record(s) from preview table to report table...',@msg,@result);
   end if;
 
-  call pr_run_previewreport(in_job_gid,in_rptsession_gid,in_user_code,@msg,@result);
+  call pr_run_previewreport(in_recon_code,in_job_gid,in_rptsession_gid,in_user_code,@msg,@result);
 
   drop temporary table if exists recon_tmp_trecondataset;
   drop temporary table if exists recon_tmp_ttranvalue;

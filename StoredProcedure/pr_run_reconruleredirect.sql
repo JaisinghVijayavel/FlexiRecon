@@ -18,9 +18,9 @@ me:BEGIN
     Created Date - 2025-02-19
 
     Updated By : Vijayavel
-    updated Date : 05-03-2025
+    updated Date : 21-03-2025
 
-	  Version - 2
+	  Version - 3
 */
 
   declare i int default 0;
@@ -476,7 +476,7 @@ me:BEGIN
   set v_job_input_param = concat(v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format),char(13),char(10));
 
   if in_automatch_flag = 'N' then
-    call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
+    call pr_run_previewreport(in_recon_code,v_job_gid,0,in_user_code,@msg,@result);
 
     set v_file_name = concat(cast(v_job_gid as nchar),'_',in_recon_code,'_MatchPreview.csv');
 
@@ -489,7 +489,7 @@ me:BEGIN
     and delete_flag = 'N';
 
     
-    call pr_run_previewreport(v_job_gid,0,in_user_code,@msg,@result);
+    call pr_run_previewreport(in_recon_code,v_job_gid,0,in_user_code,@msg,@result);
 
     set v_file_name = concat(cast(v_job_gid as nchar),'_',in_recon_code,'_ProbableMatchPreview.csv');
 
@@ -628,7 +628,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_ttran;
   drop temporary table if exists recon_tmp_ttranbrkp;
 
-  
+
   if in_automatch_flag = 'Y' then
     
     

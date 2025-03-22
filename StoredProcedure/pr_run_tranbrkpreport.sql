@@ -18,13 +18,21 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 22-02-2024
+    updated Date : 19-03-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_count int default 0;
   declare v_sql text default '';
+
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+	declare v_tranko_table text default '';
+	declare v_tranbrkpko_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -51,16 +59,33 @@ me:BEGIN
   set in_rptsession_gid = ifnull(in_rptsession_gid,0);
   set in_user_code = ifnull(in_user_code,'');
 
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+  end if;
+
   -- transfer to temporary table
   set v_sql = concat("insert into recon_tmp_ttranbrkp
     select z.* from (
 		select
       a.*
-		from recon_trn_ttranbrkp as a
+		from ",v_tranbrkp_table," as a
     left join recon_mst_tdataset as b on a.tranbrkp_dataset_code = b.dataset_code
       and b.delete_flag = 'N'
-    left join recon_trn_ttran as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
-    left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
+    left join ",v_tran_table," as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
+    left join ",v_tranko_table," as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
     left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
       and f.delete_flag = 'N'
 		where true ", in_condition," and a.delete_flag = 'N'
@@ -69,11 +94,11 @@ me:BEGIN
 
 		select
       a.*
-		from recon_trn_ttranbrkpko as a
+		from ",v_tranbrkpko_table," as a
     left join recon_mst_tdataset as b on a.tranbrkp_dataset_code = b.dataset_code
       and b.delete_flag = 'N'
-    left join recon_trn_ttran as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
-    left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
+    left join ",v_tran_table," as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
+    left join ",v_tranko_table," as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
     left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
       and f.delete_flag = 'N'
 		where true ", in_condition," and a.delete_flag = 'N'
@@ -97,8 +122,8 @@ me:BEGIN
 		from recon_tmp_ttranbrkp as a
     left join recon_mst_tdataset as b on a.tranbrkp_dataset_code = b.dataset_code
       and b.delete_flag = 'N'
-    left join recon_trn_ttran as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
-    left join recon_trn_ttranko as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
+    left join ",v_tran_table," as c on a.tran_gid = c.tran_gid and c.delete_flag = 'N'
+    left join ",v_tranko_table," as d on a.tran_gid = d.tran_gid and d.delete_flag = 'N'
     left join recon_mst_tdataset as f on a.dataset_code = f.dataset_code
       and f.delete_flag = 'N'
 		where true ", in_condition," and a.delete_flag = 'N' ",in_sorting_order,"

@@ -4,13 +4,23 @@ DROP PROCEDURE IF EXISTS `pr_del_scheduler` $$
 CREATE PROCEDURE `pr_del_scheduler`(
   in in_scheduler_gid int,
   in in_remark varchar(255),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_result int,
   out out_msg text
 )
 me:begin
-  declare v_dataset_code varchar(32) default '';
-  declare v_dataset_db_name varchar(128) default '';
+  /*
+    Created By - Vijayavel
+    Created Date - 14-03-2025
+
+    Updated By - Vijayavel
+    Updated Date -
+
+	  Version - 001
+	*/
+
+  declare v_dataset_code text default '';
+  declare v_dataset_db_name text default '';
   declare v_sql text default '';
 
   declare err_msg text default '';

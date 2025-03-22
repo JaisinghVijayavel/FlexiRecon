@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_set_PDclusterCB` $$
 CREATE PROCEDURE `pr_set_PDclusterCB`
 (
   in in_recon_code text,
+  in in_pdrecon_code text,
   in in_cluster_name text,
   out out_msg text,
   out out_result int
@@ -13,10 +14,10 @@ me:BEGIN
     Created By - Vijayavel
     Created Date - 12-03-2025
 
-    Updated By -
-    Updated Date -
+    Updated By - Vijayavel
+    Updated Date - 13-03-2025
 
-	  Version - 001
+	  Version - 002
 	*/
 
   declare v_pdrecon_code text default '';
@@ -27,6 +28,11 @@ me:BEGIN
 
   declare v_unit_name text default '';
   declare v_cycle_date date default null;
+
+  -- chk pdreconcode
+  if in_pdrecon_code = '' then
+    set in_pdrecon_code = null;
+  end if;
 
   set v_dsdb_name = fn_get_configvalue('dataset_db_name');
 
@@ -47,6 +53,7 @@ me:BEGIN
 		declare pdrecon_cursor cursor for
 		select pdrecon_code from recon_mst_tpdrecon
 			where cluster_name = in_cluster_name
+      and pdrecon_code = ifnull(in_pdrecon_code,pdrecon_code)
 			and active_status = 'Y'
 			and delete_flag = 'N';
 		declare continue handler for not found set pdrecon_done=1;
@@ -79,12 +86,27 @@ me:BEGIN
       and active_status = 'Y'
       and delete_flag = 'N';
 
+      -- Cluster Recon Field Columns
+      -- col74 - IUT CB Flag
+      -- col75 - IUT DB Type
+
       -- update IUT CB Flag
       update recon_trn_ttran set
-        col74 = null
+        col74 = null,
+        col75 = null 
       where recon_code = in_recon_code
       and col38 = v_pdrecon_code
       and delete_flag = 'N';
+
+      -- update the IUT Status
+      set v_sql = concat("update ",v_cbds_code," set
+          col40 = '',
+          col41 = ''
+        where col1 = '",v_unit_name,"'
+        and delete_flag = 'N'
+        ");
+
+      call pr_run_sql2(v_sql,@msg,@result);
 
       -- validate IUT CB
       call pr_set_PDclusterIUTIP_CB(in_recon_code,v_pdrecon_code,v_cycle_date,in_cluster_name,v_unit_name,v_cbds_code,'IP Refund',@msg,@result);

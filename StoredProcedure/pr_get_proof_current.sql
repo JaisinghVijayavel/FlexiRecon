@@ -26,6 +26,20 @@ me:begin
   declare v_threshold_value double(15,2) default 0;
   declare v_threshold_total double(15,2) default 0;
 
+  declare v_sql text default '';
+
+  declare v_tran_table text default '';
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+  end if;
+
   set v_web_date_format = fn_get_configvalue('web_date_format');
 
   set v_web_date_format = ifnull(v_web_date_format,'%d-%m-%Y');
@@ -199,22 +213,25 @@ me:begin
 
   -- insert into tb_proof (particulars,tran_value,tran_acc_mode,bal_value) values ('Exception','','','');
 
+  set v_sql = concat("
   select
     sum(excp_value),count(*)
   into
-    v_value,v_count
-  from recon_trn_ttran
-  where recon_code = in_recon_code
+    @v_value,@v_count
+  from ",v_tran_table,"
+  where recon_code = '",in_recon_code,"'
   and excp_value <> 0
-  and tran_date <= in_tran_date
+  and tran_date <= '",cast(in_tran_date as nchar),"'
   and (excp_value - roundoff_value) <> 0
   and tran_acc_mode = 'D'
-  and tran_date <= in_tran_date
+  and tran_date <= '",cast(in_tran_date as nchar),"'
   and delete_flag = 'N'
-  LOCK IN SHARE MODE;
+  LOCK IN SHARE MODE");
 
-  set v_value = ifnull(v_value,0);
-  set v_count = ifnull(v_count,0);
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_value = ifnull(@v_value,0);
+  set v_count = ifnull(@v_count,0);
   set v_dr_total = v_dr_total + v_value;
 
   set v_txt = concat('Debit Exceptions');
@@ -238,22 +255,25 @@ me:begin
     ''
   );
 
+  set v_sql = concat("
   select
     sum(excp_value),count(*)
   into
-    v_value,v_count
-  from recon_trn_ttran
-  where recon_code = in_recon_code
+    @v_value,@v_count
+  from ",v_tran_table,"
+  where recon_code = '",in_recon_code,"'
   and excp_value <> 0
-  and tran_date <= in_tran_date
+  and tran_date <= '",cast(in_tran_date as nchar),"'
   and (excp_value - roundoff_value) <> 0
   and tran_acc_mode = 'C'
-  and tran_date <= in_tran_date
+  and tran_date <= '",cast(in_tran_date as nchar),"'
   and delete_flag = 'N'
-  LOCK IN SHARE MODE;
+  LOCK IN SHARE MODE");
 
-  set v_value = ifnull(v_value,0);
-  set v_count = ifnull(v_count,0);
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_value = ifnull(@v_value,0);
+  set v_count = ifnull(@v_count,0);
   set v_cr_total = v_cr_total + v_value;
 
   set v_txt = concat('Credit Exceptions');
@@ -282,22 +302,25 @@ me:begin
 
   -- rounding off
   -- if v_threshold_value > 0 then
+    set v_sql = concat("
 		select
       sum(a.excp_value*a.tran_mult),count(*)
     into
-      v_value,v_count
-    from recon_trn_ttran as a
-		where a.recon_code = in_recon_code
-    and a.tran_date <= in_tran_date
+      @v_value,@v_count
+    from ",v_tran_table," as a
+		where a.recon_code = '",in_recon_code,"'
+    and a.tran_date <= '",cast(in_tran_date as nchar),"'
 		and a.excp_value <> 0
     and a.roundoff_value <> 0
 		and a.tran_value <> a.excp_value
 		and (a.excp_value - a.roundoff_value) = 0
 		and a.delete_flag = 'N'
-    LOCK IN SHARE MODE;
+    LOCK IN SHARE MODE");
 
-    set v_value = ifnull(v_value,0);
-    set v_count = ifnull(v_count,0);
+    call pr_run_sql2(v_sql,@msg2,@result2);
+
+    set v_value = ifnull(@v_value,0);
+    set v_count = ifnull(@v_count,0);
 
     set v_threshold_total = v_value;
 

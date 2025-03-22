@@ -6,9 +6,43 @@ CREATE procedure `pr_set_PD_minibill`
   in_recon_code varchar(32)
 )
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 21-03-2025
+
+    Version : 1
+  */
+
   declare v_sql text default '';
   declare v_pdunit_code text default '';
   declare v_mini_field_name text default '';
+
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
+  drop temporary table if exists recon_tmp_tunit;
+
+  -- creat unit code temporary table
+  create temporary table recon_tmp_tunit(
+    unit_code varchar(32) NOT NULL,
+    PRIMARY KEY (unit_code)
+  ) ENGINE = MyISAM;
 
   -- get mini field name
   select
@@ -26,7 +60,7 @@ me:begin
   end if;
 
   -- blank mini bill no
-  set v_sql = concat("update recon_trn_ttranbrkp set
+  set v_sql = concat("update ",v_tranbrkp_table," set
     ",v_mini_field_name,"='0'
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'");
@@ -34,31 +68,37 @@ me:begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- blank mini bill no
-  set v_sql = concat("update recon_trn_ttran set
+  set v_sql = concat("update ",v_tran_table," set
     ",v_mini_field_name,"='0'
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
 
-  -- pdunit
-  pdunit_block:begin
-    declare pdunit_done int default 0;
-    declare pdunit_cursor cursor for
+  set v_sql = concat("insert into recon_tmp_tunit (unit_code)
       select
         distinct split(col2,'-',1)
-      from recon_trn_ttranbrkp
-      where recon_code = in_recon_code
+      from ",v_tranbrkp_table,"
+      where recon_code = '",in_recon_code,"'
       and split(col2,'-',2) in ('OCS','OCR','ICS','ICR')
       and delete_flag = 'N'
       union
       select
         distinct split(col2,'-',1)
-      from recon_trn_ttran
-      where recon_code = in_recon_code
+      from ",v_tran_table,"
+      where recon_code = '",in_recon_code,"'
       and split(col2,'-',2) in ('OCS','OCR','ICS','ICR')
       and delete_flag = 'N'
       LOCK IN SHARE MODE;
+    ");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  -- pdunit
+  pdunit_block:begin
+    declare pdunit_done int default 0;
+    declare pdunit_cursor cursor for
+      select unit_code from recon_tmp_tunit;
 
     declare continue handler for not found set pdunit_done=1;
 
@@ -77,6 +117,8 @@ me:begin
 
     close pdunit_cursor;
   end pdunit_block;
+
+  drop temporary table if exists recon_tmp_tunit;
 end $$
 
 DELIMITER ;

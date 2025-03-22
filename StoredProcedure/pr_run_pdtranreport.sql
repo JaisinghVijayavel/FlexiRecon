@@ -17,13 +17,19 @@ me:BEGIN
     Created Date : 28-11-2024
 
     Updated By : Vijayavel
-    updated Date : 22-02-2025
+    updated Date : 20-03-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_count int default 0;
   declare v_sql text default '';
+
+  declare v_pdrecon_code text default '';
+	declare v_tran_table text default '';
+	declare v_tranko_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -48,32 +54,86 @@ me:BEGIN
     and rptsession_gid = 0;
   end if;
 
-  -- transfer to temporary table
-  set v_sql = concat(v_sql,"insert into recon_tmp_tpdtran
-    select z.* from (
-		select
-      a.*
-		from recon_trn_ttran as a
-    inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code
-      and p.active_status = 'Y'
-      and p.delete_flag = 'N'
-    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
-		where a.delete_flag = 'N' ", in_condition,"
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-    union all
+  if v_concurrent_ko_flag = 'Y' then
+		-- pdrecon block
+		pdrecon_block:begin
+			declare pdrecon_done int default 0;
 
-		select
-      a.*
-		from recon_trn_ttranko as a
-    inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code
-      and p.active_status = 'Y'
-      and p.delete_flag = 'N'
-    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
-		where a.delete_flag = 'N' ", in_condition,"
-    LOCK IN SHARE MODE) as z
-  ");
+			declare pdrecon_cursor cursor for
+				select pdrecon_code from recon_mst_tpdrecon
+				where active_status = 'Y'
+				and delete_flag = 'N';
 
-  call pr_run_sql(v_sql,@msg,@result);
+			declare continue handler for not found set pdrecon_done=1;
+
+			open pdrecon_cursor;
+
+			pdrecon_loop: loop
+				fetch pdrecon_cursor into v_pdrecon_code;
+				if pdrecon_done = 1 then leave pdrecon_loop; end if;
+
+        set v_tran_table = concat(v_pdrecon_code,'_tran');
+        set v_tranko_table = concat(v_pdrecon_code,'_tranko');
+
+				-- transfer to temporary table
+				set v_sql = concat("insert into recon_tmp_tpdtran
+					select z.* from (
+					select
+						a.*
+					from ",v_tran_table," as a
+          left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+					where 1 = 1
+					and a.recon_code = '",v_pdrecon_code,"'
+					and a.delete_flag = 'N' ", in_condition,"
+
+					union all
+
+					select
+						a.*
+					from ",v_tranko_table," as a
+          left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+					where 1 = 1
+					and a.recon_code = '",v_pdrecon_code,"'
+					and a.delete_flag = 'N' ", in_condition,"
+					LOCK IN SHARE MODE) as z
+				");
+
+				call pr_run_sql(v_sql,@msg,@result);
+
+			end loop pdrecon_loop;
+			close pdrecon_cursor;
+		end pdrecon_block;
+  else
+		-- transfer to temporary table
+		set v_sql = concat("insert into recon_tmp_tpdtran
+			select z.* from (
+			select
+				a.*
+			from recon_trn_ttran as a
+			inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code
+				and p.active_status = 'Y'
+				and p.delete_flag = 'N'
+      left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+			where a.delete_flag = 'N' ", in_condition,"
+
+			union all
+
+			select
+				a.*
+			from recon_trn_ttranko as a
+			inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code
+				and p.active_status = 'Y'
+				and p.delete_flag = 'N'
+      left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+			where a.delete_flag = 'N' ", in_condition,"
+			LOCK IN SHARE MODE) as z
+		");
+
+    call pr_run_sql2(v_sql,@msg,@result);
+  end if;
 
   -- calc exception value based on roundoff value
   update recon_tmp_tpdtran set

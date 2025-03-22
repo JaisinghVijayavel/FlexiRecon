@@ -9,19 +9,38 @@ CREATE PROCEDURE `pr_get_pullclusterdata`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 21-03-2025
+
+    Version : 1
+  */
+
   declare v_pdrecon_code varchar(32) default '';
   declare v_dataset_code varchar(32) default '';
   declare v_sql text default '';
+
+  declare v_pdtran_table text default '';
+  declare v_pdtranbrkp_table text default '';
+
   declare v_tran_table text default '';
   declare v_tranbrkp_table text default '';
 
-  /*
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
     set v_tran_table = concat(in_recon_code,'_tran');
     set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
-  */
-
-  set v_tran_table = 'recon_trn_ttran';
-  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   -- get recon dataset code
   select
@@ -66,6 +85,14 @@ me:BEGIN
 			if pdrecon_done = 1 then leave pdrecon_loop; end if;
 
       set v_pdrecon_code = ifnull(v_pdrecon_code,'');
+
+      if v_concurrent_ko_flag = 'Y' then
+        set v_pdtran_table = concat(v_pdrecon_code,'_tran');
+        set v_pdtranbrkp_table = concat(v_pdrecon_code,'_tranbrkp');
+      else
+        set v_pdtran_table = 'recon_trn_ttran';
+        set v_pdtranbrkp_table = 'recon_trn_ttranbrkp';
+      end if;
 
       -- pull data from pd recon
       set v_sql = concat("insert into ",v_tran_table,"
@@ -121,7 +148,8 @@ me:BEGIN
 					col69,
 					col70,
 					col71,
-					col72
+					col72,
+          col76
         )
         select
           '",in_recon_code,"',
@@ -175,8 +203,9 @@ me:BEGIN
 					col49,
 					col50,
 					col51,
-					col39
-        from ",v_tran_table,"
+					col39,
+          col52
+        from ",v_pdtran_table,"
         where recon_code = '",v_pdrecon_code,"'
         and excp_value <> 0
         and delete_flag = 'N'
@@ -239,7 +268,8 @@ me:BEGIN
 					col69,
 					col70,
 					col71,
-					col72
+					col72,
+          col76
         )
         select
           '",in_recon_code,"',
@@ -294,8 +324,9 @@ me:BEGIN
 					col49,
 					col50,
 					col51,
-					col39
-        from ",v_tranbrkp_table,"
+					col39,
+          col52
+        from ",v_pdtranbrkp_table,"
         where recon_code = '",v_pdrecon_code,"'
         and excp_value <> 0
         and delete_flag = 'N'

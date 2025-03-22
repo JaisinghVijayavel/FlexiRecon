@@ -42,11 +42,9 @@ me:begin
   declare v_tran_table text default '';
   declare v_tranbrkp_table text default '';
 
-  declare v_sql text default '';
+  declare v_concurrent_ko_flag text default '';
 
-  -- set tran table
-  set v_tran_table = 'recon_trn_ttran';
-  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  declare v_sql text default '';
 
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
@@ -77,6 +75,17 @@ me:begin
 
       -- get recon field and type
       -- call pr_get_fieldname(v_recon_code,v_recon_field_desc,v_recon_field,v_recon_field_type);
+
+      -- concurrent KO flag
+      set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+      if v_concurrent_ko_flag = 'Y' then
+        set v_tran_table = concat(v_recon_code,'_tran');
+	      set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
+      else
+	      set v_tran_table = 'recon_trn_ttran';
+	      set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+      end if;
 
       if v_tran_gid > 0 or v_tranbrkp_gid > 0 then
         if v_recon_code = '' then

@@ -17,20 +17,36 @@ me:BEGIN
     Created Date : 08-02-2024
 
     Updated By : Vijayavel
-    updated Date : 22-02-2025
+    updated Date : 19-03-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_tran_field text default '';
   declare v_tranbrkp_field text default '';
   declare v_recontype_code text default '';
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
+
   declare v_count int default 0;
   declare v_sql text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   -- get table column
   SELECT
@@ -69,7 +85,7 @@ me:BEGIN
   set v_sql = concat(v_sql,cast(in_job_gid as nchar),' as job_gid,');
   set v_sql = concat(v_sql,char(39),in_user_code,char(39),' as user_code,');
   set v_sql = concat(v_sql,'b.dataset_name as ds_name,rd.dataset_type,');
-  set v_sql = concat(v_sql,concat('a.',replace(v_tran_field,',',',a.')),' from recon_trn_ttran as a ');
+  set v_sql = concat(v_sql,concat('a.',replace(v_tran_field,',',',a.')),' from ',v_tran_table,' as a ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_trecondataset as rd on a.recon_code = rd.recon_code and a.dataset_code = rd.dataset_code ');
   set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
@@ -130,10 +146,10 @@ me:BEGIN
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
   set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
-  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
+  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from ',v_tranbrkp_table,' as s ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on s.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
-  set v_sql = concat(v_sql,'left join recon_trn_ttran as a on s.tran_gid = a.tran_gid ');
+  set v_sql = concat(v_sql,'left join ',v_tran_table,' as a on s.tran_gid = a.tran_gid ');
   set v_sql = concat(v_sql,'left join recon_mst_trecondataset as rd on a.recon_code = rd.recon_code and a.dataset_code = rd.dataset_code ');
   set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
   set v_sql = concat(v_sql,'and rd.active_status = ''Y'' and rd.delete_flag = ''N'' ');
@@ -164,10 +180,10 @@ me:BEGIN
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
   set v_sql = concat(v_sql,'a.tran_value as base_tran_value,a.excp_value as base_excp_value,a.tran_acc_mode as base_acc_mode,');
-  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from recon_trn_ttranbrkp as s ');
+  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from ',v_tranbrkp_table,' as s ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on s.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
-  set v_sql = concat(v_sql,'left join recon_trn_ttran as a on s.tran_gid = a.tran_gid ');
+  set v_sql = concat(v_sql,'left join ',v_tran_table,' as a on s.tran_gid = a.tran_gid ');
   set v_sql = concat(v_sql,'left join recon_mst_trecondataset as rd on a.recon_code = rd.recon_code and a.dataset_code = rd.dataset_code ');
   set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
   set v_sql = concat(v_sql,'and rd.active_status = ''Y'' and rd.delete_flag = ''N'' ');

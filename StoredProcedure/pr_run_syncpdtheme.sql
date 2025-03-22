@@ -188,6 +188,7 @@ me:BEGIN
       tran_gid,tranbrkp_gid,iut_theme,iut_flag,iut_value,closing_balance,
       from_unit,to_unit,iut_ref_no,entry_flag,entry_ref_no,action_tobe_taken
     )
+    select z.* from (
     select
       cast(col1 as signed),
       cast(col2 as signed),
@@ -204,7 +205,7 @@ me:BEGIN
     from ",v_tran_table,"
     where recon_code = '",in_recon_code,"'
     and ",v_iuttheme_field," <> ''
-    and delete_flag = 'N'
+    and delete_flag = 'N'  LOCK IN SHARE MODE) as z
     ");
 
   call pr_run_sql2(v_sql,@msg,@result);

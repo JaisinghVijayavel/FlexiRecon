@@ -3,6 +3,16 @@
 DROP PROCEDURE IF EXISTS pr_set_IUTIP_UHID $$
 CREATE PROCEDURE pr_set_IUTIP_UHID(in_recon_code varchar(32))
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 21-03-2025
+
+    Version : 1
+  */
+
   declare v_tran_gid int default 0;
   declare v_uhid_no text default '';
   declare v_dr_amount decimal(15,2) default 0;
@@ -34,8 +44,19 @@ me:begin
   declare v_sql text default '';
   declare v_succ_flag boolean default false;
 
-  set v_tran_table = 'recon_trn_ttran';
-  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
   set v_ds_code = 'DS274';
   set v_tranbrkp_ds_code = 'DS277';
 

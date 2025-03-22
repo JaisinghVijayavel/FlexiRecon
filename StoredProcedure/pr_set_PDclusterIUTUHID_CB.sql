@@ -8,7 +8,7 @@ CREATE PROCEDURE `pr_set_PDclusterIUTUHID_CB`
   in in_cycle_date date,
   in in_cluster_name text,
   in in_unit_name text,
-  in in_unitds_code text,
+  in in_cbds_code text,
   out out_msg text,
   out out_result int
 )
@@ -17,10 +17,10 @@ me:BEGIN
     Created By - Vijayavel
     Created Date - 12-03-2025
 
-    Updated By -
-    Updated Date -
+    Updated By - Vijayavel
+    Updated Date - 14-03-2025
 
-	  Version - 001
+	  Version - 003
 	*/
 
   declare v_sql text default '';
@@ -71,7 +71,7 @@ me:BEGIN
       col3,
       col2,
       cast(col6 as decimal(15,2))
-    from ",in_unitds_code,"
+    from ",in_cbds_code,"
     where col1 = '",in_unit_name,"'
     and col2 = 'UHID - Deposit CB'
     and col3 <> ''
@@ -84,11 +84,14 @@ me:BEGIN
 
   -- Cluster Recon Field Columns
   -- col6 - Dataset Code
+  -- col19 - Bill No
   -- col20 - UHID
   -- col21 - IP/OP No
   -- col22 - Event
   -- col38 - Recon Code
   -- col53 - Closing Balance
+  -- col74 - IUT CB Flag
+  -- col75 - IUT DB Type
 
   -- IP Refund CB get
 	cb_block:begin
@@ -126,7 +129,7 @@ me:BEGIN
       where recon_code = in_recon_code
       and col38 = in_pdrecon_code
       and col20 = v_uhid_no
-      and col21 = ''
+      and cast(col53 as decimal(15,2)) <> 0
       and col74 is null
       and delete_flag = 'N'
       LOCK IN SHARE MODE;
@@ -145,7 +148,7 @@ me:BEGIN
       end if;
 
       -- update the IUT Status
-      set v_sql = concat("update ",in_unitds_code," set
+      set v_sql = concat("update ",in_cbds_code," set
           col40 = ",cast(v_iut_cb_amount as nchar),",
           col41 = '",v_iut_status,"'
         where dataset_gid = ",cast(v_dataset_gid as nchar),"
@@ -156,11 +159,12 @@ me:BEGIN
 
       if v_iut_status <> 'NOT AVAILABLE' then
         update recon_trn_ttran set
-          col74 = 'Y'
+          col74 = 'Y',
+          col75 = 'UHID - Deposit CB'
         where recon_code = in_recon_code
         and col38 = in_pdrecon_code
         and col20 = v_uhid_no
-        and col21 = ''
+        and cast(col53 as decimal(15,2)) <> 0
         and col74 is null
         and delete_flag = 'N';
       end if;

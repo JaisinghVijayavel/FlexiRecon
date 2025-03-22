@@ -3,6 +3,16 @@
 DROP PROCEDURE IF EXISTS pr_set_IUT $$
 CREATE PROCEDURE pr_set_IUT(in_recon_code varchar(32))
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 21-03-2025
+
+    Version : 1
+  */
+
   declare v_tran_gid int default 0;
   declare v_uhid_no text default '';
   declare v_ip_no text default '';
@@ -39,6 +49,19 @@ me:begin
   declare v_dataset_db_name text default '';
   declare v_sql text default '';
   declare v_succ_flag boolean default false;
+
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   drop temporary table if exists recon_tmp_tuhid;
   drop temporary table if exists recon_tmp_tuhidrecon;
@@ -126,8 +149,6 @@ me:begin
     PRIMARY KEY (gid)
   ) ENGINE = MyISAM;
 
-  set v_tran_table = 'recon_trn_ttran';
-  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
   set v_ds_code = 'DS508';
   set v_tranbrkp_ds_code = 'DS277';
 

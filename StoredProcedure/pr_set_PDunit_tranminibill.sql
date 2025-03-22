@@ -16,6 +16,22 @@ me:begin
   declare v_ds_db_name text default '';
   declare v_recon_closure_date text default '';
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
   -- get dataset bill summary
   if exists(select a.dataset_code from recon_mst_trecondataset as a
     inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
@@ -82,16 +98,19 @@ me:begin
   set v_mini_field_name = ifnull(v_mini_field_name,'');
 
   -- OCR mini bill no
-  select col2 into v_bill_no from recon_trn_ttran
-  where recon_code = in_recon_code
-  and col2 like concat(in_pdunit_code,'%')
-  and col2 like '%-OCR-%'
-  -- and col14 <> ''
-  and delete_flag = 'N'
-  limit 0,1
-  LOCK IN SHARE MODE;
+  set v_sql = concat("
+    select col2 into @v_bill_no from  ",v_tran_table,"
+    where recon_code = '",in_recon_code,"'
+    and col2 like concat('",in_pdunit_code,"','%')
+    and col2 like '%-OCR-%'
+    -- and col14 <> ''
+    and delete_flag = 'N'
+    limit 0,1
+    LOCK IN SHARE MODE");
 
-  set v_bill_no = ifnull(v_bill_no,'');
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_bill_no = ifnull(@v_bill_no,'');
 
   set v_unit_code = SPLIT(v_bill_no,'-',1);
   set v_bill_type = SPLIT(v_bill_no,'-',2);
@@ -121,7 +140,7 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttran set
+    set v_sql = concat("update ",v_tran_table," set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
@@ -138,16 +157,19 @@ me:begin
   end if;
 
   -- OCS mini bill no
-  select col2 into v_bill_no from recon_trn_ttran
-  where recon_code = in_recon_code
-  and col2 like concat(in_pdunit_code,'%')
-  and col2 like '%-OCS-%'
-  -- and col14 <> ''
-  and delete_flag = 'N'
-  limit 0,1
-  LOCK IN SHARE MODE;
+  set v_sql = concat("
+    select col2 into @v_bill_no from  ",v_tran_table,"
+    where recon_code = '",in_recon_code,"'
+    and col2 like concat('",in_pdunit_code,"','%')
+    and col2 like '%-OCS-%'
+    -- and col14 <> ''
+    and delete_flag = 'N'
+    limit 0,1
+    LOCK IN SHARE MODE");
 
-  set v_bill_no = ifnull(v_bill_no,'');
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_bill_no = ifnull(@v_bill_no,'');
 
   set v_unit_code = SPLIT(v_bill_no,'-',1);
   set v_bill_type = SPLIT(v_bill_no,'-',2);
@@ -177,7 +199,7 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttran set
+    set v_sql = concat("update ",v_tran_table," set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
@@ -194,16 +216,19 @@ me:begin
   end if;
 
   -- ICR mini bill no
-  select col2 into v_bill_no from recon_trn_ttran
-  where recon_code = in_recon_code
-  and col2 like concat(in_pdunit_code,'%')
-  and col2 like '%-ICR-%'
-  -- and col14 <> ''
-  and delete_flag = 'N'
-  limit 0,1
-  LOCK IN SHARE MODE;
+  set v_sql = concat("
+    select col2 into @v_bill_no from ",v_tran_table,"
+    where recon_code = '",in_recon_code,"'
+    and col2 like concat('",in_pdunit_code,"','%')
+    and col2 like '%-ICR-%'
+    -- and col14 <> ''
+    and delete_flag = 'N'
+    limit 0,1
+    LOCK IN SHARE MODE");
 
-  set v_bill_no = ifnull(v_bill_no,'');
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_bill_no = ifnull(@v_bill_no,'');
 
   set v_unit_code = SPLIT(v_bill_no,'-',1);
   set v_bill_type = SPLIT(v_bill_no,'-',2);
@@ -233,7 +258,7 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttran set
+    set v_sql = concat("update ",v_tran_table," set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'
@@ -250,16 +275,19 @@ me:begin
   end if;
 
   -- ICS mini bill no
-  select col2 into v_bill_no from recon_trn_ttran
-  where recon_code = in_recon_code
-  and col2 like concat(in_pdunit_code,'%')
-  and col2 like '%-ICS-%'
-  -- and col14 <> ''
-  and delete_flag = 'N'
-  limit 0,1
-  LOCK IN SHARE MODE;
+  set v_sql = concat("
+    select col2 into @v_bill_no from ",v_tran_table,"
+    where recon_code = '",in_recon_code,"'
+    and col2 like concat('",in_pdunit_code,"','%')
+    and col2 like '%-ICS-%'
+    -- and col14 <> ''
+    and delete_flag = 'N'
+    limit 0,1
+    LOCK IN SHARE MODE");
 
-  set v_bill_no = ifnull(v_bill_no,'');
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_bill_no = ifnull(@v_bill_no,'');
 
   set v_unit_code = SPLIT(v_bill_no,'-',1);
   set v_bill_type = SPLIT(v_bill_no,'-',2);
@@ -289,7 +317,7 @@ me:begin
 
     set @min_bill = ifnull(@min_bill,0);
 
-    set v_sql = concat("update recon_trn_ttran set
+    set v_sql = concat("update ",v_tran_table," set
       ",v_mini_field_name,"='",cast(@min_bill as nchar),"'
       where recon_code = '",in_recon_code,"'
       and col2 like '",v_unit_code,"%'

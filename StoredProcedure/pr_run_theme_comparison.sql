@@ -128,9 +128,11 @@ me:BEGIN
   declare v_field_type text default '';
 
   declare v_preview_gid int default 0;
-	
+
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -141,8 +143,16 @@ me:BEGIN
 	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
   */
 
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code

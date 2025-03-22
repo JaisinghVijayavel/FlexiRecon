@@ -14,9 +14,9 @@ me:begin
     Created Date : 06-10-2023
 
     Updated By : Vijayavel
-    Updated Date : 19-02-2025
+    Updated Date : 19-03-2025
 
-    Version : 6
+    Version : 7
   */
 
   declare v_pipeline_code text default '';
@@ -54,6 +54,8 @@ me:begin
 
   declare v_user_code text default '';
   declare v_count int default 0;
+
+  declare v_concurrent_ko_flag text default '';
 
   drop temporary table if exists recon_tmp_ttrangid;
   drop temporary table if exists recon_tmp_tbalance;
@@ -205,8 +207,15 @@ me:begin
   end if;
   */
 
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
   if v_dataset_type = 'B' or v_dataset_type = 'T' then
-    set v_target_table = 'recon_trn_ttran';
+    if v_concurrent_ko_flag = 'Y' then
+      set v_target_table = concat(in_recon_code,'_tran');
+    else
+      set v_target_table = 'recon_trn_ttran';
+    end if;
 
     set v_source_sql = concat('select ',cast(in_scheduler_gid as nchar),',');
     set v_source_sql = concat(v_source_sql,char(34),in_recon_code,char(34),',');
@@ -214,7 +223,11 @@ me:begin
 
     set v_target_sql = concat('insert into ',v_target_table,' (scheduler_gid,recon_code,dataset_code,');
   elseif v_dataset_type = 'S' then
-    set v_target_table = 'recon_trn_ttranbrkp';
+    if v_concurrent_ko_flag = 'Y' then
+      set v_target_table = concat(in_recon_code,'_tranbrkp');
+    else
+      set v_target_table = 'recon_trn_ttranbrkp';
+    end if;
 
     set v_source_sql = concat('select ',cast(in_scheduler_gid as nchar),',');
     set v_source_sql = concat(v_source_sql,char(34),in_recon_code,char(34),',');
@@ -280,34 +293,43 @@ me:begin
 
     if v_count = 2 and (v_dataset_type = 'B' or v_dataset_type = 'T') then
       -- find the last row for the day to find balance
-      insert into recon_tmp_ttrangid
-      (
-        tran_gid,
-        tran_date
-      )
-      select max(tran_gid),tran_date from recon_trn_ttran
-      where scheduler_gid = in_scheduler_gid
-      and dataset_code = v_dataset_code
-      and tran_date is not null
-      group by tran_date;
+      set v_sql = concat("
+        insert into recon_tmp_ttrangid
+        (
+          tran_gid,
+          tran_date
+        )
+        select
+          max(tran_gid),tran_date
+        from  ",v_target_table,"
+        where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+        and dataset_code = '",v_dataset_code,"'
+        and tran_date is not null
+        group by tran_date");
 
-      insert into recon_tmp_tbalance
-      (
-        tran_date,
-        dataset_code,
-        bal_value_debit,
-        bal_value_credit
-      )
-      select
-        a.tran_date,
-        a.dataset_code,
-        ifnull(a.bal_value_debit,0),
-        ifnull(a.bal_value_credit,0)
-      from recon_trn_ttran as a
-      inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
-      where a.scheduler_gid = in_scheduler_gid
-      and a.dataset_code = v_dataset_code
-      and a.delete_flag = 'N';
+      call pr_run_sql2(v_sql,@msg2,@result2);
+
+      -- insert in temporary table
+      set v_sql = concat("
+        insert into recon_tmp_tbalance
+        (
+          tran_date,
+          dataset_code,
+          bal_value_debit,
+          bal_value_credit
+        )
+        select
+          a.tran_date,
+          a.dataset_code,
+          ifnull(a.bal_value_debit,0),
+          ifnull(a.bal_value_credit,0)
+        from ",v_target_table," as a
+        inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
+        where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+        and a.dataset_code = '",v_dataset_code,"'
+        and a.delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg2,@result2);
 
       if not exists(select * from recon_trn_taccbal
         where scheduler_gid = in_scheduler_gid

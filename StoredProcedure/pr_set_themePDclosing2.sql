@@ -10,12 +10,12 @@ CREATE PROCEDURE `pr_set_themePDclosing2`
 me:begin
   /*
     Created By : Vijayavel
-    Created Date :
+    Created Date : 27-02-2025
 
     Updated By : Vijayavel
-    Updated Date : 27-02-2025
+    Updated Date : 20-03-2025
 
-    Version : 2
+    Version : 4
   */
 
   declare v_sql text default '';
@@ -27,11 +27,21 @@ me:begin
 	declare v_ds_dbname text default '';
   declare v_recon_cycle_date date;
 
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
   -- get recon_cycle_date
   set v_recon_cycle_date = fn_get_reconcycledate(in_recon_code);
-
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
   set v_ds_dbname = ifnull(fn_get_configvalue('dataset_db_name'),'');
 
@@ -78,7 +88,7 @@ me:begin
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
     and col3 <> ''
-    and (theme_code = '' or theme_code = 'Consider for CB IP Refund')
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund' or theme_code like 'Consider for CB IP Refund,%')
     and delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
@@ -89,7 +99,7 @@ me:begin
     where recon_code = '",in_recon_code,"'
     and excp_value <> 0
     and tran_gid > 0
-    and (theme_code = '' or theme_code = 'Consider for CB IP Refund')
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund' or theme_code like 'Consider for CB IP Refund,%')
 
     /*
     and col1 <> 'DIGITAL  TESTING'
@@ -165,7 +175,7 @@ me:begin
     set a.theme_code = b.balance_type
     where 1 = 1
     and b.tally_status = 'TALLIED'
-    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund') ");
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund' or theme_code like 'Consider for CB IP Refund,%') ");
 
   call pr_run_sql(v_sql,@msg,@result);
 
@@ -177,7 +187,7 @@ me:begin
     set a.theme_code = b.balance_type
     where 1 = 1
     and b.tally_status = 'TALLIED'
-    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund') ");
+    and (a.theme_code = '' or a.theme_code = 'Consider for CB IP Refund' or theme_code like 'Consider for CB IP Refund,%') ");
 
   call pr_run_sql(v_sql,@msg,@result);
 

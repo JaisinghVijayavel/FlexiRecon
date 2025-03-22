@@ -9,8 +9,47 @@ CREATE PROCEDURE `pr_get_rollbacktran`
   out out_result int
 )
 me:begin
+	declare v_sql text default '';
   declare v_next_tran_date date;
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+	declare v_tranko_table text default '';
+	declare v_tranbrkpko_table text default '';
+
+	declare v_ko_table text default '';
+	declare v_kodtl_table text default '';
+	declare v_koroundoff_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+
+	  set v_ko_table = concat(in_recon_code,'_ko');
+	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
+	  set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+	  set v_ko_table = 'recon_trn_tko';
+	  set v_kodtl_table = 'recon_trn_tkodtl';
+	  set v_koroundoff_table = 'recon_trn_tkoroundoff';
+  end if;
+
+  -- get next tran date
   set v_next_tran_date = date_add(in_tran_date,interval 1 day);
 
   drop temporary table if exists recon_tmp_ttran;
@@ -69,26 +108,32 @@ me:begin
   ) ENGINE = MyISAM;
 
   -- tran table
+  set v_sql = concat("
   insert into recon_tmp_ttran
   select z.* from
   (
-    select * from recon_trn_ttran
-    where recon_code = in_recon_code
-    and tran_date < v_next_tran_date
+    select * from ",v_tran_table,"
+    where recon_code = '",in_recon_code,"'
+    and tran_date < '",cast(v_next_tran_date as nchar),"'
     and delete_flag = 'N'
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
 
   -- tranbrkp table
+  set v_sql = concat("
   insert into recon_tmp_ttranbrkp
   select z.* from
   (
-    select * from recon_trn_ttranbrkp
-    where recon_code = in_recon_code
-    and tran_date < v_next_tran_date
+    select * from ",v_tranbrkp_table,"
+    where recon_code = '",in_recon_code,"'
+    and tran_date < '",cast(v_next_tran_date as nchar),"'
     and delete_flag = 'N'
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
 
   -- ko table
   /*
@@ -100,29 +145,36 @@ me:begin
   */
 
   -- kodtl table
+  set v_sql = concat("
   insert into recon_tmp_tkodtl
   select z.* from
   (
-    select b.* from recon_trn_tko as a
-    inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
-    where a.ko_date >= v_next_tran_date
-    and a.recon_code = in_recon_code
+    select b.* from ",v_ko_table," as a
+    inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+    where a.ko_date >= '",cast(v_next_tran_date as nchar),"'
+    and a.recon_code = '",in_recon_code,"'
     and a.delete_flag = 'N'
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
 
   -- koroundoff table
+  set v_sql = concat("
   insert into recon_tmp_tkoroundoff
   select z.* from
   (
-    select b.* from recon_trn_tko as a
-    inner join recon_trn_tkoroundoff as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
-    where a.ko_date >= v_next_tran_date
-    and a.recon_code = in_recon_code
+    select b.* from ",v_ko_table," as a
+    inner join ",v_koroundoff_table," as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+    where a.ko_date >= '",cast(v_next_tran_date as nchar),"'
+    and a.recon_code = '",in_recon_code,"'
     and a.delete_flag = 'N'
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
 
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_sql = concat("
   insert into recon_tmp_ttrangid (tran_gid,ko_value,roundoff_value)
   select z.* from
   (
@@ -130,32 +182,40 @@ me:begin
       a.tran_gid,
       sum(a.ko_value*a.ko_mult),
       sum(ifnull(b.roundoff_value,0)) as roundoff_value
-    from recon_tmp_tkodtl as a
-		left join recon_trn_tkoroundoff as b on a.ko_gid = b.ko_gid
+    from ",v_kodtl_table," as a
+		left join ",v_koroundoff_table," as b on a.ko_gid = b.ko_gid
 			and a.tran_gid = b.tran_gid
 			and a.tranbrkp_gid = b.tranbrkp_gid
 			and b.delete_flag = 'N'
     group by a.tran_gid
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
 
   -- insert knockoff transactions
+  set v_sql = concat("
   insert into recon_tmp_ttran
   select z.* from
   (
     select b.* from recon_tmp_ttrangid as a
-    inner join recon_trn_ttranko as b on a.tran_gid = b.tran_gid
+    inner join ",v_tranko_table," as b on a.tran_gid = b.tran_gid
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
 
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_sql = concat("
   insert into recon_tmp_ttranbrkp
   select z.* from
   (
     select b.* from recon_tmp_tkodtl as a
-    inner join recon_trn_ttranbrkpko as b on a.tranbrkp_gid = b.tranbrkp_gid
+    inner join ",v_tranbrkpko_table," as b on a.tranbrkp_gid = b.tranbrkp_gid
     where b.tranbrkp_gid > 0
     LOCK IN SHARE MODE
-  ) as z;
+  ) as z");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
 
   -- update in tran table
   update recon_tmp_ttran as a

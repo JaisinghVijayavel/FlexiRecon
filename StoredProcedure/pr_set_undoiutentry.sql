@@ -5,10 +5,21 @@ CREATE PROCEDURE `pr_set_undoiutentry`
 (
   in in_recon_code varchar(32),
   in in_iutentryref_no text,
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 19-03-2025
+
+    Version : 1
+  */
+
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
@@ -26,8 +37,10 @@ me:begin
     and entry_Ref_no = in_iutentryref_no
     and iutentry_status = 'C'
     and delete_flag = 'N') then
+
     set out_msg = 'Falied';
     set out_result = 0;
+    leave me;
   end if;
 
   -- undo in tranbrkp table
@@ -57,7 +70,9 @@ me:begin
 
   -- update in iutentry table
   update recon_trn_tiutentry set
-    iutentry_status = 'U'
+    iutentry_status = 'U',
+    update_by = in_user_code,
+    update_date = sysdate()
   where recon_code = in_recon_code
   and entry_ref_no = in_iutentryref_no
   and iutentry_status = 'C'

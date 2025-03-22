@@ -17,13 +17,18 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 22-05-2025
+    updated Date : 19-03-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_count int default 0;
   declare v_sql text default '';
+
+	declare v_tran_table text default '';
+	declare v_tranko_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -40,6 +45,18 @@ me:BEGIN
   create index idx_recon_code on recon_tmp_ttran(recon_code);
   create index idx_dataset_code on recon_tmp_ttran(recon_code,dataset_code);
 
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranko_table = 'recon_trn_ttranko';
+  end if;
+
+
   -- delete record
   if in_job_gid = 0 and in_rptsession_gid = 0 then
     delete from recon_rpt_ttran
@@ -53,7 +70,7 @@ me:BEGIN
     select z.* from (
 		select
       a.*
-		from recon_trn_ttran as a
+		from ",v_tran_table," as a
     left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
 		where a.delete_flag = 'N' ", in_condition,"
 
@@ -61,7 +78,7 @@ me:BEGIN
 
 		select
       a.*
-		from recon_trn_ttranko as a
+		from ",v_tranko_table," as a
     left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
 		where a.delete_flag = 'N' ", in_condition,"
     LOCK IN SHARE MODE) as z

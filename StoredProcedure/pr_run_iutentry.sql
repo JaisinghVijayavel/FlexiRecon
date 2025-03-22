@@ -19,14 +19,34 @@ me:BEGIN
   declare v_ds_db_name text default '';
 	declare v_ds_unit_table text default 'DS276';
 
+  declare v_concurrent_ko_flag text default '';
+
 	-- set tran table
   /*
 	set v_tran_table = concat(in_recon_code,'_tran');
 	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
   */
 
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- get recon code
+  select
+    recon_code into v_recon_code
+  from recon_trn_tiutentry
+  where scheduler_gid = in_scheduler_gid
+  and recon_code <> ''
+  and delete_flag = 'N';
+
+  set v_recon_code = ifnull(v_recon_code,'');
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(v_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   -- dataset table
   set v_ds_db_name = fn_get_configvalue('dataset_db_name');

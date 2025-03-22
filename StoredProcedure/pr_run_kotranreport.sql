@@ -3,10 +3,11 @@
 DROP PROCEDURE IF EXISTS `pr_run_kotranreport` $$
 CREATE PROCEDURE `pr_run_kotranreport`
 (
+  in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
   in in_condition text,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -16,12 +17,23 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 22-02-2025
+    updated Date : 21-03-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_sql text default '';
+
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+	declare v_tranko_table text default '';
+	declare v_tranbrkpko_table text default '';
+
+	declare v_ko_table text default '';
+	declare v_kodtl_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -50,6 +62,29 @@ me:BEGIN
   set in_job_gid = ifnull(in_job_gid,0);
   set in_rptsession_gid = ifnull(in_rptsession_gid,0);
   set in_user_code = ifnull(in_user_code,'');
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+
+	  set v_ko_table = concat(in_recon_code,'_ko');
+	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+	  set v_ko_table = 'recon_trn_tko';
+	  set v_kodtl_table = 'recon_trn_tkodtl';
+  end if;
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tko
     select z.* from (
@@ -225,10 +260,10 @@ me:BEGIN
       c.bal_value_debit,
       c.bal_value_credit,
       a.job_gid as job_ref_gid
-		from recon_trn_tko as a
-		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
-		inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
-		left join recon_trn_ttranbrkpko as cc on b.tranbrkp_gid = cc.tranbrkp_gid and cc.delete_flag = 'N'
+		from ",v_ko_table," as a
+		inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+		inner join ",v_tranko_table," as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+		left join ",v_tranbrkpko_table," as cc on b.tranbrkp_gid = cc.tranbrkp_gid and cc.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
@@ -408,10 +443,10 @@ me:BEGIN
       c.bal_value_debit,
       c.bal_value_credit,
       a.job_gid as job_ref_gid
-		from recon_trn_tko as a
-		inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
-		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
-		left join recon_trn_ttranbrkpko as cc on b.tranbrkp_gid = cc.tranbrkp_gid and cc.delete_flag = 'N'
+		from ",v_ko_table," as a
+		inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.delete_flag = 'N'
+		inner join ",v_tran_table," as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+		left join ",v_tranbrkpko_table," as cc on b.tranbrkp_gid = cc.tranbrkp_gid and cc.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'

@@ -14,11 +14,11 @@ CREATE PROCEDURE `pr_run_sp`(
 )
 begin
   if in_sp_name = 'pr_run_koreport' then
-    call pr_run_koreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_koreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_koheadreport' then
-    call pr_run_koheadreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_koheadreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_kobrkpreport' then
-    call pr_run_kobrkpreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_kobrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranbrkpreport' then
     call pr_run_tranbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_amountmatchedmultiple' then
@@ -26,11 +26,11 @@ begin
   elseif in_sp_name = 'pr_run_tranreport' then
     call pr_run_tranreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_manualmatchreport' then
-    call pr_run_manualmatchreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_manualmatchreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_manualpostreport' then
-    call pr_run_manualpostreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_manualpostreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_kotranreport' then
-    call pr_run_kotranreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_kotranreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranwithbrkpreport' then
     call pr_run_tranwithbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_errorlogreport' then

@@ -8,7 +8,7 @@ CREATE PROCEDURE `pr_set_PDclusterIUTIP_CB`
   in in_cycle_date date,
   in in_cluster_name text,
   in in_unit_name text,
-  in in_unitds_code text,
+  in in_cbds_code text,
   in in_ip_type text,
   out out_msg text,
   out out_result int
@@ -18,10 +18,10 @@ me:BEGIN
     Created By - Vijayavel
     Created Date - 12-03-2025
 
-    Updated By -
-    Updated Date -
+    Updated By - Vijayavel
+    Updated Date - 14-03-2025
 
-	  Version - 001
+	  Version - 003
 	*/
 
   declare v_sql text default '';
@@ -77,7 +77,7 @@ me:BEGIN
       col5,
       col2,
       cast(col6 as decimal(15,2))
-    from ",in_unitds_code,"
+    from ",in_cbds_code,"
     where col1 = '",in_unit_name,"'
     and col2 = '",in_ip_type,"'
     and col3 <> ''
@@ -91,11 +91,14 @@ me:BEGIN
 
   -- Cluster Recon Field Columns
   -- col6 - Dataset Code
+  -- col19 - Bill No
   -- col20 - UHID
   -- col21 - IP/OP No
   -- col22 - Event
   -- col38 - Recon Code
   -- col53 - Closing Balance
+  -- col74 - IUT CB Flag
+  -- col75 - IUT DB Type
 
   -- IP Refund CB get
 	cb_block:begin
@@ -126,6 +129,7 @@ me:BEGIN
 
       set v_cb_amount = ifnull(v_cb_amount,0);
 
+      -- case 1
       -- get closing balance sum
       select
         sum(cast(col53 as decimal(15,2))),count(*)
@@ -136,6 +140,7 @@ me:BEGIN
       and col38 = in_pdrecon_code
       and col20 = v_uhid_no
       and col21 = v_ip_no
+      and cast(col53 as decimal(15,2)) <> 0
       and col74 is null
       and delete_flag = 'N'
       LOCK IN SHARE MODE;
@@ -151,27 +156,97 @@ me:BEGIN
 
       if v_iut_cb_amount = v_cb_amount and v_count > 0 then
         set v_iut_status = 'TALLIED';
-      end if;
 
-      -- update the IUT Status
-      set v_sql = concat("update ",in_unitds_code," set
-          col40 = ",cast(v_iut_cb_amount as nchar),",
-          col41 = '",v_iut_status,"'
-        where dataset_gid = ",cast(v_dataset_gid as nchar),"
-        and delete_flag = 'N'
-        ");
+        -- update the IUT Status
+        set v_sql = concat("update ",in_cbds_code," set
+            col40 = ",cast(v_iut_cb_amount as nchar),",
+            col41 = '",v_iut_status,"'
+          where dataset_gid = ",cast(v_dataset_gid as nchar),"
+          and delete_flag = 'N'
+          ");
 
-      call pr_run_sql2(v_sql,@msg,@result);
+        call pr_run_sql2(v_sql,@msg,@result);
 
-      if v_iut_status <> 'NOT AVAILABLE' then
         update recon_trn_ttran set
-          col74 = 'Y'
+          col74 = 'Y',
+          col75 = in_ip_type
         where recon_code = in_recon_code
         and col38 = in_pdrecon_code
         and col20 = v_uhid_no
         and col21 = v_ip_no
+        and cast(col53 as decimal(15,2)) <> 0
         and col74 is null
         and delete_flag = 'N';
+      end if;
+
+
+      -- case 2
+      if v_iut_status <> 'TALLIED' then
+				-- get closing balance sum
+				select
+					sum(cast(col53 as decimal(15,2))),count(*)
+				into
+					@closing_balance,@cb_rec_count
+				from recon_trn_ttran
+				where recon_code = in_recon_code
+				and col38 = in_pdrecon_code
+				and col20 = v_uhid_no
+        and col19 not like '%-OC%'
+				and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
+        and cast(col53 as decimal(15,2)) <> 0
+				and col74 is null
+				and delete_flag = 'N'
+				LOCK IN SHARE MODE;
+
+				set v_iut_cb_amount = ifnull(@closing_balance,0);
+				set v_count = ifnull(@cb_rec_count,0);
+
+				set v_iut_status = '';
+
+				if v_count = 0 then
+					set v_iut_status = 'NOT AVAILABLE';
+				end if;
+
+				if v_iut_cb_amount = v_cb_amount and v_count > 0 then
+					set v_iut_status = 'TALLIED';
+        end if;
+
+        -- update the IUT Status
+        set v_sql = concat("update ",in_cbds_code," set
+            col40 = ",cast(v_iut_cb_amount as nchar),",
+            col41 = '",v_iut_status,"'
+          where dataset_gid = ",cast(v_dataset_gid as nchar),"
+          and delete_flag = 'N'
+          ");
+
+        call pr_run_sql2(v_sql,@msg,@result);
+
+        if v_iut_status = 'TALLIED' then
+					update recon_trn_ttran set
+						col74 = 'Y',
+            col75 = in_ip_type
+					where recon_code = in_recon_code
+					and col38 = in_pdrecon_code
+					and col20 = v_uhid_no
+          and col19 not like '%-OC%'
+				  and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
+          and cast(col53 as decimal(15,2)) <> 0
+					and col74 is null
+					and delete_flag = 'N';
+				end if;
+
+        if v_iut_status = '' then
+					update recon_trn_ttran set
+						col74 = 'Y',
+            col75 = in_ip_type
+					where recon_code = in_recon_code
+					and col38 = in_pdrecon_code
+					and col20 = v_uhid_no
+				  and col21 = v_ip_no
+          and cast(col53 as decimal(15,2)) <> 0
+					and col74 is null
+					and delete_flag = 'N';
+				end if;
       end if;
 	  end loop cb_loop;
 

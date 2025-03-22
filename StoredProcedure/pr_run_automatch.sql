@@ -150,7 +150,7 @@ me:BEGIN
   declare v_recorder_source text default '';
   declare v_recorder_comparison text default '';
   declare v_recorder text default '';
-	
+
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
@@ -159,6 +159,8 @@ me:BEGIN
 
 	declare v_ko_table text default '';
 	declare v_kodtl_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   declare v_preview_gid int default 0;
 
@@ -202,14 +204,28 @@ me:BEGIN
 	set v_kodtl_table = concat(in_recon_code,'_kodtl');
   */
 
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-	set v_tranko_table = 'recon_trn_ttranko';
-	set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
 
-	set v_ko_table = 'recon_trn_tko';
-	set v_kodtl_table = 'recon_trn_tkodtl';
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+
+	  set v_ko_table = concat(in_recon_code,'_ko');
+	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+	  set v_ko_table = 'recon_trn_tko';
+	  set v_kodtl_table = 'recon_trn_tkodtl';
+  end if;
 
   set v_group_flag = in_group_flag;
 

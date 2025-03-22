@@ -13,9 +13,9 @@ me:begin
     Created Date : 27-02-2025
 
     Updated By : Vijayavel
-    updated Date :
+    updated Date : 20-03-2025
 
-    Version : 1
+    Version : 3
   */
 
   declare v_sql text default '';
@@ -27,11 +27,21 @@ me:begin
 	declare v_ds_dbname text default '';
   declare v_recon_cycle_date date;
 
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
   -- get recon_cycle_date
   set v_recon_cycle_date = fn_get_reconcycledate(in_recon_code);
-
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
   set v_ds_dbname = ifnull(fn_get_configvalue('dataset_db_name'),'');
 
@@ -87,7 +97,7 @@ me:begin
     and tran_gid = 0
     and col4 <> ''
     and col3 <> ''
-    and (theme_code = '' or theme_code = 'Consider for CB IP Refund')
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund' or theme_code like 'Consider for CB IP Refund,%')
 
     /*
     and col1 <> 'DIGITAL  TESTING'
@@ -125,7 +135,7 @@ me:begin
     and excp_value <> 0
     and tran_gid > 0
     and (col3,col4) in (select uhid_no,ipop_no from recon_tmp_tnotposted)
-    and (theme_code = '' or theme_code = 'Consider for CB IP Refund') 
+    and (theme_code = '' or theme_code = 'Consider for CB IP Refund' or theme_code like 'Consider for CB IP Refund,%')
 
     /*
     and col1 <> 'DIGITAL  TESTING'

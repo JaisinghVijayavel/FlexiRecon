@@ -2,9 +2,10 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_previewreport` $$
 CREATE PROCEDURE `pr_run_previewreport`(
+  in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -12,8 +13,24 @@ me:BEGIN
   declare v_sql text default '';
   declare v_condition text default '';
 
+	declare v_tran_table text default '';
+	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   set in_job_gid = ifnull(in_job_gid,0);
   set in_rptsession_gid = ifnull(in_rptsession_gid,0);
@@ -185,7 +202,7 @@ me:BEGIN
 		  c.tran_remark2
 		from recon_trn_tpreview as a
 		inner join recon_trn_tpreviewdtl as b on a.preview_gid = b.preview_gid and a.job_gid = b.job_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
-		inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+		inner join ",v_tran_table," as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
@@ -355,11 +372,11 @@ me:BEGIN
 		  '' as tran_remark2
 		from recon_trn_tpreview as a
 		inner join recon_trn_tpreviewdtl as b on a.preview_gid = b.preview_gid and a.job_gid = b.job_gid and b.delete_flag = 'N'
-		inner join recon_trn_ttranbrkp as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
+		inner join ",v_tranbrkp_table," as c on b.tranbrkp_gid = c.tranbrkp_gid and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 		left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
     left join recon_mst_tdataset as f on c.tranbrkp_dataset_code = f.dataset_code and f.delete_flag = 'N'
-    left join recon_trn_ttran as g on c.tran_gid = g.tran_gid and c.delete_flag = 'N'
+    left join ",v_tran_table," as g on c.tran_gid = g.tran_gid and c.delete_flag = 'N'
 		where true ", v_condition," and b.tranbrkp_gid > 0
   ");
 

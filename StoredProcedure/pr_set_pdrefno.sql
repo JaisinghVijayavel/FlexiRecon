@@ -6,6 +6,16 @@ CREATE procedure `pr_set_pdrefno`
   in_recon_code varchar(32)
 )
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date : 
+
+    Updated By : Vijayavel
+    Updated Date : 21-03-2025
+
+    Version : 2
+  */
+
   declare v_sql text default '';
 
   declare v_tran_table text default '';
@@ -21,9 +31,18 @@ me:begin
   declare v_entryref_no_field text default '';
   declare v_action_field text default '';
 
+  declare v_concurrent_ko_flag text default '';
 
-  set v_tran_table = 'recon_trn_ttran';
-  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   -- set line ref no
   -- find line ref no column
@@ -182,7 +201,7 @@ me:begin
           and c.delete_flag = 'N'
         set a.",v_entrypass_field," = 'Y'
         where a.recon_code = '",in_recon_code,"'
-        and a.",v_entrypass_field," is null
+        and (a.",v_entrypass_field," is null or a.",v_entrypass_field," = '')
         and a.delete_flag = 'N'");
 
       call pr_run_sql2(v_sql,@msg,@result);
@@ -194,7 +213,7 @@ me:begin
           and c.delete_flag = 'N'
         set a.",v_entrypass_field," = 'Y'
         where a.recon_code = '",in_recon_code,"'
-        and a.",v_entrypass_field," is null
+        and (a.",v_entrypass_field," is null or a.",v_entrypass_field," = '')
         and a.delete_flag = 'N'");
 
       call pr_run_sql2(v_sql,@msg,@result);
