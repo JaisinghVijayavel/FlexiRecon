@@ -18,9 +18,9 @@ me:BEGIN
     Created Date - 2025-02-19
 
     Updated By - Vijayavel
-    Updated Date - 2025-03-10
+    Updated Date - 2025-03-29
 
-	  Version - 002
+	  Version - 003
 	*/
 
   declare v_query text default '';
@@ -29,25 +29,6 @@ me:BEGIN
   declare v_txt text default '';
   declare v_count integer default 0;
   declare v_recon_koqueue_max integer default 0;
-
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION
-  BEGIN
-    GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
-    @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
-
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text,' ',err_msg);
-
-    ROLLBACK;
-
-    -- call pr_upd_koqueue(v_job_gid,'F',@full_error,@msg,@result);
-
-    set out_msg = @full_error;
-    set out_result = 0;
-
-    SIGNAL SQLSTATE '99999' SET
-    MYSQL_ERRNO = @errno,
-    MESSAGE_TEXT = @text;
-  END;
 
   set v_txt = fn_get_configvalue('recon_koqueue_max');
 
@@ -85,8 +66,14 @@ me:BEGIN
 
     START TRANSACTION;
 
-	  insert into recon_trn_tkoqueue(recon_code,ko_query,koqueue_status,scheduled_date,scheduled_by,delete_flag)
-	  values (in_recon_code,v_query,'I',now(),in_user_code,'N');
+	  insert into recon_trn_tkoqueue
+    (
+      recon_code,ko_period_from,ko_period_to,ko_query,koqueue_status,scheduled_date,scheduled_by
+    )
+	  values
+    (
+      in_recon_code,in_period_from,in_period_to,v_query,'I',now(),in_user_code
+    );
 
     COMMIT;
 

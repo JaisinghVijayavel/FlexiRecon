@@ -59,10 +59,28 @@ me:begin
 
 	  set v_ko_table = 'recon_trn_tko';
 	  set v_kodtl_table = 'recon_trn_tkodtl';
+	  set v_koroundoff_table = 'recon_trn_tkoroundoff';
   end if;
 
   set out_result = 0;
   set out_msg = 'initiated';
+
+  -- check if any job is running
+	if exists(select job_gid from recon_trn_tjob
+		where recon_code = in_recon_code
+		and jobtype_code in ('A','M','U','T','UJ')
+		and job_status in ('I','P')
+		and delete_flag = 'N') then
+
+		select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
+		where recon_code = in_recon_code
+		and jobtype_code in ('A','M','U','T','UJ')
+		and job_status in ('I','P')
+		and delete_flag = 'N';
+
+		set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
+		set out_result = 0;
+	end if;
 
   drop temporary table if exists recon_tmp_ttranko;
   drop temporary table if exists recon_tmp_ttrangid;

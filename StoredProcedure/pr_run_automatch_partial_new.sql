@@ -168,6 +168,8 @@ me:BEGIN
 
   declare v_preview_gid int default 0;
 
+  declare v_concurrent_ko_flag text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
@@ -184,15 +186,30 @@ me:BEGIN
 	set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
   */
 
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-	set v_tranko_table = 'recon_trn_ttranko';
-	set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
 
-	set v_ko_table = 'recon_trn_tko';
-	set v_kodtl_table = 'recon_trn_tkodtl';
-	set v_koroundoff_table = 'recon_trn_tkoroundoff';
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+
+	  set v_ko_table = concat(in_recon_code,'_ko');
+	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
+	  set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+	  set v_ko_table = 'recon_trn_tko';
+	  set v_kodtl_table = 'recon_trn_tkodtl';
+	  set v_koroundoff_table = 'recon_trn_tkoroundoff';
+  end if;
 
   set v_group_flag = in_group_flag;
 
@@ -262,10 +279,12 @@ me:BEGIN
   insert into recon_tmp_t2index select 'recon_tmp_t2source','idx_tran_date','Y';
   insert into recon_tmp_t2index select 'recon_tmp_t2comparison','idx_tran_date','Y';
 
+  /*
   drop table if exists recon_tmp_t2thresholddiff;
   drop table if exists recon_tmp_t2thresholddiffdtl;
+  */
 
-  CREATE /*temporary*/ TABLE recon_tmp_t2thresholddiff(
+  CREATE temporary TABLE recon_tmp_t2thresholddiff(
     matchdiff_gid int unsigned NOT NULL AUTO_INCREMENT,
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
@@ -284,7 +303,7 @@ me:BEGIN
     key idx_dup_flag(dup_flag)
   ) ENGINE = MyISAM;
 
-  create /*temporary*/ table recon_tmp_t2thresholddiffdtl(
+  create temporary table recon_tmp_t2thresholddiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL,
     parent_tranbrkp_gid int unsigned NOT NULL,
@@ -299,9 +318,9 @@ me:BEGIN
     key idx_tran_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  drop table if exists recon_tmp_t2match;
+  -- drop table if exists recon_tmp_t2match;
 
-  CREATE /*temporary*/ TABLE recon_tmp_t2match(
+  CREATE temporary TABLE recon_tmp_t2match(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -333,9 +352,9 @@ me:BEGIN
     key idx_tran_gid(tran_gid,tranbrkp_gid)
   );
 
-  drop table if exists recon_tmp_t2manymatch;
+  -- drop table if exists recon_tmp_t2manymatch;
 
-  CREATE /*temporary*/ TABLE recon_tmp_t2manymatch(
+  CREATE temporary TABLE recon_tmp_t2manymatch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     source_value double(15,2) not null default 0,
@@ -771,6 +790,8 @@ me:BEGIN
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_source_head_sql = concat(v_source_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tran table
       set v_comparison_head_sql = concat('insert into recon_tmp_t2comparison (',v_tran_fields,') ');
 
@@ -795,6 +816,8 @@ me:BEGIN
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- source head for tranbrkp table
       set v_source_headbrkp_sql = concat('insert into recon_tmp_t2source (',v_tranbrkp_fields,') ');
 
@@ -818,6 +841,8 @@ me:BEGIN
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and 1 = 2 ');
       end if;
 
+      set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tranbrkp table
       set v_comparison_headbrkp_sql = concat('insert into recon_tmp_t2comparison (',v_tranbrkp_fields,') ');
 
@@ -840,6 +865,8 @@ me:BEGIN
       else
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and 1 = 2 ');
       end if;
+
+      set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and auto_match_flag = ''Y'' ');
 
           basefilter_block:begin
             declare basefilter_done int default 0;
@@ -915,11 +942,13 @@ me:BEGIN
           drop temporary table if exists recon_tmp_t2comparison;
           drop temporary table if exists recon_tmp_t2sourcedup;
 
+          /*
           drop table if exists recon_tmp_t2source;
           drop table if exists recon_tmp_t2comparison;
+          */
 
           -- create source
-          create /*temporary*/ table recon_tmp_t2source select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_t2source select * from recon_trn_ttranwithbrkp where 1 = 2;
 
           alter table recon_tmp_t2source add primary key(tran_gid,tranbrkp_gid);
           alter table recon_tmp_t2source add match_flag char(1) not null default 'N';
@@ -934,7 +963,7 @@ me:BEGIN
           alter table recon_tmp_t2source ENGINE = MyISAM;
 
           -- create comparison
-          create /*temporary*/ table recon_tmp_t2comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_t2comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
 
           alter table recon_tmp_t2comparison add primary key(tran_gid,tranbrkp_gid);
           alter table recon_tmp_t2comparison add match_flag char(1) not null default 'N';
@@ -2026,7 +2055,7 @@ me:BEGIN
               set v_match_sql = concat(v_match_sql,v_recorder);
             end if;
 
-            select v_match_sql;
+            -- select v_match_sql;
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- insert in match table
@@ -2062,7 +2091,7 @@ me:BEGIN
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json ');
 						end if;
 
-            select v_match_sql;
+            -- select v_match_sql;
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						select max(matched_count) into v_count from recon_tmp_t2match;
@@ -2119,7 +2148,7 @@ me:BEGIN
 						truncate recon_tmp_t2tranbrkpgid;
 					end if;
 
-          leave me;
+          -- leave me;
 
 					-- one to many match
 					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' then

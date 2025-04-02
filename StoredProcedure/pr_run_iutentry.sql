@@ -9,6 +9,16 @@ CREATE PROCEDURE `pr_run_iutentry`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 02-04-2025
+
+    Version : 1
+  */
+
   declare v_recon_code text default '';
   declare v_job_gid int default 0;
 
@@ -29,11 +39,11 @@ me:BEGIN
 
   -- get recon code
   select
-    recon_code into v_recon_code
+    distinct recon_code into v_recon_code
   from recon_trn_tiutentry
   where scheduler_gid = in_scheduler_gid
   and recon_code <> ''
-  and delete_flag = 'N';
+  and delete_flag = 'N' limit 1;
 
   set v_recon_code = ifnull(v_recon_code,'');
 
@@ -213,6 +223,7 @@ me:BEGIN
 
   call pr_run_sql2(v_sql,@msg,@result);
 
+  /*
   update recon_trn_tiutentry as a
   inner join recon_tmp_treftxtgid as b on a.ref_tran_gid = b.ref_tran_gid and a.ref_tranbrkp_gid = b.ref_tranbrkp_gid
     and b.valid_flag = 'N'
@@ -221,6 +232,7 @@ me:BEGIN
     a.iutentry_failed_reason = concat(ifnull(concat(a.iutentry_failed_reason,','),''),'Invalid tran id & supporting tran id')
   where a.scheduler_gid = in_scheduler_gid
   and a.delete_flag = 'N';
+  */
 
   if not exists(select scheduler_gid from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid

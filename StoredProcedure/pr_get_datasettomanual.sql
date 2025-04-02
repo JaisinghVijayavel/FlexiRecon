@@ -6,7 +6,7 @@ CREATE PROCEDURE `pr_get_datasettomanual`
   in in_user_code varchar(32),
   in in_role_code varchar(32),
   in in_lang_code varchar(32)
- )
+)
 BEGIN
   declare v_app_datetime_format text default '';
 
@@ -73,11 +73,16 @@ BEGIN
     end as dataset_type,
     s.recon_code,r.recon_name,
     date_format(j.start_date,v_app_datetime_format) as last_sync_date,
-    fn_get_mastername(j.job_status,'QCD_JOB_STATUS') as last_sync_status
+    fn_get_mastername(j.job_status,'QCD_JOB_STATUS') as last_sync_status,
+    a.job_gid as scheduler_job_gid,
+    sj.job_initiated_by
 	from recon_tmp_tscheduler as s
   inner join recon_trn_tscheduler as a on s.scheduler_gid = a.scheduler_gid
-	  and a.scheduler_status = 'C'
+    and a.scheduler_status in ('C','F')
     and a.delete_flag = 'N'
+  inner join recon_trn_tjob as sj on a.job_gid = sj.job_gid
+    and sj.job_initiated_by <> in_user_code
+    and sj.delete_flag = 'N'
 	inner join con_trn_tscheduler as b on a.scheduler_gid = b.scheduler_gid
 	inner join con_mst_tpipeline as c on b.pipeline_code = c.pipeline_code
 	inner join recon_mst_tdataset as d on c.target_dataset_code = d.dataset_code

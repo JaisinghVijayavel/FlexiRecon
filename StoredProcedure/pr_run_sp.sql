@@ -49,6 +49,8 @@ begin
     call pr_run_pdkoreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_archtranwithbrkpreport' then
     call pr_run_archtranwithbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_jobreport' then
+    call pr_run_jobreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   end if;
 
   set out_msg = @msg;

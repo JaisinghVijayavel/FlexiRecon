@@ -33,23 +33,39 @@ begin
   declare v_archival_db_name text default '';
   declare v_recontype_code text default '';
 
-  -- get archival db name
-  set v_archival_db_name = fn_get_configvalue('archival_db_name');
+  declare v_concurrent_ko_flag text default '';
 
-  -- recon tran table
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-	set v_tranko_table = 'recon_trn_ttranko';
-	set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
 
-	set v_ko_table = 'recon_trn_tko';
-	set v_kodtl_table = 'recon_trn_tkodtl';
-	set v_koroundoff_table = 'recon_trn_tkoroundoff';
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+
+	  set v_ko_table = concat(in_recon_code,'_ko');
+	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
+	  set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+	  set v_ko_table = 'recon_trn_tko';
+	  set v_kodtl_table = 'recon_trn_tkodtl';
+	  set v_koroundoff_table = 'recon_trn_tkoroundoff';
+  end if;
 
 	set v_rule_table = 'recon_mst_trule';
 	set v_preprocess_table = 'recon_mst_tpreprocess';
 	set v_theme_table = 'recon_mst_ttheme';
+
+  -- get archival db name
+  set v_archival_db_name = fn_get_configvalue('archival_db_name');
 
   -- find recon type code and its condition
   select
