@@ -14,9 +14,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 02-04-2025
+    updated Date : 03-04-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_code text default '';
@@ -127,10 +127,42 @@ me:BEGIN
 
   call pr_run_sql2(v_sql,@msg,@result);
 
+
+  -- Blank entry_ref_no
+  update recon_trn_tiutentry
+  set
+    iutentry_status = 'F',
+    iutentry_failed_reason = concat(ifnull(concat(iutentry_failed_reason,','),''),'Blank entry ref no')
+  where scheduler_gid = in_scheduler_gid
+  and (entry_ref_no is null or entry_ref_no = '')
+  and delete_flag = 'N';
+
+  -- check duplicate entry_ref_no
   -- iut entry table validation
   insert into recon_tmp_trefno(entry_ref_no)
     select entry_ref_no from recon_trn_tiutentry
+    where scheduler_gid <> in_scheduler_gid
+    and entry_ref_no <> ''
+    and iutentry_status = 'C'
+    and delete_flag = 'N'
+    group by entry_ref_no;
+
+  update recon_trn_tiutentry as a
+  inner join recon_tmp_trefno as b on a.entry_ref_no = b.entry_ref_no
+  set
+    a.iutentry_status = 'F',
+    a.iutentry_failed_reason = concat(ifnull(concat(a.iutentry_failed_reason,','),''),'Duplicate entry ref no')
+  where a.scheduler_gid = in_scheduler_gid
+  and a.delete_flag = 'N';
+
+  -- iut entry table validation
+  truncate recon_tmp_trefno;
+
+  insert into recon_tmp_trefno(entry_ref_no)
+    select entry_ref_no from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
+    and entry_ref_no <> ''
+    and iutentry_status = 'P'
     and delete_flag = 'N'
     group by entry_ref_no
     having sum(entry_value) <> 0;
@@ -183,7 +215,7 @@ me:BEGIN
   -- duplicate tran_gid,tranbrkp_gid validation
   insert into recon_tmp_trefgid(ref_tran_gid,ref_tranbrkp_gid)
     select ref_tran_gid,ref_tranbrkp_gid from recon_trn_tiutentry
-    where scheduler_gid = in_scheduler_gid
+    where iutentry_status in ('C','P')
     and delete_flag = 'N'
     group by ref_tran_gid,ref_tranbrkp_gid
     having count(*) > 1;
@@ -203,7 +235,7 @@ me:BEGIN
       entry_value,reftxt_tran_gid,reftxt_tranbrkp_gid
     )
     select
-      distinct ref_tran_gid,ref_tranbrkp_gid,recon_code,entry_ref_no,
+      distinct ifnull(ref_tran_gid,0),ifnull(ref_tranbrkp_gid,0),recon_code,entry_ref_no,
       entry_value,cast(ref_tran_gid as nchar),cast(ref_tranbrkp_gid as nchar)
     from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
@@ -223,7 +255,6 @@ me:BEGIN
 
   call pr_run_sql2(v_sql,@msg,@result);
 
-  /*
   update recon_trn_tiutentry as a
   inner join recon_tmp_treftxtgid as b on a.ref_tran_gid = b.ref_tran_gid and a.ref_tranbrkp_gid = b.ref_tranbrkp_gid
     and b.valid_flag = 'N'
@@ -232,7 +263,6 @@ me:BEGIN
     a.iutentry_failed_reason = concat(ifnull(concat(a.iutentry_failed_reason,','),''),'Invalid tran id & supporting tran id')
   where a.scheduler_gid = in_scheduler_gid
   and a.delete_flag = 'N';
-  */
 
   if not exists(select scheduler_gid from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
@@ -350,7 +380,7 @@ me:BEGIN
     -- update in pd tran table
 		set v_sql = concat("update ",v_tran_table," as a
 			inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
-				and b.ref_tranbrkp_gid = 0
+				and (b.ref_tranbrkp_gid = '0' or b.ref_tranbrkp_gid is null)
         and b.valid_flag = 'Y'
 			set a.col23 = cast(b.entry_value*-1 as nchar),
           a.col22 = 'IUT - MANUAL',

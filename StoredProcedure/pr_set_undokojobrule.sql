@@ -122,7 +122,7 @@ me:begin
     where job_gid = in_job_gid
     and recon_code = in_recon_code
     and jobtype_code in ('A')
-    and job_status in ('C','F')
+    and job_status in ('C','F','R')
     and delete_flag = 'N') then
     select
       jobtype_code,cast(start_date as date)
@@ -132,7 +132,7 @@ me:begin
     where job_gid = in_job_gid
     and recon_code = in_recon_code
     and jobtype_code in ('A')
-    and job_status in ('C','F')
+    and job_status in ('C','F','R')
     and delete_flag = 'N';
 
     -- get recon_lock_date
@@ -317,7 +317,7 @@ me:begin
         and delete_flag = 'N'");
 				
 			call pr_run_sql(v_sql,@msg,@result);
-			
+
 			set v_count = ifnull(@post_count,0);
 		
       if v_count > 0 then
