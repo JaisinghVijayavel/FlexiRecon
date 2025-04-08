@@ -442,7 +442,7 @@ me:begin
     into
       @v_value,@v_count
     from ",v_tran_table," as a
-		where a.recon_code = ",in_recon_code,"'
+		where a.recon_code = '",in_recon_code,"'
     and a.tran_date <= '",cast(in_tran_date as nchar),"'
 		and a.excp_value <> 0
     and a.roundoff_value <> 0

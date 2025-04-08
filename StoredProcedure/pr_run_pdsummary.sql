@@ -14,9 +14,9 @@ me:BEGIN
     Created Date : 27-02-2025
 
     Updated By : Vijayavel
-    updated Date :
+    updated Date : 05-04-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_report_code_ko text;
@@ -32,12 +32,15 @@ me:BEGIN
   declare v_dataset_db_name text;
 
   declare v_recon_lock_date text;
+  declare v_recon_cycle_date text;
 
   -- get recon details
   select
-    date_format(ifnull(recon_lock_date,'2000-01-01'),'%Y-%m-%d') as lock_date
+    date_format(ifnull(recon_lock_date,'2000-01-01'),'%Y-%m-%d') as lock_date,
+    date_format(recon_cycle_date,'%Y-%m-%d') as cycle_date
   into
-    v_recon_lock_date
+    v_recon_lock_date,
+    v_recon_cycle_date
   from recon_mst_trecon
   where recon_code = in_recon_code
   and active_status = 'Y'
@@ -141,6 +144,11 @@ me:BEGIN
   -- v_unitmaster_table_name DS255
   -- clossing balance remove zero value
   set v_closing_balance_conditon = concat(v_closing_balance_conditon,' and cast(col6 as decimal(15,2)) <> 0 ');
+
+  -- col12 - cycle_date
+  if v_recon_cycle_date <> '' then
+    set v_closing_balance_conditon = concat(v_closing_balance_conditon," and col12 = '",v_recon_cycle_date,"' ");
+  end if;
 
 	call pr_run_dynamicreport('', in_recon_code,v_closingbalance_table_name, 'PD Recon - Closing Balance',
 		v_closing_balance_conditon, false, '', '', in_user_code, @out_msg, @out_result);

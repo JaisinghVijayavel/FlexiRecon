@@ -14,9 +14,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 03-04-2025
+    updated Date : 05-04-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_code text default '';
@@ -46,6 +46,24 @@ me:BEGIN
   and delete_flag = 'N' limit 1;
 
   set v_recon_code = ifnull(v_recon_code,'');
+
+	-- check if any job is running
+	if exists(select job_gid from recon_trn_tjob
+		where recon_code = v_recon_code
+		and jobtype_code in ('A','M','U','T','UJ')
+		and job_status in ('I','P')
+		and delete_flag = 'N') then
+
+		select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
+		where recon_code = v_recon_code
+		and jobtype_code in ('A','M','U','T','UJ')
+		and job_status in ('I','P')
+		and delete_flag = 'N';
+
+		set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
+		set out_result = 0;
+		leave me;
+	end if;
 
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');

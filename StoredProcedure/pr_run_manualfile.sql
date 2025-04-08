@@ -31,24 +31,6 @@ me:BEGIN
   elseif v_dataset_code = 'THEMEMANUAL'
     or v_dataset_code = 'FIELDUPDATE'
     or v_dataset_code = 'IUTENTRY' then
-		if exists(select job_gid from recon_trn_tjob
-			where jobtype_code = 'M'
-			and job_status in ('I','P')
-			and delete_flag = 'N') then
-
-			select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
-			where jobtype_code = 'M'
-			and job_status in ('I','P')
-			and delete_flag = 'N';
-
-			set out_msg = concat('Manual match is already running in the job id ', v_txt ,' ! ');
-			set out_result = 0;
-
-			set v_job_gid = 0;
-
-			leave me;
-		end if;
-
     if v_dataset_code = 'THEMEMANUAL' then
 	    call pr_ins_job('','M',in_scheduler_gid,concat('Theme manual - ',v_file_name),v_file_name,
         in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);

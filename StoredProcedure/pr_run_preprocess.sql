@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_preprocess` $$
 CREATE PROCEDURE `pr_run_preprocess`(
   in in_recon_code text,
+  in in_preprocess_code varchar(32),
   in in_job_gid int,
   in in_postprocess_flag varchar(32),
   in in_period_from date,
@@ -17,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 19-03-2025
+    Updated Date : 07-04-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_get_recon_field text default '';
@@ -117,6 +118,10 @@ me:BEGIN
 
   set in_job_gid = ifnull(in_job_gid,0);
 
+  if in_preprocess_code = '' then
+    set in_preprocess_code = null;
+  end if;
+
   -- recon validation
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -190,6 +195,7 @@ me:BEGIN
         recorderby_type
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
+      and preprocess_code = ifnull(in_preprocess_code,preprocess_code) 
       and postprocess_flag = in_postprocess_flag
       and hold_flag = 'N'
       and active_status = 'Y'

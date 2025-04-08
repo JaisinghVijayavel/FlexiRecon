@@ -280,6 +280,8 @@ me:begin
     set v_sql = concat(v_sql,' and recon_code = ',char(34),in_recon_code,char(34),' ');
     set v_sql = concat(v_sql,' and delete_flag = ''N''');
 
+    call pr_run_sql2(v_sql,@msg2,@result2);
+
     -- check balance field
     select
       count(*) into v_count
@@ -311,7 +313,7 @@ me:begin
 
       -- insert in temporary table
       set v_sql = concat("
-        insert into recon_tmp_tbalance
+        replace into recon_tmp_tbalance
         (
           tran_date,
           dataset_code,

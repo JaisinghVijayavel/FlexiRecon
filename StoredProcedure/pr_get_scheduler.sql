@@ -32,7 +32,7 @@ BEGIN
     and d.delete_flag = 'N'
 	where b.scheduled_date >= in_processed_date
 	and b.scheduled_date < date_add(in_processed_date,interval 1 day)
-  and a.scheduler_status = 'C'
+  and a.scheduler_status in ('C','F')
 	and a.delete_flag = 'N';
 END $$
 

@@ -15,10 +15,11 @@ me:begin
     Created Date : 13-09-2024
 
     Updated By : Vijayavel
-    Updated Date :
+    Updated Date : 05-04-2025
 
-    Version : 1
+    Version : 2
   */
+
   declare v_tran_gid int default 0;
   declare v_tranbrkp_gid int default 0;
   declare v_dataset_gid int default 0;
@@ -106,6 +107,24 @@ me:begin
 
         set v_recon_field_desc = v_field_desc;
         set v_recon_field = fn_get_reconfieldfromdesc(v_recon_code,v_recon_field_desc);
+
+				-- check if any job is running
+				if exists(select job_gid from recon_trn_tjob
+					where recon_code = v_recon_code
+					and jobtype_code in ('A','M','U','T','UJ')
+					and job_status in ('I','P')
+					and delete_flag = 'N') then
+
+					select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
+					where recon_code = v_recon_code
+					and jobtype_code in ('A','M','U','T','UJ')
+					and job_status in ('I','P')
+					and delete_flag = 'N';
+
+					set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
+					set out_result = 0;
+          leave me;
+				end if;
       elseif v_dataset_gid > 0 and v_dataset_code <> '' then
         set v_dataset_field_desc = v_field_desc;
 

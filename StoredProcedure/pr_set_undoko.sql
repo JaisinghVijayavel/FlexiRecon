@@ -76,6 +76,7 @@ me:begin
 
 		set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
 		set out_result = 0;
+    leave me;
 	end if;
 
   drop temporary table if exists recon_tmp_ttranko;

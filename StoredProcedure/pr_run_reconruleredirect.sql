@@ -18,9 +18,9 @@ me:BEGIN
     Created Date - 2025-02-19
 
     Updated By : Vijayavel
-    updated Date : 28-03-2025
+    updated Date : 07-04-2025
 
-	  Version - 5
+	  Version - 6
 */
 
   declare i int default 0;
@@ -215,7 +215,7 @@ me:BEGIN
 	call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
   */
 
-  call pr_run_preprocess(in_recon_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+  call pr_run_preprocess(in_recon_code,'',v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
 
 
   drop temporary table if exists recon_tmp_ttran;
@@ -634,7 +634,7 @@ me:BEGIN
   if in_automatch_flag = 'Y' then
     
     
-    call pr_run_theme(v_recon_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
+    call pr_run_theme(v_recon_code,'',v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
 
     call pr_run_dynamicreport('',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',in_ip_addr,in_user_code,@msg,@result);
 

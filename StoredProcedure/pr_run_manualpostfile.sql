@@ -11,6 +11,16 @@ CREATE PROCEDURE `pr_run_manualpostfile`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 05-04-2025
+
+    Version : 1
+  */
+
   declare v_recon_code text default '';
   declare v_recontype_code text default '';
   declare v_dataset_code text default '';
@@ -21,9 +31,11 @@ me:BEGIN
   declare v_sql text default '';
   declare v_job_gid int default 0;
   declare v_file_name text default '';
-	
+
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
+
+  declare v_concurrent_ko_flag text default '';
 
   /*
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -51,9 +63,6 @@ me:BEGIN
 	set v_tran_table = concat(in_recon_code,'_tran');
 	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
   */
-
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
 
   drop temporary table if exists recon_tmp_ttrangid;
 
@@ -90,6 +99,24 @@ me:BEGIN
   set v_recon_code = ifnull(v_recon_code,'');
   set v_recontype_code = ifnull(v_recontype_code,'');
 
+  -- recon validation
+  if v_recon_code = '' then
+    set out_msg = 'Invalid recon !';
+    set out_result = 0;
+    leave me;
+  end if;
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(v_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
   -- get file name
   select
     file_name into v_file_name
@@ -118,16 +145,18 @@ me:BEGIN
   end if;
 
 	if exists(select job_gid from recon_trn_tjob
-	  where jobtype_code = 'M'
+		where recon_code = v_recon_code
+		and jobtype_code in ('A','M','U','T','UJ')
 	  and job_status in ('I','P')
 	  and delete_flag = 'N') then
 
 	  select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
-	  where jobtype_code = 'M'
+		where recon_code = v_recon_code
+		and jobtype_code in ('A','M','U','T','UJ')
 	  and job_status in ('I','P')
 	  and delete_flag = 'N';
 
-	  set out_msg = concat('Manual match is already running in the job id ', v_txt ,' ! ');
+		set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
 	  set out_result = 0;
 
 	  set v_job_gid = 0;

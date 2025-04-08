@@ -7,6 +7,16 @@ CREATE PROCEDURE `pr_get_manualinfo`(
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 04-04-2025
+
+    Version : 1
+  */
+
   declare v_recon_code varchar(32) default '';
   declare v_recon_name text default '';
   declare v_recontype_code varchar(32) default '';
@@ -116,27 +126,43 @@ me:BEGIN
   and a.delete_flag = 'N';
 
   -- recon info
-  select
-    concat(recon_code,'-',recon_name) as 'Recon Name',
-    fn_get_mastername(recontype_code,'QCD_RC_RCON_TYPE') as 'Recon Type',
-    recon_rule_version as 'Rule Version'
-  from recon_mst_trecon
-  where recon_code = v_recon_code
-  and delete_flag = 'N';
+  if exists(select recon_code from recon_mst_trecon
+    where recon_code = v_recon_code
+    and delete_flag = 'N') then
+    select
+      concat(recon_code,'-',recon_name) as 'Recon Name',
+      fn_get_mastername(recontype_code,'QCD_RC_RCON_TYPE') as 'Recon Type',
+      recon_rule_version as 'Rule Version'
+    from recon_mst_trecon
+    where recon_code = v_recon_code
+    and delete_flag = 'N';
+  else
+    select 'Invalid Recon' as 'Recon Name','Invalid Recon Type' as 'Recon Type';
+  end if;
 
   -- return manual match info
 	if v_dataset_code = 'KOMANUAL' then
 	  -- return dataset
-		select distinct
-			concat(b.dataset_code,'-',b.dataset_name) as 'Dataset Name',
-			fn_get_mastername(c.dataset_type,'QCD_DS_TYPE') as 'Dataset Type'
-		from recon_trn_tmanualtran as a
-		inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
-		inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code
-      and a.recon_code = c.recon_code
-			and c.delete_flag = 'N'
-		where a.scheduler_gid = in_scheduler_gid
-		and a.delete_flag = 'N';
+    if exists(select a.scheduler_gid from recon_trn_tmanualtran as a
+		  inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+		  inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code
+        and a.recon_code = c.recon_code
+			  and c.delete_flag = 'N'
+		  where a.scheduler_gid = in_scheduler_gid
+		  and a.delete_flag = 'N') then
+		  select distinct
+			  concat(b.dataset_code,'-',b.dataset_name) as 'Dataset Name',
+			  fn_get_mastername(c.dataset_type,'QCD_DS_TYPE') as 'Dataset Type'
+		  from recon_trn_tmanualtran as a
+		  inner join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+		  inner join recon_mst_trecondataset as c on b.dataset_code = c.dataset_code
+        and a.recon_code = c.recon_code
+			  and c.delete_flag = 'N'
+		  where a.scheduler_gid = in_scheduler_gid
+		  and a.delete_flag = 'N';
+    else
+      select 'Invalid Dataset' as 'Dataset Name','Invalid Dataset Type' as 'Dataset Type';
+    end if;
 
 		if v_recontype_code = 'W' or v_recontype_code = 'B' then
 			-- Proof/BRS
@@ -189,6 +215,17 @@ me:BEGIN
 				and c.delete_flag = 'N'
 			where a.scheduler_gid = in_scheduler_gid
 			and a.delete_flag = 'N';
+    else
+      select
+        'Invalid Recon Type' as 'Recon Type',
+        match_gid as 'Match Id',
+        tran_gid as 'Tran Id',
+        tranbrkp_gid as 'Supporting Tran Id',
+        ko_value as 'KO Value',
+        ko_reason as 'KO Reason'
+      from recon_trn_tmanualtran
+      where scheduler_gid = in_scheduler_gid
+      and delete_flag = 'N';
 		end if;
 	elseif v_dataset_code = 'POSTMANUAL' then
 	  -- return dataset
@@ -257,14 +294,15 @@ me:BEGIN
     and delete_flag = 'N'
     group by scheduler_gid;
 
+    /*
     select scheduler_gid as 'Scheduler Id',
       count(*) as 'Record Count'
     from recon_trn_tfieldupdate
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N'
     group by scheduler_gid;
+    */
 
-    /*
     select scheduler_gid as 'Scheduler Id',
       tran_gid as 'Tran Id',
       tranbrkp_gid as 'Supporting Tran Id',
@@ -273,7 +311,6 @@ me:BEGIN
     from recon_trn_tfieldupdate
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N';
-    */
   elseif v_dataset_code = 'IUTENTRY' then
     select scheduler_gid as 'Scheduler Id',
       count(*) as 'Record Count'
@@ -282,14 +319,15 @@ me:BEGIN
     and delete_flag = 'N'
     group by scheduler_gid;
 
+    /*
     select scheduler_gid as 'Scheduler Id',
       count(*) as 'Record Count'
     from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N'
     group by scheduler_gid;
+    */
 
-    /*
     select scheduler_gid as 'Scheduler Id',
       entry_ref_no as 'Entry Ref No',
       iut_ipop as 'IP/OP',
@@ -309,7 +347,6 @@ me:BEGIN
     from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N';
-    */
 	end if;
 end $$
 

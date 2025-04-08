@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_theme` $$
 CREATE PROCEDURE `pr_run_theme`(
   in in_recon_code varchar(32),
+  in in_theme_code varchar(32),
   in in_job_gid int,
   in in_period_from date,
   in in_period_to date,
@@ -13,6 +14,16 @@ CREATE PROCEDURE `pr_run_theme`(
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 07-04-2025
+
+    Version : 1
+  */
+
   declare v_job_gid int default 0;
   declare v_job_input_param text default '';
   declare v_date_format text default '';
@@ -31,6 +42,10 @@ me:BEGIN
 
   declare v_theme_code text default '';
   declare v_theme_type_code text default '';
+
+  if in_theme_code = '' then
+    set in_theme_code = null;
+  end if;
 
   -- check if any job is running
 	if exists(select job_gid from recon_trn_tjob
@@ -127,7 +142,7 @@ me:BEGIN
 
   if in_automatch_flag = 'Y' then
     -- postprocess
-    call pr_run_preprocess(in_recon_code,v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+    call pr_run_preprocess(in_recon_code,'',v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
   end if;
 
   -- theme
@@ -138,6 +153,7 @@ me:BEGIN
         theme_code,theme_type_code
       from recon_mst_ttheme
       where recon_code = in_recon_code
+      and theme_code = ifnull(in_theme_code,theme_code)
       and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'
