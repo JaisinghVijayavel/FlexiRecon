@@ -4,7 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_get_undojobprocess` $$
 CREATE PROCEDURE `pr_get_undojobprocess`
 (
   in in_recon_code varchar(32),
-  In in_job_status varchar(15),
+  In in_job_status varchar(32),
   In in_job_type char (1),
   In in_From_date date,
   In in_To_date date
@@ -30,12 +30,12 @@ begin
 		ifnull(a.ip_addr,'') as ip_addr,
 		ifnull(a.job_remark,'')as job_remark,
 		@mysql_rpt_path as file_path
-	from recon_trn_tjob a 
+	from recon_trn_tjob a
 	left join recon_mst_tjobtype b on a.jobtype_code = b.jobtype_code
 		and b.delete_flag = 'N'
-	left join recon_mst_tjobstatus c on a.job_status = c.job_status 
+	left join recon_mst_tjobstatus c on a.job_status = c.job_status
 		and c.delete_flag = 'N'
-	where a.job_status in ('C','F')
+	where a.job_status in ('C','F','R')
 	and a.jobtype_code in ('A','M') and a.delete_flag = 'N' and a.recon_code =  '",in_recon_code,"'
 	and date_format(a.start_date,'%Y-%m-%d') >= date_format('",in_From_date,"','%Y-%m-%d')
 	and date_format(a.start_date,'%Y-%m-%d') <= date_format('",in_To_date,"','%Y-%m-%d')

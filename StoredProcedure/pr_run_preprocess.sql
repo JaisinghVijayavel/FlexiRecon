@@ -122,6 +122,10 @@ me:BEGIN
     set in_preprocess_code = null;
   end if;
 
+  if in_preprocess_code <> '' then
+    set in_postprocess_flag = null;
+  end if;
+
   -- recon validation
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -195,8 +199,8 @@ me:BEGIN
         recorderby_type
       from recon_mst_tpreprocess
       where recon_code = in_recon_code
-      and preprocess_code = ifnull(in_preprocess_code,preprocess_code) 
-      and postprocess_flag = in_postprocess_flag
+      and preprocess_code = ifnull(in_preprocess_code,preprocess_code)
+      and postprocess_flag = ifnull(in_postprocess_flag,postprocess_flag)
       and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'

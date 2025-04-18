@@ -319,15 +319,14 @@ me:BEGIN
     and delete_flag = 'N'
     group by scheduler_gid;
 
-    /*
     select scheduler_gid as 'Scheduler Id',
       count(*) as 'Record Count'
     from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N'
     group by scheduler_gid;
-    */
 
+    /*
     select scheduler_gid as 'Scheduler Id',
       entry_ref_no as 'Entry Ref No',
       iut_ipop as 'IP/OP',
@@ -347,6 +346,7 @@ me:BEGIN
     from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N';
+    */
 	end if;
 end $$
 

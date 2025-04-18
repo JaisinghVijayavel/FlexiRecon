@@ -116,7 +116,7 @@ me:begin
     where job_gid = in_job_gid
     and recon_code = in_recon_code
     and jobtype_code in ('A','S','M')
-    and job_status in ('C','F')
+    and job_status in ('C','F','R')
     and delete_flag = 'N') then
     select
       jobtype_code,cast(start_date as date)
@@ -126,7 +126,7 @@ me:begin
     where job_gid = in_job_gid
     and recon_code = in_recon_code
     and jobtype_code in ('A','S','M')
-    and job_status in ('C','F')
+    and job_status in ('C','F','R')
     and delete_flag = 'N';
 
     -- get recon_lock_date
@@ -183,7 +183,7 @@ me:begin
 					where a.job_gid = ",cast(in_job_gid as nchar),"
 					and a.delete_flag = 'N'
 					group by b.tran_gid");
-				
+
 			call pr_run_sql(v_sql,@msg,@result);
 
       insert into recon_tmp_tkotrangid
@@ -195,7 +195,7 @@ me:begin
 					inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid > 0 and b.delete_flag = 'N'
 					where a.job_gid = ",cast(in_job_gid as nchar),"
 					and a.delete_flag = 'N'");
-					
+
 			call pr_run_sql(v_sql,@msg,@result);
 
 			set v_sql = concat("

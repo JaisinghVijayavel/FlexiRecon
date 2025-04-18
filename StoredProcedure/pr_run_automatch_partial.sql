@@ -633,7 +633,7 @@ me:BEGIN
       and a.active_status = 'Y'
       and a.system_match_flag = ifnull(v_system_matchoff,a.system_match_flag)
       and a.manual_match_flag = ifnull(v_manual_matchoff,a.manual_match_flag)
-      and a.rule_automatch_partial = if(v_recon_automatch_partial='N','Y',a.rule_automatch_partial)
+      -- and a.rule_automatch_partial = if(v_recon_automatch_partial='N','Y',a.rule_automatch_partial)
       and a.delete_flag = 'N'
       order by a.rule_order;
     declare continue handler for not found set applyrule_done=1;
@@ -2510,6 +2510,7 @@ me:BEGIN
 
 							call pr_run_sql(v_sql,@msg,@result);
 
+              /*
               -- zero roundoff value
 							set v_sql = concat("
 								update ",v_tran_table," as a
@@ -2520,6 +2521,7 @@ me:BEGIN
 								and a.delete_flag = 'N'");
 
 							call pr_run_sql(v_sql,@msg,@result);
+              */
 
               -- update in tranbrkp table
 							set v_sql = concat("

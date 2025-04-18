@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 07-04-2025
+    Updated Date : 11-04-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_job_gid int default 0;
@@ -112,22 +112,14 @@ me:BEGIN
 
   set in_job_gid = ifnull(in_job_gid,0);
 
-  if in_job_gid = 0 then
-    call pr_ins_job(in_recon_code,'T',0,'Theming','',in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+  if in_theme_code is null then
+    if in_job_gid = 0 then
+      call pr_ins_job(in_recon_code,'T',0,'Theming','',in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 
-    set v_job_gid = @out_job_gid;
-
-    -- blank the theme code
-	  set v_sql = 'update $TABLENAME$ set ';
-	  set v_sql = concat(v_sql,'theme_code = '''' ');
-	  set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-	  set v_sql = concat(v_sql,v_recon_date_condition);
-	  set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
-
-	  call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tran_table),@msg,@result);
-	  call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
-  else
-    set v_job_gid = in_job_gid;
+      set v_job_gid = @out_job_gid;
+    else
+      set v_job_gid = in_job_gid;
+    end if;
 
     -- blank the theme code
 	  set v_sql = 'update $TABLENAME$ set ';
@@ -140,7 +132,7 @@ me:BEGIN
 	  call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
   end if;
 
-  if in_automatch_flag = 'Y' then
+  if in_automatch_flag = 'Y' and in_theme_code is null then
     -- postprocess
     call pr_run_preprocess(in_recon_code,'',v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
   end if;
@@ -185,7 +177,9 @@ me:BEGIN
     close theme_cursor;
   end theme_block;
 
-  call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C','Completed',@msg,@result);
+  if in_theme_code is null then
+    call pr_upd_jobwithparam(v_job_gid,v_job_input_param,'C','Completed',@msg,@result);
+  end if;
 
   set out_result = @result;
   set out_msg = @msg;

@@ -19,27 +19,36 @@ me:begin
     Version : 1
   */
 
-  select
-    recon_code as 'Recon Code',
-    entry_ref_no as 'IUT Entry No',
-    from_unit_name as 'From Unit',
-    to_unit_name as 'To Unit',
-    dr_amount as 'Debit',
-    cr_amount as 'Credit',
-    uhid_no as 'UHID No',
-    bill_no as 'Bill No',
-    ipop_no as 'IP/OP No',
-    iut_ipop as 'IUT IP/OP',
-    iutentry_status as 'IUT Entry Status',
-    entry_date as 'Entry Date',
-    ref_tran_gid as 'Tran Id',
-    ref_tranbrkp_gid as 'Supporting Tran Id',
-    scheduler_gid as 'Scheduler Id',
-    iutentry_gid as 'IUT Entry Id'
-  from recon_trn_tiutentry
-  where recon_code = in_recon_code
-  and entry_ref_no = in_iutentryref_no
-  and delete_flag = 'N';
+  if exists(select * from recon_trn_tiutentry
+    where recon_code = in_recon_code
+    and entry_ref_no = in_iutentryref_no
+    and delete_flag = 'N') then
+    select
+      recon_code as 'Recon Code',
+      entry_ref_no as 'IUT Entry No',
+      from_unit_name as 'From Unit',
+      to_unit_name as 'To Unit',
+      dr_amount as 'Debit',
+      cr_amount as 'Credit',
+      uhid_no as 'UHID No',
+      bill_no as 'Bill No',
+      ipop_no as 'IP/OP No',
+      iut_ipop as 'IUT IP/OP',
+      iutentry_status as 'IUT Entry Status',
+      entry_date as 'Entry Date',
+      ref_tran_gid as 'Tran Id',
+      ref_tranbrkp_gid as 'Supporting Tran Id',
+      scheduler_gid as 'Scheduler Id',
+      iutentry_gid as 'IUT Entry Id'
+    from recon_trn_tiutentry
+    where recon_code = in_recon_code
+    and entry_ref_no = in_iutentryref_no
+    and delete_flag = 'N';
+  else
+    call pr_run_dynamicreport('RT430',in_recon_code,'RPT_TRANBRKP_NOTPOSTED','',
+      concat(" and a.col51 = '",in_iutentryref_no,"'"),
+      false,'csv','','vijay',@msg,@result);
+  end if;
 
   set out_msg = 'Success';
   set out_result = 1;

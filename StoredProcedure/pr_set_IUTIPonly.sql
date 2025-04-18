@@ -8,9 +8,9 @@ me:begin
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 21-03-2025
+    updated Date : 17-04-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_tran_gid int default 0;
@@ -348,6 +348,7 @@ me:begin
   -- col13 - Theme
   -- col19 - Bill No
   -- col20 - uhid
+  -- col21 - IP/OP No
   -- col38 - Recon Code
   -- col41 - IUT Entry Flag
   -- col42 - IUT Location
@@ -534,23 +535,23 @@ me:begin
 						dataset_code,
 						'",v_tranbrkp_ds_code,"',
 						cast(sysdate() as nchar),
-						col8,
-						col9,
+            '",cast(v_dr_amount as nchar),"',
+            '",cast(v_dr_amount as nchar),"',
 						col11,
 						col12,
 						'Entry',
-						col17,
-						col18,
+						'0.00',
+            '",cast(v_dr_amount as nchar),"',
 						col19,
 						col20,
 						col21,
 						'Entry',
 						'Entry',
-						col37,
+						'",cast(v_dr_amount as nchar),"',
 						'",v_dr_recon_code,"',
 						'",v_dr_loc_code,"',
 						'",v_cr_recon_code,"',
-						col37,
+						'",cast(v_dr_amount as nchar),"',
 						col47,
 						'",v_cr_loc_code,"',
 						'",v_ref_no,"'
@@ -597,23 +598,23 @@ me:begin
 						dataset_code,
 						'",v_tranbrkp_ds_code,"',
 						cast(sysdate() as nchar),
-						col8,
-						col9,
+            '",cast(v_dr_amount as nchar),"',
+            '",cast(v_dr_amount as nchar),"',
 						'D',
 						'-1',
 						'Entry',
-						col18,
-						col17,
+            '",cast(v_dr_amount as nchar),"',
+						'0.00',
 						col19,
 						col20,
 						col21,
 						'Entry',
 						'Entry',
-						concat('-',col37),
+						concat('-','",cast(v_dr_amount as nchar),"'),
 						'",v_cr_recon_code,"',
 						'",v_cr_loc_code,"',
 						'",v_dr_recon_code,"',
-						concat('-',col37),
+						concat('-','",cast(v_dr_amount as nchar),"'),
 						col47,
 						'",v_dr_loc_code,"',
 						'",v_ref_no,"'

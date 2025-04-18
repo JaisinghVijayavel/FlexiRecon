@@ -647,7 +647,7 @@ me:BEGIN
       and a.active_status = 'Y'
       and a.system_match_flag = ifnull(v_system_matchoff,a.system_match_flag)
       and a.manual_match_flag = ifnull(v_manual_matchoff,a.manual_match_flag)
-      and a.rule_automatch_partial = if(v_recon_automatch_partial='N','Y',a.rule_automatch_partial)
+      -- and a.rule_automatch_partial = if(v_recon_automatch_partial='N','Y',a.rule_automatch_partial)
       and a.delete_flag = 'N'
       order by a.rule_order;
     declare continue handler for not found set applyrule_done=1;
@@ -691,6 +691,10 @@ me:BEGIN
       else
         set v_rule_threshold_plus_value = v_threshold_plus_value;
         set v_rule_threshold_minus_value = v_threshold_minus_value;
+      end if;
+
+      if v_rule_threshold_plus_value = 0 and v_rule_threshold_minus_value = 0 then
+        iterate applyrule_loop;
       end if;
 
       -- update job
@@ -931,7 +935,7 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
-          set v_rule_condition = ' and ';
+          set v_rule_condition = ' and a.excp_value <> 0 and b.excp_value <> 0 and ';
           set v_rule_notnull_condition = ' and ';
           set v_rule_groupby = '';
 
@@ -2679,6 +2683,7 @@ me:BEGIN
 
 							call pr_run_sql(v_sql,@msg,@result);
 
+              /*
               -- zero roundoff value
 							set v_sql = concat("
 								update ",v_tran_table," as a
@@ -2689,6 +2694,7 @@ me:BEGIN
 								and a.delete_flag = 'N'");
 
 							call pr_run_sql(v_sql,@msg,@result);
+              */
 
               -- update in tranbrkp table
 							set v_sql = concat("
