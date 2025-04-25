@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_tranbrkpreport` $$
 CREATE PROCEDURE `pr_run_tranbrkpreport`
 (
+  in in_archival_code varchar(32),
   in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
@@ -18,9 +19,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 19-03-2025
+    updated Date : 24-04-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_count int default 0;
@@ -33,6 +34,7 @@ me:BEGIN
 	declare v_tranbrkpko_table text default '';
 
   declare v_concurrent_ko_flag text default '';
+  declare v_table_prefix text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -59,22 +61,14 @@ me:BEGIN
   set in_rptsession_gid = ifnull(in_rptsession_gid,0);
   set in_user_code = ifnull(in_user_code,'');
 
-  -- concurrent KO flag
-  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+  -- get transaction table
+  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
-  if v_concurrent_ko_flag = 'Y' then
-	  set v_tran_table = concat(in_recon_code,'_tran');
-	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  set v_tran_table = concat(v_table_prefix,'tran');
+  set v_tranbrkp_table = concat(v_table_prefix,'tranbrkp');
 
-	  set v_tranko_table = concat(in_recon_code,'_tranko');
-	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
-  else
-	  set v_tran_table = 'recon_trn_ttran';
-	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-
-	  set v_tranko_table = 'recon_trn_ttranko';
-	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
-  end if;
+  set v_tranko_table = concat(v_table_prefix,'tranko');
+  set v_tranbrkpko_table = concat(v_table_prefix,'tranbrkpko');
 
   -- transfer to temporary table
   set v_sql = concat("insert into recon_tmp_ttranbrkp

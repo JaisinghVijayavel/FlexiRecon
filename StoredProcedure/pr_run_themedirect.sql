@@ -16,6 +16,7 @@ me:BEGIN
   declare v_theme_code text default '';
   declare v_theme_desc text default '';
 
+  declare v_recon_version text default '';
   declare v_recon_date_flag text default '';
   declare v_recon_date_field text default '';
   declare v_recon_date_condition text default '';
@@ -64,16 +65,19 @@ me:BEGIN
   else
     select
       recon_date_flag,
-      recon_date_field
+      recon_date_field,
+      recon_rule_version
     into
       v_recon_date_flag,
-      v_recon_date_field
+      v_recon_date_field,
+      v_recon_version
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
 
     set v_recon_date_flag = ifnull(v_recon_date_flag,'');
     set v_recon_date_field = ifnull(v_recon_date_field,'');
+    set v_recon_version = ifnull(v_recon_version,'');
 
     if v_recon_date_flag = 'Y' then
       set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
@@ -107,9 +111,10 @@ me:BEGIN
     declare theme_cursor cursor for
       select
         theme_code,theme_desc
-      from recon_mst_ttheme
+      from recon_mst_tthemehistory
       where recon_code = in_recon_code
-      and theme_code = in_theme_code 
+      and theme_code = in_theme_code
+      and recon_version = v_recon_version
       and theme_type_code = 'QCD_THEME_DIRECT'
       and hold_flag = 'N'
       and active_status = 'Y'
@@ -146,8 +151,9 @@ me:BEGIN
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
-            from recon_mst_tthemefilter
+            from recon_mst_tthemefilterhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
             order by themefilter_seqno;
@@ -184,6 +190,16 @@ me:BEGIN
 
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
+
+            if v_filter_field = '' then
+              set v_join_condition = '';
+              set v_filter_value_flag = '';
+              set v_filter_value = '';
+            else
+              if v_join_condition = '' then
+                set v_join_condition = 'and';
+              end if;
+            end if;
 
             set v_theme_filter = concat(v_theme_filter,
                                              v_open_parentheses_flag,

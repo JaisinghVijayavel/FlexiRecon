@@ -649,7 +649,8 @@ me:BEGIN
         in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
     end if;
 
-    call pr_run_dynamicreport('',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',in_ip_addr,in_user_code,@msg,@result);
+    call pr_run_dynamicreport('','',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',
+      in_ip_addr,in_user_code,@msg,@result);
 
     call pr_run_tablequery('',
                            v_recon_code,

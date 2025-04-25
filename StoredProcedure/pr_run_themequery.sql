@@ -13,6 +13,7 @@ CREATE PROCEDURE `pr_run_themequery`
   out out_result int
 )
 me:BEGIN
+  declare v_recon_version text default '';
   declare v_theme_code text default '';
   declare v_theme_desc text default '';
   declare v_theme_query text default '';
@@ -37,15 +38,25 @@ me:BEGIN
     leave me;
   end if;
 
+  select
+    recon_rule_version into v_recon_version
+  from recon_mst_trecon
+  where recon_code = in_recon_code
+  and active_status = 'Y'
+  and delete_flag = 'N';
+
+  set v_recon_version = ifnull(v_recon_version,'');
+
   -- process
   theme_block:begin
     declare theme_done int default 0;
     declare theme_cursor cursor for
       select
         theme_code,theme_desc,theme_query
-      from recon_mst_ttheme
+      from recon_mst_tthemehistory
       where recon_code = in_recon_code
       and theme_code = in_theme_code
+      and recon_version = v_recon_version 
       and theme_type_code = 'QCD_THEME_QUERY'
       and hold_flag = 'N'
       and active_status = 'Y'

@@ -2,6 +2,7 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_tranreport` $$
 CREATE PROCEDURE `pr_run_tranreport`(
+  in in_archival_code varchar(32),
   in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
@@ -17,9 +18,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 19-03-2025
+    updated Date : 24-04-2025
 
-    Version : 6
+    Version : 7
   */
 
   declare v_count int default 0;
@@ -29,6 +30,7 @@ me:BEGIN
 	declare v_tranko_table text default '';
 
   declare v_concurrent_ko_flag text default '';
+  declare v_table_prefix text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -45,17 +47,11 @@ me:BEGIN
   create index idx_recon_code on recon_tmp_ttran(recon_code);
   create index idx_dataset_code on recon_tmp_ttran(recon_code,dataset_code);
 
-  -- concurrent KO flag
-  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+  -- get transaction table
+  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
-  if v_concurrent_ko_flag = 'Y' then
-	  set v_tran_table = concat(in_recon_code,'_tran');
-	  set v_tranko_table = concat(in_recon_code,'_tranko');
-  else
-	  set v_tran_table = 'recon_trn_ttran';
-	  set v_tranko_table = 'recon_trn_ttranko';
-  end if;
-
+  set v_tran_table = concat(v_table_prefix,'tran');
+  set v_tranko_table = concat(v_table_prefix,'tranko');
 
   -- delete record
   if in_job_gid = 0 and in_rptsession_gid = 0 then

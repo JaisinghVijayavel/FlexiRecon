@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_archtranwithbrkpreport` $$
-CREATE PROCEDURE `pr_run_archtranwithbrkpreport`
+DROP PROCEDURE IF EXISTS `pr_run_archexcpwithtranbrkp` $$
+CREATE PROCEDURE `pr_run_archexcpwithtranbrkp`
 (
   in in_recon_code varchar(32),
   in in_job_gid int,
@@ -15,7 +15,7 @@ CREATE PROCEDURE `pr_run_archtranwithbrkpreport`
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 30-12-2024
+    Created Date : 21-04-2025
 
     Updated By : Vijayavel
     updated Date :

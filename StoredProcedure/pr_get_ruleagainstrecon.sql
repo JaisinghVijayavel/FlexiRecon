@@ -25,16 +25,20 @@ BEGIN
 		a.group_flag,
 		fn_get_mastername(a.group_flag, 'QCD_RULE_GRP') as  group_flag_desc,
 		a.rule_order as ruleorder,
-    a.recon_rule_version,
+    a.recon_version as recon_version,
 		a.source_dataset_code,
 		a.comparison_dataset_code,
 		a.parent_acc_mode,
 		fn_get_mastername(a.parent_acc_mode, 'QCD_RS_ACC_MODE') as parent_acc_mode_desc,
 		a.active_status,
-		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
+    fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
 		b.dataset_name as source_dataset_desc,
 		c.dataset_name as comparison_dataset_desc,
-		b.dataset_name as dataset_name
+		b.dataset_name as dataset_name,
+    hold_flag,
+		case hold_flag when 'Y' then 'YES' else 'NO' end as hold_flag_desc,
+		probable_match_flag as probable_flag,
+		case probable_match_flag when 'Y' then 'YES' else 'NO' end as probable_match_desc
 	from recon_mst_trule a
 	inner join recon_mst_tdataset b on a.source_dataset_code = b.dataset_code
 		and b.delete_flag = 'N'
@@ -51,7 +55,7 @@ BEGIN
 		a.dataset_code,
 		b.dataset_name,
 		a.dataset_type,
-    date_format(d.start_date,v_app_datetime_format) as last_sync_date,
+    DATE_FORMAT(d.start_date, '%d-%m-%Y %H:%i:%s') as last_sync_date,
 		fn_get_mastername(d.job_status, 'QCD_JOB_STATUS') as last_sync_status,
 		fn_get_mastername(a.dataset_type, 'QCD_DS_TYPE') as dataset_type_desc,
 		a.parent_dataset_code,

@@ -9,6 +9,15 @@ CREATE PROCEDURE `pr_set_reconarchival`
   out out_result int
 )
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 25-04-2025
+
+    Version : 1
+  */
 
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
@@ -20,6 +29,10 @@ begin
 	declare v_kodtl_table text default '';
 	declare v_koroundoff_table text default '';
 
+  declare v_dataset_code text default '';
+  declare v_dataset_name text default '';
+  declare v_dataset_table text default '';
+
 	declare v_rule_table text default '';
 	declare v_preprocess_table text default '';
 	declare v_theme_table text default '';
@@ -27,13 +40,45 @@ begin
   declare v_sql text default '';
   declare v_table text default '';
   declare v_table_prefix text default '';
+  declare v_table_prefix_code text default '';
   declare v_archival_code text default '';
 
   declare v_condition text default '';
-  declare v_archival_db_name text default '';
+  declare v_dataset_db_name text default '';
   declare v_recontype_code text default '';
 
+  declare v_archival_db_name text default '';
+  declare v_archival_db_flag text default '';
+  declare v_archival_db_prefix text default '';
+
   declare v_concurrent_ko_flag text default '';
+
+  declare v_recon_code text default '';
+  declare v_recon_name text default '';
+
+  declare v_job_gid int default 0;
+
+  -- recon validation
+  if not exists(select recon_code from recon_mst_trecon
+    where recon_code = in_recon_code
+    and period_from <= curdate()
+    and (period_to >= curdate() or period_to is null)
+    and active_status = 'Y'
+    and delete_flag = 'N') then
+    set out_msg = 'Invalid recon !';
+    set out_result = 0;
+  else
+    select
+      recon_code,recon_name
+    into
+      v_recon_code,v_recon_name
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_recon_code = ifnull(v_recon_code,'');
+    set v_recon_name = ifnull(v_recon_name,'');
+  end if;
 
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
@@ -64,8 +109,62 @@ begin
 	set v_preprocess_table = 'recon_mst_tpreprocess';
 	set v_theme_table = 'recon_mst_ttheme';
 
-  -- get archival db name
+  -- get archival db info
   set v_archival_db_name = fn_get_configvalue('archival_db_name');
+  set v_archival_db_flag = fn_get_configvalue('archival_db_flag');
+  set v_archival_db_prefix = fn_get_configvalue('archival_db_prefix');
+
+  -- generate archival code
+  set v_archival_code = fn_get_autocode('RA');
+
+  -- archival table prefix
+  set v_table_prefix_code = concat(v_archival_code,'_',in_recon_code);
+  set v_table_prefix = v_table_prefix_code;
+
+  -- get archival db
+  if v_archival_db_name = '' then
+    if v_archival_db_flag = 'Y' then
+      set v_archival_db_name = concat(v_archival_db_prefix,v_table_prefix_code);
+
+      -- create database
+      set v_sql = concat('create database if not exists ',v_archival_db_name);
+
+      call pr_run_sql2(v_sql,@msg,@result);
+    end if;
+  end if;
+
+  -- set archival db name in table prefix
+  if v_archival_db_name <> '' then
+    set v_table_prefix = concat(v_archival_db_name,'.',v_table_prefix);
+  end if;
+
+  -- insert into archival table
+  insert into recon_trn_treconarchival
+  (
+    recon_code,
+    archival_code,
+    archival_date,
+    archival_by,
+    archival_db_name,
+    active_status,
+    insert_date,
+    insert_by
+  )
+  select
+    in_recon_code,
+    v_archival_code,
+    sysdate(),
+    in_user_code,
+    v_archival_db_name,
+    'Y',
+    sysdate(),
+    in_user_code;
+
+  call pr_ins_job(v_recon_code,'AR',0,
+                  concat('Recon Archival:',v_archival_code,'/',v_recon_code,'-',v_recon_name),
+                  '',in_user_code,'','I','Initiated...',@out_job_gid,@msg,@result);
+
+  set v_job_gid = @out_job_gid;
 
   -- find recon type code and its condition
   select
@@ -83,34 +182,6 @@ begin
     set v_condition = ' and excp_value <> 0 ';
   end if;
 
-  -- generate archival code
-  set v_archival_code = fn_get_autocode('RA');
-
-  -- insert into archival table
-  insert into recon_trn_treconarchival
-  (
-    recon_code,
-    archival_code,
-    archival_date,
-    archival_by,
-    active_status,
-    insert_date,
-    insert_by
-  )
-  select
-    in_recon_code,
-    v_archival_code,
-    sysdate(),
-    in_user_code,
-    'Y',
-    sysdate(),
-    in_user_code;
-
-  set v_table_prefix = concat(v_archival_code,'_',in_recon_code);
-
-  if v_archival_db_name <> '' then
-    set v_table_prefix = concat(v_archival_db_name,'.',v_table_prefix);
-  end if;
 
   -- create tran table
   set v_table = concat(v_table_prefix,'_tran');
@@ -326,6 +397,8 @@ begin
 
   -- transfer data
   -- tran table
+  call pr_upd_job(v_job_gid,'P','Archiving tran table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_tran');
 
   set v_sql = concat("insert into ",v_table,"
@@ -338,6 +411,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- tranko table
+  call pr_upd_job(v_job_gid,'P','Archiving tranko table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_tranko');
 
   set v_sql = concat("insert into ",v_table,"
@@ -349,6 +424,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- tranbrkp table
+  call pr_upd_job(v_job_gid,'P','Archiving tranbrkp table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_tranbrkp');
 
   set v_sql = concat("insert into ",v_table,"
@@ -360,6 +437,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- tranbrkpko table
+  call pr_upd_job(v_job_gid,'P','Archiving tranbrkpko table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_tranbrkpko');
 
   set v_sql = concat("insert into ",v_table,"
@@ -371,6 +450,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- ko table
+  call pr_upd_job(v_job_gid,'P','Archiving ko table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_ko');
 
   set v_sql = concat("insert into ",v_table,"
@@ -382,6 +463,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- kodtl table
+  call pr_upd_job(v_job_gid,'P','Archiving kodtl table...',@msg,@result);
+
   set v_ko_table = concat(v_table_prefix,'_ko');
   set v_table = concat(v_table_prefix,'_kodtl');
 
@@ -396,6 +479,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- koroundoff table
+  call pr_upd_job(v_job_gid,'P','Archiving koroundoff table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_koroundoff');
 
   set v_sql = concat("insert into ",v_table,"
@@ -409,6 +494,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- rule table
+  call pr_upd_job(v_job_gid,'P','Archiving rule table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_rule');
 
   set v_sql = concat("insert into ",v_table,"
@@ -420,6 +507,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- preprocess table
+  call pr_upd_job(v_job_gid,'P','Archiving process table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_preprocess');
 
   set v_sql = concat("insert into ",v_table,"
@@ -431,6 +520,8 @@ begin
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- theme table
+  call pr_upd_job(v_job_gid,'P','Archiving theme table...',@msg,@result);
+
   set v_table = concat(v_table_prefix,'_theme');
 
   set v_sql = concat("insert into ",v_table,"
@@ -440,6 +531,61 @@ begin
     and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
+
+  -- get dataset db name
+  set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
+
+  if v_dataset_db_name <> '' then
+    set v_dataset_db_name = concat(v_dataset_db_name,'.');
+  end if;
+
+	-- dataset block
+	dataset_block:begin
+		declare dataset_done int default 0;
+		declare dataset_cursor cursor for
+		select
+      a.dataset_code,b.dataset_name
+    from recon_mst_trecondataset as a
+    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code
+      and b.delete_flag = 'N'
+    where a.recon_code = in_recon_code
+			and a.active_status = 'Y'
+			and a.dataset_type = 'L'
+			and a.delete_flag = 'N';
+		declare continue handler for not found set dataset_done=1;
+
+		open dataset_cursor;
+
+		dataset_loop: loop
+			fetch dataset_cursor into v_dataset_code,v_dataset_name;
+			if dataset_done = 1 then leave dataset_loop; end if;
+
+      set v_dataset_name = ifnull(v_dataset_name,'');
+
+      -- create archive dataset table
+      set v_table = concat(v_table_prefix_code,'_',v_dataset_code);
+      call pr_create_datasettable(v_archival_db_name,v_table,@msg3,@result3);
+
+      -- to add archival db name (ex. table = db_name.table_name)
+      set v_table = concat(v_table_prefix,'_',v_dataset_code);
+
+	    call pr_upd_job(v_job_gid,'P',concat('Archiving ',v_dataset_name,'...'),@msg,@result);
+
+      -- archive dataset table data
+      set v_dataset_table = concat(v_dataset_db_name,v_dataset_code);
+
+      set v_sql = concat("insert into ",v_table,"
+        select z.* from (
+        select * from ",v_dataset_table,"
+        where delete_flag = 'N' LOCK IN SHARE MODE) as z");
+
+      call pr_run_sql2(v_sql,@msg,@result);
+		end loop dataset_loop;
+
+		close dataset_cursor;
+	end dataset_block;
+
+	call pr_upd_job(v_job_gid,'C','Completed',@msg,@result);
 
   set out_msg = 'Success';
   set out_result = 1;

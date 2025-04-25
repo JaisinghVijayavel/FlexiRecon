@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_archkoreport` $$
 CREATE PROCEDURE `pr_run_archkoreport`
 (
+  in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
   in in_condition text,
@@ -34,7 +35,7 @@ me:BEGIN
     into
       @archival_code
     from recon_trn_treconarchival
-    where recon_code = '",in_recon_code,"'
+    where 1 = 1
     ",in_condition,"
     and delete_flag = 'N' order by reconarchival_gid limit 1");
 
@@ -49,19 +50,21 @@ me:BEGIN
       set v_archival_db_name = concat(v_archival_db_name,'.');
     end if;
 
-    set v_tran_table = concat(v_archival_db_name,in_recon_code,'_',v_archival_code,'_tran');
-    set v_tranbrkp_table = concat(v_archival_db_name,in_recon_code,'_',v_archival_code,'_tranbrkp');
+    set v_tran_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tranbrkp');
 
-    set v_tranko_table = concat(v_archival_db_name,in_recon_code,'_',v_archival_code,'_tranko');
-    set v_tranbrkpko_table = concat(v_archival_db_name,in_recon_code,'_',v_archival_code,'_tranbrkpko');
+    set v_tranko_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tranko');
+    set v_tranbrkpko_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tranbrkpko');
 
-    set v_ko_table = concat(v_archival_db_name,in_recon_code,'_',v_archival_code,'_ko');
-    set v_kodtl_table = concat(v_archival_db_name,in_recon_code,'_',v_archival_code,'_kodtl');
+    set v_ko_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_ko');
+    set v_kodtl_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_kodtl');
   end if;
 
   set in_job_gid = ifnull(in_job_gid,0);
   set in_rptsession_gid = ifnull(in_rptsession_gid,0);
   set in_user_code = ifnull(in_user_code,'');
+
+  set v_sql = '';
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tko
 		select
@@ -244,7 +247,6 @@ me:BEGIN
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
     left join ",v_tranko_table," as g on b.tran_gid = g.tran_gid and 1 = 2
     left join ",v_tran_table," as h on b.tran_gid = h.tran_gid and 1 = 2
-		where true ", in_condition,"
 
     union
 
@@ -428,7 +430,6 @@ me:BEGIN
     left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
     left join ",v_tranko_table," as g on b.tran_gid = g.tran_gid and 1 = 2
     left join ",v_tran_table," as h on b.tran_gid = h.tran_gid and 1 = 2
-		where true ", in_condition,"
 
     union
 
@@ -612,7 +613,6 @@ me:BEGIN
     left join recon_mst_tdataset as f on c.tranbrkp_dataset_code = f.dataset_code and f.delete_flag = 'N'
     left join ",v_tranko_table," as g on c.tran_gid = g.tran_gid and g.delete_flag = 'N'
     left join ",v_tran_table," as h on c.tran_gid = h.tran_gid and h.delete_flag = 'N'
-		where true ", in_condition,"
 
     union
 
@@ -796,7 +796,6 @@ me:BEGIN
     left join recon_mst_tdataset as f on c.tranbrkp_dataset_code = f.dataset_code and f.delete_flag = 'N'
     left join ",v_tranko_table," as g on c.tran_gid = g.tran_gid and g.delete_flag = 'N'
     left join ",v_tran_table," as h on c.tran_gid = h.tran_gid and h.delete_flag = 'N'
-		where true ", in_condition,"
   ");
 
   call pr_run_sql(v_sql,@msg,@result);

@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_kotranreport` $$
 CREATE PROCEDURE `pr_run_kotranreport`
 (
+  in in_archival_code varchar(32),
   in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
@@ -17,9 +18,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 21-03-2025
+    updated Date : 24-04-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_sql text default '';
@@ -34,6 +35,7 @@ me:BEGIN
 	declare v_kodtl_table text default '';
 
   declare v_concurrent_ko_flag text default '';
+  declare v_table_prefix text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
@@ -63,28 +65,17 @@ me:BEGIN
   set in_rptsession_gid = ifnull(in_rptsession_gid,0);
   set in_user_code = ifnull(in_user_code,'');
 
-  -- concurrent KO flag
-  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+  -- get transaction table
+  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
-  if v_concurrent_ko_flag = 'Y' then
-	  set v_tran_table = concat(in_recon_code,'_tran');
-	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  set v_tran_table = concat(v_table_prefix,'tran');
+  set v_tranbrkp_table = concat(v_table_prefix,'tranbrkp');
 
-	  set v_tranko_table = concat(in_recon_code,'_tranko');
-	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+  set v_tranko_table = concat(v_table_prefix,'tranko');
+  set v_tranbrkpko_table = concat(v_table_prefix,'tranbrkpko');
 
-	  set v_ko_table = concat(in_recon_code,'_ko');
-	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
-  else
-	  set v_tran_table = 'recon_trn_ttran';
-	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-
-	  set v_tranko_table = 'recon_trn_ttranko';
-	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
-
-	  set v_ko_table = 'recon_trn_tko';
-	  set v_kodtl_table = 'recon_trn_tkodtl';
-  end if;
+  set v_ko_table = concat(v_table_prefix,'ko');
+  set v_kodtl_table = concat(v_table_prefix,'kodtl');
 
   set v_sql = concat(v_sql,"insert into recon_rpt_tko
     select z.* from (

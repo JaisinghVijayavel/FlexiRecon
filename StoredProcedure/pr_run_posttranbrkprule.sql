@@ -15,6 +15,7 @@ CREATE PROCEDURE `pr_run_posttranbrkprule`
 )
 me:BEGIN
   declare v_recon_name text default '';
+  declare v_recon_version text default '';
   declare v_recontype_code varchar(32);
 
   declare v_source_head_sql text default '';
@@ -160,14 +161,15 @@ me:BEGIN
     leave me;
   else
     select
-      recon_name,recontype_code
+      recon_name,recon_rule_version,recontype_code
     into
-      v_recon_name,v_recontype_code
+      v_recon_name,v_recon_version,v_recontype_code
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
 
     set v_recon_name = ifnull(v_recon_name,'');
+    set v_recon_version = ifnull(v_recon_version,'');
     set v_recontype_code = ifnull(v_recontype_code,'');
   end if;
 
@@ -276,9 +278,10 @@ me:BEGIN
         a.comparison_acc_mode,
         a.group_flag,
         a.group_method_flag
-      from recon_mst_trule as a
+      from recon_mst_trulehistory as a
       where a.recon_code = in_recon_code
-      and a.rule_code = in_rule_code 
+      and a.recon_version = v_recon_version
+      and a.rule_code = in_rule_code
       and a.period_from <= curdate()
       and (a.until_active_flag = 'Y'
       or a.period_to >= curdate())
@@ -367,11 +370,12 @@ me:BEGIN
               filter_applied_on,filter_field,filter_criteria,add_filter,ident_criteria,
               ident_value_flag,ident_value,
               open_parentheses_flag,close_parentheses_flag,join_condition
-            from recon_mst_truleselefilter
+            from recon_mst_truleselefilterhistory
             where rule_code = v_rule_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
-            order by filter_applied_on,ruleselefilter_seqno,ruleselefilter_gid;
+            order by filter_applied_on,ruleselefilter_seqno;
 
             declare continue handler for not found set basefilter_done=1;
 
@@ -388,6 +392,7 @@ me:BEGIN
                                     v_join_condition;
               if basefilter_done = 1 then leave basefilter_loop; end if;
 
+              set v_filter_field = ifnull(v_filter_field,'');
               set v_ident_value_flag = ifnull(v_ident_value_flag,'Y');
               set v_ident_value = ifnull(v_ident_value,'');
 
@@ -397,6 +402,16 @@ me:BEGIN
 
               if v_join_condition = '' then
                 set v_join_condition = 'and';
+              end if;
+
+              if v_filter_field = '' then
+                set v_join_condition = '';
+                set v_ident_value_flag = '';
+                set v_ident_value = '';
+              else
+                if v_join_condition = '' then
+                  set v_join_condition = 'and';
+                end if;
               end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
@@ -464,11 +479,12 @@ me:BEGIN
               a.comparison_field,a.comparison_criteria,a.comparison_filter,
               a.open_parentheses_flag,a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_trulecondition as a
+            from recon_mst_truleconditionhistory as a
             where a.rule_code = v_rule_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
-            order by rulecondition_seqno,rulecondition_gid;
+            order by rulecondition_seqno;
 
             declare continue handler for not found set rule_done=1;
 
@@ -729,8 +745,9 @@ me:BEGIN
             call pr_run_sql(v_sql,@msg,@result);
           else
             -- get target addtional group field
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfield
+            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfieldhistory
             where rule_code = v_rule_code
+            and recon_version = v_recon_version 
             and active_status = 'Y'
             and delete_flag = 'N';
 

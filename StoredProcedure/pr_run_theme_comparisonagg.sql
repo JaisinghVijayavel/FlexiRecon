@@ -13,6 +13,17 @@ CREATE PROCEDURE `pr_run_theme_comparisonagg`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 25-04-2025
+
+    Version : 1
+  */
+
+  declare v_recon_version text default '';
   declare v_recontype_code varchar(32) default '';
 
   declare v_source_head_sql text default '';
@@ -279,9 +290,9 @@ me:BEGIN
 
   -- recon retails
   select
-    recon_name,recontype_code
+    recon_name,recontype_code,recon_rule_version
   into
-    v_recon_name,v_recontype_code
+    v_recon_name,v_recontype_code,v_recon_version
   from recon_mst_trecon
   where recon_code = in_recon_code
   and period_from <= curdate()
@@ -291,6 +302,7 @@ me:BEGIN
 
   set v_recontype_code = ifnull(v_recontype_code,'');
   set v_recon_name = ifnull(v_recon_name,'');
+  set v_recon_version = ifnull(v_recon_version,'');
 
   if v_recontype_code <> 'N' then
     set v_recon_value_flag = 'Y';
@@ -306,9 +318,10 @@ me:BEGIN
         a.theme_name,
         a.source_dataset_code,
         a.comparison_dataset_code
-      from recon_mst_ttheme as a
+      from recon_mst_tthemehistory as a
       where a.recon_code = in_recon_code
       and a.theme_code = in_theme_code
+      and a.recon_version = v_recon_version
       and a.theme_type_code = 'QCD_THEME_COMPARE_AGG'
       and a.hold_flag = 'N'
       and a.active_status = 'Y'
@@ -422,11 +435,12 @@ me:BEGIN
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
-            from recon_mst_tthemefilter
+            from recon_mst_tthemefilterhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
-            order by filter_applied_on,themefilter_seqno,themefilter_gid;
+            order by filter_applied_on,themefilter_seqno;
 
             declare continue handler for not found set themefilter_done=1;
 
@@ -447,6 +461,7 @@ me:BEGIN
 
               if themefilter_done = 1 then leave themefilter_loop; end if;
 
+              set v_filter_field = ifnull(v_filter_field,'');
               set v_filter_value_flag = ifnull(v_filter_value_flag,'Y');
               set v_filter_value = ifnull(v_filter_value,'');
 
@@ -456,6 +471,16 @@ me:BEGIN
 
               if v_join_condition = '' then
                 set v_join_condition = 'and';
+              end if;
+
+              if v_filter_field = '' then
+                set v_join_condition = '';
+                set v_filter_value_flag = '';
+                set v_filter_value = '';
+              else
+                if v_join_condition = '' then
+                  set v_join_condition = 'and';
+                end if;
               end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
@@ -574,11 +599,12 @@ me:BEGIN
               a.comparison_field,a.comparison_criteria,
               a.open_parentheses_flag,a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_tthemecondition as a
+            from recon_mst_tthemeconditionhistory as a
             where a.theme_code = v_theme_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
-            order by themecondition_seqno,themecondition_gid;
+            order by themecondition_seqno;
 
             declare continue handler for not found set condition_done=1;
 
@@ -940,8 +966,11 @@ me:BEGIN
           -- get target addtional group field
           if v_group_flag = 'Y' then
             -- grp on source
-            select group_concat(concat('a.',grp_field)) into v_grp_field from recon_mst_tthemegrpfield
+            select
+              group_concat(concat('a.',grp_field)) into v_grp_field
+            from recon_mst_tthemegrpfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and grpfield_applied_on = 'S'
             and active_status = 'Y'
             and delete_flag = 'N';
@@ -963,8 +992,11 @@ me:BEGIN
             end if;
 
             -- grp on comparison
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_tthemegrpfield
+            select
+              group_concat(concat('b.',grp_field)) into v_grp_field
+            from recon_mst_tthemegrpfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and grpfield_applied_on = 'C'
             and active_status = 'Y'
             and delete_flag = 'N';
@@ -998,8 +1030,9 @@ me:BEGIN
               themeagg_function,
               themeagg_field,
               themeagg_field_type
-            from recon_mst_tthemeaggfield
+            from recon_mst_tthemeaggfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and themeaggfield_applied_on = 'S'
             and active_status = 'Y'
             and delete_flag = 'N'
@@ -1058,8 +1091,9 @@ me:BEGIN
               themeagg_function,
               themeagg_field,
               themeagg_field_type
-            from recon_mst_tthemeaggfield
+            from recon_mst_tthemeaggfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and themeaggfield_applied_on = 'C'
             and active_status = 'Y'
             and delete_flag = 'N'
@@ -1124,13 +1158,14 @@ me:BEGIN
               a.open_parentheses_flag,
               a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_tthemeaggcondition as a
-            left join recon_mst_tthemeaggfield as b on a.themeagg_field = b.themeagg_field
+            from recon_mst_tthemeaggconditionhistory as a
+            left join recon_mst_tthemeaggfieldhistory as b on a.themeagg_field = b.themeagg_field
               and a.theme_code = b.theme_code
               and a.themeagg_applied_on = b.themeaggfield_applied_on
               and b.active_status = 'Y'
               and b.delete_flag = 'N'
             where a.theme_code = v_theme_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
             order by a.themeaggcondition_seqno;

@@ -2,6 +2,7 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_tranwithbrkpreport` $$
 CREATE PROCEDURE `pr_run_tranwithbrkpreport`(
+  in in_archival_code varchar(32),
   in in_recon_code varchar(32),
   in in_job_gid int,
   in in_rptsession_gid int,
@@ -17,9 +18,9 @@ me:BEGIN
     Created Date : 08-02-2024
 
     Updated By : Vijayavel
-    updated Date : 19-03-2025
+    updated Date : 24-04-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_tran_field text default '';
@@ -30,6 +31,7 @@ me:BEGIN
 	declare v_tranbrkp_table text default '';
 
   declare v_concurrent_ko_flag text default '';
+  declare v_table_prefix text default '';
 
   declare v_count int default 0;
   declare v_sql text default '';
@@ -37,16 +39,11 @@ me:BEGIN
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
-  -- concurrent KO flag
-  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+  -- get transaction table
+  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
-  if v_concurrent_ko_flag = 'Y' then
-	  set v_tran_table = concat(in_recon_code,'_tran');
-	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
-  else
-	  set v_tran_table = 'recon_trn_ttran';
-	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-  end if;
+  set v_tran_table = concat(v_table_prefix,'tran');
+  set v_tranbrkp_table = concat(v_table_prefix,'tranbrkp');
 
   -- get table column
   SELECT

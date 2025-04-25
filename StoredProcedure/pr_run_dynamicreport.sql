@@ -2,6 +2,7 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_dynamicreport` $$
 CREATE PROCEDURE `pr_run_dynamicreport`(
+  in in_archival_code varchar(32),
   in in_reporttemplate_code varchar(32),
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
@@ -15,6 +16,16 @@ CREATE PROCEDURE `pr_run_dynamicreport`(
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 24-04-2025
+
+    Version : 1
+  */
+
   declare v_recon_code varchar(32);
   declare v_report_code varchar(32);
   declare v_sortby_code varchar(32);
@@ -33,39 +44,20 @@ me:BEGIN
   declare v_sorting_field text default '';
   declare v_dataset_db_name text default '';
 
+  declare v_table_prefix text default '';
+
   declare v_sql text default '';
   declare v_txt text default '';
 
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
-  /*
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION
-  BEGIN
-    GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
-    @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
-
-    set @text = concat(@text,' ',err_msg);
-
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
-
-    ROLLBACK;
-
-    if in_outputfile_flag then
-      call pr_upd_job(v_job_gid,'F',@full_error,@msg,@result);
-    end if;
-
-    set out_msg = @full_error;
-    set out_result = 0;
-
-    SIGNAL SQLSTATE '99999' SET
-    MYSQL_ERRNO = @errno,
-    MESSAGE_TEXT = @text;
-  END;
-  */
-
+  set in_archival_code = ifnull(in_archival_code,'');
   set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
   set in_outputfile_type = ifnull(in_outputfile_type,'');
+
+  -- get transaction table
+  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
   if in_reporttemplate_code <> '' then
     select
@@ -253,7 +245,7 @@ me:BEGIN
       call pr_run_sql(v_sql,@msg,@result);
     end if;
 
-    call pr_run_sp(v_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sorting_field,in_user_code,@msg,@result);
+    call pr_run_sp(in_archival_code,v_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sorting_field,in_user_code,@msg,@result);
 
     -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_dynamicreport',v_sorting_field,@msg,@result);
 
@@ -286,10 +278,15 @@ me:BEGIN
   elseif v_report_exec_type = 'D' then    -- dataset
     set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
-    if v_dataset_db_name <> '' then
-      set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+    if in_archival_code = '' then
+      if v_dataset_db_name <> '' then
+        set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+      else
+        set v_table_name = in_report_code;
+      end if;
     else
-      set v_table_name = in_report_code;
+      -- archival table name
+      set v_table_name = concat(v_table_prefix,in_report_code);
     end if;
 
     call pr_run_tablequery(in_reporttemplate_code,
@@ -302,7 +299,13 @@ me:BEGIN
                            in_outputfile_type,
                            in_user_code,@msg,@result);
   elseif v_report_exec_type = 'C' then
-    call pr_run_customsp(in_recon_code,in_report_code,v_sp_name,in_report_condition,v_job_gid,in_user_code,@msg,@result);
+    call pr_run_customsp(in_archival_code,
+                         in_recon_code,
+                         in_report_code,
+                         v_sp_name,
+                         in_report_condition,
+                         v_job_gid,
+                         in_user_code,@msg,@result);
   else
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,

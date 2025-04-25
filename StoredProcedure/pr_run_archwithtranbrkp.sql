@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_archtranwithbrkpreport` $$
-CREATE PROCEDURE `pr_run_archtranwithbrkpreport`
+DROP PROCEDURE IF EXISTS `pr_run_archwithtranbrkp` $$
+CREATE PROCEDURE `pr_run_archwithtranbrkp`
 (
   in in_recon_code varchar(32),
   in in_job_gid int,
@@ -15,7 +15,7 @@ CREATE PROCEDURE `pr_run_archtranwithbrkpreport`
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 30-12-2024
+    Created Date : 21-04-2025
 
     Updated By : Vijayavel
     updated Date :
@@ -28,6 +28,8 @@ me:BEGIN
 
   declare v_tran_table text default '';
   declare v_tranbrkp_table text default '';
+  declare v_tranko_table text default '';
+  declare v_tranbrkpko_table text default '';
 
   declare v_tran_field text default '';
   declare v_tranbrkp_field text default '';
@@ -90,6 +92,9 @@ me:BEGIN
 
     set v_tran_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tran');
     set v_tranbrkp_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tranbrkp');
+
+    set v_tranko_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tranko');
+    set v_tranbrkpko_table = concat(v_archival_db_name,v_archival_code,'_',in_recon_code,'_tranbrkpko');
   else
     set out_msg = 'Failed';
     set out_result = 0;
@@ -109,11 +114,6 @@ me:BEGIN
   set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
   set v_sql = concat(v_sql,'and rd.active_status = ''Y'' and rd.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,'where true ');
-
-  if v_recontype_code = 'N' then
-    set v_sql = concat(v_sql,'and a.ko_gid = 0 ');
-  end if;
-
   set v_sql = concat(v_sql,'and a.delete_flag = ''N'' ');
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
@@ -123,6 +123,23 @@ me:BEGIN
     excp_value = excp_value - roundoff_value
   where job_gid = in_job_gid
   and rptsession_gid = in_rptsession_gid;
+
+  -- transfer tranko records to report table
+  set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,dataset_type,',v_tran_field,') ');
+  set v_sql = concat(v_sql,'select ');
+  set v_sql = concat(v_sql,cast(in_rptsession_gid as nchar),' as rptsession_gid,');
+  set v_sql = concat(v_sql,cast(in_job_gid as nchar),' as job_gid,');
+  set v_sql = concat(v_sql,char(39),in_user_code,char(39),' as user_code,');
+  set v_sql = concat(v_sql,'b.dataset_name,rd.dataset_type,');
+  set v_sql = concat(v_sql,concat('a.',replace(v_tran_field,',',',a.')),' from ',v_tranko_table,' as a ');
+  set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code ');
+  set v_sql = concat(v_sql,'left join recon_mst_trecondataset as rd on a.recon_code = rd.recon_code and a.dataset_code = rd.dataset_code ');
+  set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
+  set v_sql = concat(v_sql,'and rd.active_status = ''Y'' and rd.delete_flag = ''N'' ');
+  set v_sql = concat(v_sql,'where true ');
+  set v_sql = concat(v_sql,'and a.delete_flag = ''N'' ');
+
+  call pr_run_sql(v_sql,@out_msg,@out_result);
 
   -- update tranbrkp_dataset_code, tranbrkp_dataset_name
   set v_sql = concat('update recon_rpt_ttranwithbrkp set ');
@@ -154,17 +171,11 @@ me:BEGIN
   set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
   set v_sql = concat(v_sql,'and rd.active_status = ''Y'' and rd.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,'where true ');
-
-  if v_recontype_code <> 'N' then
-    set v_sql = concat(v_sql,'and s.excp_value <> 0 ');
-  end if;
-
-  set v_sql = concat(v_sql,'and s.tran_gid > 0 ');
   set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
 
   call pr_run_sql(v_sql,@out_msg,@out_result);
 
-  -- transfer tranbrkp records to report table - not posted cases
+  -- transfer tranbrkpko records to report table
   set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,dataset_type,tranbrkp_dataset_name,');
   set v_sql = concat(v_sql,'base_tran_value,base_excp_value,base_acc_mode,');
   set v_sql = concat(v_sql,v_tranbrkp_field,') ');
@@ -176,7 +187,7 @@ me:BEGIN
   set v_sql = concat(v_sql,'rd.dataset_type,');
   set v_sql = concat(v_sql,'c.dataset_name,');
   set v_sql = concat(v_sql,'a.tran_value,a.excp_value,a.tran_acc_mode,');
-  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from ',v_tranbrkp_table,' as s ');
+  set v_sql = concat(v_sql,concat('s.',replace(v_tranbrkp_field,',',',s.')),' from ',v_tranbrkpko_table,' as s ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on s.dataset_code = b.dataset_code ');
   set v_sql = concat(v_sql,'left join recon_mst_tdataset as c on s.tranbrkp_dataset_code = c.dataset_code ');
   set v_sql = concat(v_sql,'left join ',v_tran_table,' as a on s.tran_gid = a.tran_gid ');
@@ -184,12 +195,6 @@ me:BEGIN
   set v_sql = concat(v_sql,'and rd.dataset_type in (''B'',''T'') ');
   set v_sql = concat(v_sql,'and rd.active_status = ''Y'' and rd.delete_flag = ''N'' ');
   set v_sql = concat(v_sql,'where true ');
-
-  if v_recontype_code <> 'N' then
-    set v_sql = concat(v_sql,'and s.excp_value <> 0 ');
-  end if;
-
-  set v_sql = concat(v_sql,'and s.tran_gid = 0 ');
   set v_sql = concat(v_sql,'and s.delete_flag = ''N'' ');
 
   call pr_run_sql(v_sql,@out_msg,@out_result);

@@ -76,13 +76,13 @@ me:begin
   -- check if any job is running
 	if exists(select job_gid from recon_trn_tjob
 		where recon_code = in_recon_code
-		and jobtype_code in ('A','M','U','T','UJ')
+		and jobtype_code in ('A','M','U','T')
 		and job_status in ('I','P')
 		and delete_flag = 'N') then
 
 		select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
 		where recon_code = in_recon_code
-		and jobtype_code in ('A','M','U','T','UJ')
+		and jobtype_code in ('A','M','U','T')
 		and job_status in ('I','P')
 		and delete_flag = 'N';
 

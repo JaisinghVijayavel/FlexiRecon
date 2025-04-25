@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_pdsummary` $$
 CREATE PROCEDURE `pr_run_pdsummary`
 (
+  in in_archival_code varchar(32),
   in in_recon_code varchar(32),
   in in_user_code varchar(32),
   out out_msg text,
@@ -57,7 +58,7 @@ me:BEGIN
   and active_status = 'Y'
 	and delete_flag = 'N';
 
-  call pr_run_dynamicreport(v_reporttemplate_code_es, in_recon_code,v_report_code_es,
+  call pr_run_dynamicreport(in_archival_code,v_reporttemplate_code_es, in_recon_code,v_report_code_es,
     'Transaction Exception With Breakp','and a.scheduler_gid > 0 ', false, '', '', in_user_code, @out_msg, @out_result);
 
 
@@ -79,7 +80,7 @@ me:BEGIN
 	and delete_flag = 'N';
 
 	-- KO formatted
-	call pr_run_dynamicreport(v_reporttemplate_code_ko, in_recon_code,v_report_code_ko,
+	call pr_run_dynamicreport(in_archival_code,v_reporttemplate_code_ko, in_recon_code,v_report_code_ko,
         in_recon_code,
         concat("AND  a.ko_gid > '0' and a.ko_date > '",v_recon_lock_date,"' "),
         false, '', '', in_user_code, @out_msg, @out_result);
@@ -150,7 +151,7 @@ me:BEGIN
     set v_closing_balance_conditon = concat(v_closing_balance_conditon," and col12 = '",v_recon_cycle_date,"' ");
   end if;
 
-	call pr_run_dynamicreport('', in_recon_code,v_closingbalance_table_name, 'PD Recon - Closing Balance',
+	call pr_run_dynamicreport(in_archival_code,'', in_recon_code,v_closingbalance_table_name, 'PD Recon - Closing Balance',
 		v_closing_balance_conditon, false, '', '', in_user_code, @out_msg, @out_result);
 
 	-- leave me;
@@ -188,7 +189,7 @@ me:BEGIN
     -- col11 - TRA Status
     -- col35 - PD Tran Id
 
-	  call pr_run_dynamicreport('', in_recon_code,v_rr_ds_code, 'RR Not Mapped',
+	  call pr_run_dynamicreport(in_archival_code,'', in_recon_code,v_rr_ds_code, 'RR Not Mapped',
 		  concat(" and col35 is null and col11 = 'ACTIVE' "),
       false, '', '', in_user_code, @out_msg, @out_result);
   else

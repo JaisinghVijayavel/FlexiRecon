@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_customsp` $$
 CREATE PROCEDURE `pr_run_customsp`
 (
+  in in_archival_code text,
   in in_recon_code text,
   in in_report_code text,
   in in_sp_name text,
@@ -13,6 +14,16 @@ CREATE PROCEDURE `pr_run_customsp`
   out out_result int
 )
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 24-04-2025
+
+    Version : 1
+  */
+
   declare v_reportparam_type text default '';
   declare v_reportparam_code text default '';
   declare v_reportparam_value text default '';
@@ -40,8 +51,8 @@ begin
 		select
       reportparam_type,
       reportparam_code,
-      fn_get_reportfiltervalue(in_recon_code,in_condition,
-        reportparam_value,in_user_code) as reportparam_value
+      fn_get_reportfiltervalue1(in_arcival_code,in_recon_code,in_condition,
+                                reportparam_value,in_user_code) as reportparam_value
     from recon_mst_treportparam
     where report_code = in_report_code
     and active_status = 'Y'

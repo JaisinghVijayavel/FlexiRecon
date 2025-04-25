@@ -19,10 +19,11 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 11-04-2025
+    Updated Date : 25-04-2025
 
-    Version : 2
+    Version : 3
   */
+  declare v_recon_version text default '';
 
   declare v_job_gid int default 0;
   declare v_job_input_param text default '';
@@ -67,10 +68,12 @@ me:BEGIN
   -- get recon details
   select
     recon_date_field,
-    recon_date_flag
+    recon_date_flag,
+    recon_rule_version
   into
     v_recon_date_field,
-    v_recon_date_flag
+    v_recon_date_flag,
+    v_recon_version
   from recon_mst_trecon
   where recon_code = in_recon_code
   and period_from <= curdate()
@@ -78,6 +81,7 @@ me:BEGIN
   or period_to >= curdate())
   and delete_flag = 'N';
 
+  set v_recon_version = ifnull(v_recon_version,'');
   set v_recon_date_field = ifnull(v_recon_date_field,'N');
   set v_recon_date_flag = ifnull(v_recon_date_flag,'N');
 
@@ -143,9 +147,10 @@ me:BEGIN
     declare theme_cursor cursor for
       select
         theme_code,theme_type_code
-      from recon_mst_ttheme
+      from recon_mst_tthemehistory
       where recon_code = in_recon_code
       and theme_code = ifnull(in_theme_code,theme_code)
+      and recon_version = v_recon_version
       and hold_flag = 'N'
       and active_status = 'Y'
       and delete_flag = 'N'

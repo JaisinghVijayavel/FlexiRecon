@@ -18,11 +18,12 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 07-04-2025
+    Updated Date : 25-04-2025
 
-    Version : 3
+    Version : 5
   */
 
+  declare v_recon_version text default '';
   declare v_get_recon_field text default '';
   declare v_set_recon_field text default '';
   declare v_cumulative_flag text default '';
@@ -142,16 +143,19 @@ me:BEGIN
   else
     select
       recon_date_flag,
-      recon_date_field
+      recon_date_field,
+      recon_rule_version
     into
       v_recon_date_flag,
-      v_recon_date_field
+      v_recon_date_field,
+      v_recon_version
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
 
     set v_recon_date_flag = ifnull(v_recon_date_flag,'');
     set v_recon_date_field = ifnull(v_recon_date_field,'');
+    set v_recon_version = ifnull(v_recon_version,'');
   end if;
 
   -- get dataset db name
@@ -197,8 +201,9 @@ me:BEGIN
         lookup_multi_return_flag,
         lookup_agg_return_function,
         recorderby_type
-      from recon_mst_tpreprocess
+      from recon_mst_tpreprocesshistory
       where recon_code = in_recon_code
+      and recon_version = v_recon_version
       and preprocess_code = ifnull(in_preprocess_code,preprocess_code)
       and postprocess_flag = ifnull(in_postprocess_flag,postprocess_flag)
       and hold_flag = 'N'
@@ -292,8 +297,9 @@ me:BEGIN
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
-            from recon_mst_tpreprocessfilter
+            from recon_mst_tpreprocessfilterhistory
             where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
             order by filter_seqno;
@@ -333,6 +339,16 @@ me:BEGIN
 
             if v_join_condition = '' then
               set v_join_condition = 'and';
+            end if;
+
+            if v_filter_field = '' then
+              set v_join_condition = '';
+              set v_filter_value_flag = '';
+              set v_filter_value = '';
+            else
+              if v_join_condition = '' then
+                set v_join_condition = 'and';
+              end if;
             end if;
 
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
@@ -400,8 +416,9 @@ me:BEGIN
 								set_recon_field,
 								lookup_return_field,
                 reverse_update_flag
-							from recon_mst_tpreprocesslookup
+							from recon_mst_tpreprocesslookuphistory
 							where preprocess_code = v_preprocess_code
+              and recon_version = v_recon_version
 							and active_status = 'Y'
 							and delete_flag = 'N'
 							order by lookup_seqno;
@@ -454,8 +471,9 @@ me:BEGIN
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
-            from recon_mst_tpreprocesscondition
+            from recon_mst_tpreprocessconditionhistory
             where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
             order by condition_seqno;
@@ -571,8 +589,9 @@ me:BEGIN
 						declare lookupfield_cursor cursor for
 							select
 								distinct lookup_field
-							from recon_mst_tpreprocesscondition
+							from recon_mst_tpreprocessconditionhistory
 							where preprocess_code = v_preprocess_code
+              and recon_version = v_recon_version
 							and lookup_field <> v_lookup_return_field
 							and lookup_field <> ''
 							and active_status = 'Y'
@@ -659,8 +678,9 @@ me:BEGIN
 					declare orderbyfield_cursor cursor for
 						select
 							distinct recorder_field
-						from recon_mst_tpreprocessrecorder
+						from recon_mst_tpreprocessrecorderhistory
 						where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
 						and active_status = 'Y'
 						and delete_flag = 'N'
 						order by recorder_seqno;
@@ -747,8 +767,9 @@ me:BEGIN
 					declare grpfield_cursor cursor for
 						select
 							distinct grp_field
-						from recon_mst_tpreprocessgrpfield
+						from recon_mst_tpreprocessgrpfieldhistory
 						where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version 
 						and active_status = 'Y'
 						and delete_flag = 'N'
 						order by grpfield_seqno;

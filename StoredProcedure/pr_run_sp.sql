@@ -2,6 +2,7 @@
 
 DROP PROCEDURE IF EXISTS `pr_run_sp` $$
 CREATE PROCEDURE `pr_run_sp`(
+  in in_archival_code text,
   in in_recon_code text,
   in in_sp_name text,
   in in_job_gid int,
@@ -13,26 +14,36 @@ CREATE PROCEDURE `pr_run_sp`(
   out out_result int
 )
 begin
+  /*
+    Created By : Vijayavel
+    Created Date : 
+
+    Updated By : Vijayavel
+    updated Date : 24-04-2025
+
+    Version : 1
+  */
+
   if in_sp_name = 'pr_run_koreport' then
-    call pr_run_koreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_koreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_koheadreport' then
     call pr_run_koheadreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_kobrkpreport' then
-    call pr_run_kobrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_kobrkpreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranbrkpreport' then
-    call pr_run_tranbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+    call pr_run_tranbrkpreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_amountmatchedmultiple' then
     call pr_run_amountmatchedmultiple(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranreport' then
-    call pr_run_tranreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+    call pr_run_tranreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_manualmatchreport' then
     call pr_run_manualmatchreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_manualpostreport' then
     call pr_run_manualpostreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_kotranreport' then
-    call pr_run_kotranreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
+    call pr_run_kotranreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranwithbrkpreport' then
-    call pr_run_tranwithbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+    call pr_run_tranwithbrkpreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_errorlogreport' then
     call pr_run_errorlogreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_accbalreport' then
@@ -47,8 +58,8 @@ begin
     call pr_run_pdtranwithbrkpexcprpt(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_pdkoreport' then
     call pr_run_pdkoreport(in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
-  elseif in_sp_name = 'pr_run_archtranwithbrkpreport' then
-    call pr_run_archtranwithbrkpreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_reconarchreport' then
+    call pr_run_reconarchreport(in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_jobreport' then
     call pr_run_jobreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   end if;
