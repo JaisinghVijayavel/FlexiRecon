@@ -1161,6 +1161,7 @@ me:BEGIN
             from recon_mst_tthemeaggconditionhistory as a
             left join recon_mst_tthemeaggfieldhistory as b on a.themeagg_field = b.themeagg_field
               and a.theme_code = b.theme_code
+              and a.recon_version = b.recon_version
               and a.themeagg_applied_on = b.themeaggfield_applied_on
               and b.active_status = 'Y'
               and b.delete_flag = 'N'

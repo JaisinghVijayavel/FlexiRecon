@@ -18,9 +18,9 @@ me:BEGIN
     Created Date : 01-01-2025
 
     Updated By : Muthu
-    updated Date : 22-03-2025
+    updated Date : 02-05-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_rptsession_gid int default 0;
@@ -255,7 +255,7 @@ me:BEGIN
     abs(sum(ko_value*tran_mult))
   from recon_tmp_tkodtl
   where 1=1 and manual_matchoff = 'N'
-  group by recon_code,rule_order;
+  group by recon_code,dataset_code,rule_order;
 
   -- insert manual
   insert into recon_tmp_tkosumm
@@ -286,7 +286,7 @@ me:BEGIN
   from recon_tmp_tkodtl
   where manual_matchoff = 'Y'
   -- group by recon_code,dataset_code,matchoff_type;
-  group by recon_code,matchoff_type;
+  group by recon_code,dataset_code,matchoff_type;
 
   insert into recon_tmp_tkosumm1
     select * from recon_tmp_tkosumm where dr_count is not null;

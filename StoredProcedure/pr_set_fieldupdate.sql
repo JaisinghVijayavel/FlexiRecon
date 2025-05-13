@@ -15,9 +15,9 @@ me:begin
     Created Date : 13-09-2024
 
     Updated By : Vijayavel
-    Updated Date : 05-04-2025
+    Updated Date : 29-04-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_tran_gid int default 0;
@@ -46,6 +46,7 @@ me:begin
   declare v_concurrent_ko_flag text default '';
 
   declare v_sql text default '';
+  declare v_txt text default '';
 
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 

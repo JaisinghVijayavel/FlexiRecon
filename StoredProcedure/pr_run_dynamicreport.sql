@@ -322,6 +322,19 @@ me:BEGIN
   set out_result = v_job_gid;
 
   if in_outputfile_flag = true then
+    if v_report_exec_type <> 'C' and (
+      in_outputfile_type = 'xls' or
+      in_outputfile_type = 'xlsx' or
+      in_outputfile_type = 'xl' or
+      in_outputfile_type = 'excel') then
+
+      -- return job info
+      select v_job_gid as result, concat('Report initiated in job id ',cast(v_job_gid as nchar)) as msg;
+
+      -- return resultset sheet name
+      select 'Data' as resultset_name,1 as resultset_order,'Data' sheet_name;
+    end if;
+
     select out_result as result, out_msg as msg;
   end if;
 end $$

@@ -14,15 +14,16 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 05-04-2025
+    updated Date : 29-04-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recon_code text default '';
   declare v_job_gid int default 0;
 
 	declare v_sql text default '';
+  declare v_txt text default '';
 
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';

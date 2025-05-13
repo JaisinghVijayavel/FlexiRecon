@@ -18,9 +18,9 @@ me:BEGIN
     Created Date : 24-11-2023
 
     Updated By : Vijayavel
-    updated Date : 22-03-2025
+    updated Date : 02-05-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_rptsession_gid int default 0;
@@ -70,8 +70,8 @@ me:BEGIN
 	where recon_code = in_recon_code
 	and active_status = 'Y' 
 	and delete_flag = 'N';
-	
-  if (v_recontype = 'W') then	
+
+  if (v_recontype = 'W') then
 		call pr_get_kosummary_proof(in_recon_code,in_period_from,in_period_to,in_ip_addr,in_user_code,in_conversion_type,in_dataset_formt,@out_msg, @out_result);
   elseif(v_recontype = 'N') then
 		call pr_get_kosummary_nonvaluebase(in_recon_code,in_period_from,in_period_to,in_ip_addr,in_user_code,in_conversion_type,in_dataset_formt,@out_msg, @out_result);
@@ -314,7 +314,7 @@ me:BEGIN
 			-- sum(ko_value)
 		from recon_tmp_tkodtl
 		where manual_matchoff = 'Y'
-		group by recon_code,dataset_code,matchoff_type;
+		group by recon_code,dataset_code;
 
 		insert into recon_tmp_tkosumm1 select * from recon_tmp_tkosumm where dr_count is not null;
 
@@ -423,7 +423,7 @@ me:BEGIN
 			/*tot_count as 'Total Count',
 			format(tot_value,2,'en_IN') as 'Total Value',*/
 			case when dr_value > cr_value then
-			ifnull(dr_value,0) - ifnull(cr_value,0) 
+			ifnull(dr_value,0) - ifnull(cr_value,0)
 			when cr_value > dr_value then
 			ifnull(cr_value,0) - ifnull(dr_value,0) end as 'Net Value',
 			case when dr_value > cr_value then
@@ -435,7 +435,7 @@ me:BEGIN
 			v_recontype as recontype
 		from recon_tmp_tkosumm
 		order by recon_code,dataset_code,rec_slno;
-		
+
 		drop temporary table if exists recon_tmp_tkodtl;
 		drop temporary table if exists recon_tmp_treconcode;
 		drop temporary table if exists recon_tmp_tkosumm;

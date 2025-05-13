@@ -18,7 +18,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tran_gid)');
+  set v_sql = concat('alter table ',v_table,' modify tran_gid int AUTO_INCREMENT PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add scheduler_gid
@@ -48,7 +48,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tran_gid)');
+  set v_sql = concat('alter table ',v_table,' modify tran_gid int PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add scheduler_gid
@@ -77,7 +77,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tranbrkp_gid)');
+  set v_sql = concat('alter table ',v_table,' modify tranbrkp_gid int AUTO_INCREMENT PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add scheduler_gid
@@ -111,7 +111,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tranbrkp_gid)');
+  set v_sql = concat('alter table ',v_table,' modify tran_gid int PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add scheduler_gid
@@ -144,7 +144,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(ko_gid)');
+  set v_sql = concat('alter table ',v_table,' modify ko_gid int AUTO_INCREMENT PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add job_gid
@@ -165,7 +165,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(kodtl_gid)');
+  set v_sql = concat('alter table ',v_table,' modify kodtl_gid int AUTO_INCREMENT PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add ko_gid
@@ -178,7 +178,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(koroundoff_gid)');
+  set v_sql = concat('alter table ',v_table,' modify koroundoff_gid int AUTO_INCREMENT PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add ko_gid

@@ -582,7 +582,8 @@ me:BEGIN
               if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_source_field <> 'a.tran_date' then
 
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
@@ -600,7 +601,8 @@ me:BEGIN
               if (instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_comparison_field <> 'b.tran_date' then
 
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);

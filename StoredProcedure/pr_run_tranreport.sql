@@ -99,7 +99,8 @@ me:BEGIN
       null as match_gid,
       a.*
 		from recon_tmp_ttran as a
-    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N' ",in_sorting_order);
+    left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code and b.delete_flag = 'N'
+    ",in_sorting_order);
 
   call pr_run_sql(v_sql,@msg,@result);
 

@@ -25,7 +25,7 @@ BEGIN
 		a.group_flag,
 		fn_get_mastername(a.group_flag, 'QCD_RULE_GRP') as  group_flag_desc,
 		a.rule_order as ruleorder,
-    a.recon_version as recon_version,
+    a.recon_version as recon_rule_version,
 		a.source_dataset_code,
 		a.comparison_dataset_code,
 		a.parent_acc_mode,

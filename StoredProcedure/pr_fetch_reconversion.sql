@@ -50,10 +50,18 @@ BEGIN
   order by b.rule_order;
 
   -- rule version
-  select distinct recon_rule_version from recon_mst_trulehistory
-  where recon_code=in_recon_code
-  and delete_flag = 'N'
-  order by cast(replace(recon_rule_version,'.','') as unsigned) desc;
+  if exists(select recon_version from recon_mst_treconversion
+    where recon_code = in_recon_code
+    and delete_flag = 'N') then
+    select
+      distinct recon_version as recon_rule_version
+    from recon_mst_treconversion
+    where recon_code=in_recon_code
+    and delete_flag = 'N'
+    order by cast(replace(recon_version,'.','') as unsigned) desc;
+  else
+    select '0.0.0' as recon_rule_version;
+  end if;
 
   -- theme
   select

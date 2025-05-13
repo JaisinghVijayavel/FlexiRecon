@@ -1,15 +1,15 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_recon_mst_tdatasetfield` $$
-CREATE PROCEDURE `pr_recon_mst_tdatasetfield`
-(
+DROP PROCEDURE IF EXISTS `pr_recon_mst_tdatasetfieldnew` $$
+CREATE PROCEDURE `pr_recon_mst_tdatasetfieldnew`(
 	inout in_datasetfield_gid int(10),
 	in in_dataset_code varchar(32),
 	in in_field_name varchar(32),
 	in in_field_type varchar(32),
 	in in_field_length varchar(16),
 	in in_precision_length int(10),
-	in in_scale_length int(10),
+	in in_scale_length int(10),   
+    in in_seq_no decimal(6,2),
 	in in_field_mandatory char(1),
 	in in_action varchar(16),
 	in in_action_by varchar(10),
@@ -20,7 +20,7 @@ CREATE PROCEDURE `pr_recon_mst_tdatasetfield`
 	out out_result int(10)
 )
 me:BEGIN
-
+	
 
 	declare err_msg text default '';
 	declare err_flag boolean default false;
@@ -29,10 +29,10 @@ me:BEGIN
 	declare v_count int default 0;
 
 	set in_datasetfield_gid = ifnull(in_datasetfield_gid,0);
-
+	
 	if(in_action = 'INSERT' or in_action = 'UPDATE') then
 		if (in_action = 'INSERT') then
-			set in_datasetfield_gid = 0;
+			set in_datasetfield_gid = 0; 
 		end if;
 
 		if not exists(select dataset_code from recon_mst_tdataset
@@ -91,7 +91,7 @@ me:BEGIN
 			set in_field_length = concat(cast(in_precision_length+in_scale_length as nchar),',',cast(in_scale_length as nchar));
 		end if;
 
-
+		
 		if exists(select * from recon_mst_tdatasetfield where dataset_code = in_dataset_code  and field_name = in_field_name
 					and datasetfield_gid <> in_datasetfield_gid and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Duplicate dataset field,');
@@ -110,16 +110,14 @@ me:BEGIN
 		set out_result = 0;
 		set out_msg = err_msg;
 		leave me;
-  end if;
-
+	end if;
+	
    start transaction;
-
+	 
    if (in_action = 'INSERT') then
 		set in_datasetfield_gid = 0;
 
-		select
-      max(dataset_field_sno) into v_count
-    from recon_mst_tdatasetfield
+		select max(dataset_field_sno) into v_count from recon_mst_tdatasetfield
 		where dataset_code = in_dataset_code
     and delete_flag = 'N';
 
@@ -128,11 +126,12 @@ me:BEGIN
 		insert into recon_mst_tdatasetfield
 		(
 			dataset_code,
+      dataset_seqno,
 			field_name,
 			field_type,
 			field_length,
 			precision_length,
-			scale_length,
+			scale_length,           
 			field_mandatory,
 			dataset_field_sno,
 			dataset_table_field,
@@ -143,11 +142,12 @@ me:BEGIN
 		value
 		(
 			in_dataset_code,
+            in_seq_no,
 			in_field_name,
 			in_field_type,
 			in_field_length,
 			in_precision_length,
-			in_scale_length,
+			in_scale_length,          
 			in_field_mandatory,
 			v_count,
 			concat('col',v_count),
@@ -155,26 +155,26 @@ me:BEGIN
 			sysdate(),
 			in_action_by
 		);
-
+		
 		select max(datasetfield_gid) into v_datasetfield_gid from recon_mst_tdatasetfield;
-
+		
 		set in_datasetfield_gid = v_datasetfield_gid;
 		set v_msg = 'Record saved successfully.. !';
 	elseif(in_action = 'UPDATE') then
 		update recon_mst_tdatasetfield set
 			datasetfield_gid = in_datasetfield_gid,
 			dataset_code = in_dataset_code,
+            dataset_seqno = in_seq_no,
 			field_name = in_field_name,
 			field_type = in_field_type,
 			field_length = in_field_length,
-			precision_length = in_precision_length,
-			scale_length = in_scale_length,
+			precision_length = in_precision_length,       
+			scale_length = in_scale_length,          
 			field_mandatory = in_field_mandatory,
 			update_date = sysdate(),
 			update_by = in_action_by
-		where datasetfield_gid = in_datasetfield_gid and delete_flag = 'N';
-
-    -- pipeline status change
+		where datasetfield_gid = in_datasetfield_gid and delete_flag = 'N';        
+	
     update con_mst_tpipeline set
       pipeline_status = 'Draft'
     where target_dataset_code = in_dataset_code
@@ -183,27 +183,25 @@ me:BEGIN
 
 		set v_datasetfield_gid = in_datasetfield_gid;
 		set v_msg = 'Record Updated Successfully.. !';
-	elseif(in_action = 'DELETE') then
+	elseif(in_action = 'DELETE') then 
 		if exists(select reconfieldmapping_gid from recon_mst_treconfieldmapping where dataset_code = in_dataset_code and dataset_field_name = in_field_name
 					and active_status !='N' and delete_flag = 'N') then
 			set out_result = 0;
 			set out_msg = 'Access Denied';
 			leave me;
 		end if;
-
+        
 		update recon_mst_tdatasetfield set
 			active_status='N',
       delete_flag='Y',
 			update_date = sysdate(),
-			update_by = in_action_by
-		where datasetfield_gid = in_datasetfield_gid
-    and delete_flag = 'N';
-
+			update_by = in_action_by			
+		where datasetfield_gid = in_datasetfield_gid and delete_flag = 'N';
 		set v_msg = 'Record deleted successfully.. !';
 	end if;
-
-  commit;
-
+	
+commit;
+	
 	set out_result = 1;
 	set out_msg = v_msg;
 END $$

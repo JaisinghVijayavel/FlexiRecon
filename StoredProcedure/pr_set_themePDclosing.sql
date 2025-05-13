@@ -22,6 +22,7 @@ me:begin
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 	declare v_ds_table text default '';
+	declare v_ds_blocked_table text default 'DS520';
 
 	declare v_ds_dbname text default '';
   declare v_recon_cycle_date date;
@@ -48,6 +49,7 @@ me:begin
     set v_ds_table = in_dataset_code;
   else
     set v_ds_table = concat(v_ds_dbname,'.',in_dataset_code);
+    set v_ds_blocked_table = concat(v_ds_dbname,'.',v_ds_blocked_table);
   end if;
 
   /*
@@ -72,11 +74,16 @@ me:begin
   call pr_run_sql(v_sql,@msg,@result);
   */
 
+  -- col8 - PD Recon Outstanding Amount
+  -- col9 - PD Recon Outstanding Status
+  -- col11 - Reasons
+
   -- clear status in dataset table
   set v_sql = concat("update ",v_ds_table,"
     set
       col8 = '',
-      col9 = ''
+      col9 = '',
+      col11 = ''
     where col1 = '",in_unit_name,"'
     ",if(v_recon_cycle_date is null,"",concat("and col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
     and delete_flag = 'N'");
@@ -253,6 +260,38 @@ me:begin
     set col12 = cast(excp_value*tran_mult as nchar)
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  -- blocked dataset
+  -- col2 - Type
+  -- col3 - UHID
+  -- col5 - IP No
+
+  -- update UHID blocked list
+  set v_sql = concat("update ",v_ds_table," as a
+    inner join ",v_ds_blocked_table," as b on a.col3 = b.col3
+      and b.col2 = 'UHID DEPOSIT'
+      and b.delete_flag = 'N'
+    set
+      a.col11 = 'Blocked UHID Deposit'
+    where a.col1 = '",in_unit_name,"'
+    ",if(v_recon_cycle_date is null,"",concat("and a.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  -- update IP Refund blocked list
+  set v_sql = concat("update ",v_ds_table," as a
+    inner join ",v_ds_blocked_table," as b on a.col3 = b.col3
+      and a.col5 = b.col5
+      and b.col2 = 'IP REFUND'
+      and b.delete_flag = 'N'
+    set
+      a.col11 = 'Blocked IP Refund'
+    where a.col1 = '",in_unit_name,"'
+    ",if(v_recon_cycle_date is null,"",concat("and a.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+    and a.delete_flag = 'N'");
 
   call pr_run_sql(v_sql,@msg,@result);
 end $$

@@ -31,13 +31,15 @@ begin
   else
     set v_themeagg_value = ifnull(in_themeagg_value,'');
 
-    if in_themeagg_field_type = 'NUMERIC' or in_themeagg_field_type = 'INTEGER' then
+    if (in_themeagg_field_type = 'NUMERIC' or in_themeagg_field_type = 'INTEGER') and
+      (in_themeagg_criteria = '=' or in_themeagg_criteria = 'EXACT') then
+
       if v_themeagg_value = '' then
         set v_themeagg_value = '0';
       end if;
 
       if cast(v_themeagg_value as decimal(15,2)) = 0 then
-        set v_txt = concat(' ',v_themeagg_field,' is null ');
+        set v_txt = concat(" (",v_themeagg_field," is null or cast(if(",v_themeagg_field,"='','0',",v_themeagg_field,") as decimal(15,2)) = 0)");
 
         return v_txt;
       end if;
@@ -71,7 +73,18 @@ begin
       set v_txt = concat(' ',v_themeagg_field,' is null ');
     end if;
   else
-    set v_txt = concat(' ',v_themeagg_field,' ',in_themeagg_criteria,' ',v_themeagg_value,' ');
+    if instr(in_themeagg_criteria,'$FIELD$') > 0 or
+       instr(in_themeagg_criteria,'$SOURCE_FIELD$') > 0 or
+       instr(in_themeagg_criteria,'$COMPARISON_FIELD$') > 0 then
+
+      set v_txt = in_themeagg_criteria;
+
+      set v_txt = replace(v_txt,'$FIELD$','$SOURCE_FIELD$');
+      set v_txt = replace(v_txt,'$SOURCE_FIELD$',v_themeagg_field);
+      set v_txt = replace(v_txt,'$COMPARISON_FIELD$',v_themeagg_value);
+    else
+      set v_txt = concat(' ',v_themeagg_field,' ',in_themeagg_criteria,' ',v_themeagg_value,' ');
+    end if;
   end if;
 
   return v_txt;

@@ -13,6 +13,17 @@ CREATE PROCEDURE `pr_run_theme_comparisonaggchk`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 25-04-2025
+
+    Version : 1
+  */
+
+  declare v_recon_version text default '';
   declare v_recontype_code varchar(32) default '';
 
   declare v_source_head_sql text default '';
@@ -153,6 +164,8 @@ me:BEGIN
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
+  declare v_concurrent_ko_flag text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
@@ -162,8 +175,16 @@ me:BEGIN
 	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
   */
 
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -176,19 +197,25 @@ me:BEGIN
 
   select database() into v_database_name;
 
-  drop temporary table if exists recon_tmp_tthemepseudorows;
-  drop temporary table if exists recon_tmp_tthemetrangid;
-  drop temporary table if exists recon_tmp_tthemetranbrkpgid;
-  drop temporary table if exists recon_tmp_tthemetranwithbrkpgid;
+  drop temporary table if exists recon_tmp_t9themepseudorows;
+  drop temporary table if exists recon_tmp_t9themetrangid;
+  drop temporary table if exists recon_tmp_t9themetranbrkpgid;
+  drop temporary table if exists recon_tmp_t9themetranwithbrkpgid;
 
-  drop temporary table if exists recon_tmp_tthemeindex;
-  drop temporary table if exists recon_tmp_tthemesql;
+  drop temporary table if exists recon_tmp_t9themeindex;
+  drop temporary table if exists recon_tmp_t9themesql;
 
-  drop temporary table if exists recon_tmp_tthemesourceagg;
-  drop temporary table if exists recon_tmp_tthemecomparisonagg;
-  drop temporary table if exists recon_tmp_tthemetranagg;
+  drop table if exists recon_tmp_t9themesourceagg;
+  drop table if exists recon_tmp_t9themecomparisonagg;
+  drop table if exists recon_tmp_t9themetranagg;
 
-  CREATE TEMPORARY TABLE recon_tmp_tthemeindex(
+	/*
+  drop temporary table if exists recon_tmp_t9themesourceagg;
+  drop temporary table if exists recon_tmp_t9themecomparisonagg;
+  drop temporary table if exists recon_tmp_t9themetranagg;
+	*/
+	
+  CREATE TEMPORARY TABLE recon_tmp_t9themeindex(
     table_name varchar(255) not null,
     index_name varchar(255) not null,
     sys_flag char(1) not null default 'N',
@@ -196,29 +223,29 @@ me:BEGIN
     key idx_sys_flag(sys_flag)
   ) ENGINE = MyISAM;
 
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_tran_date','Y';
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_excp_value','Y';
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_recon_code','Y';
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemesource','idx_dataset_date','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themesource','idx_tran_date','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themesource','idx_excp_value','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themesource','idx_recon_code','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themesource','idx_dataset_date','Y';
 
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_tran_date','Y';
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_excp_value','Y';
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_recon_code','Y';
-  insert into recon_tmp_tthemeindex select 'recon_tmp_tthemecomparison','idx_dataset_date','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themecomparison','idx_tran_date','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themecomparison','idx_excp_value','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themecomparison','idx_recon_code','Y';
+  insert into recon_tmp_t9themeindex select 'recon_tmp_t9themecomparison','idx_dataset_date','Y';
 
-  CREATE temporary TABLE recon_tmp_tthemepseudorows(
+  CREATE temporary TABLE recon_tmp_t9themepseudorows(
     row int unsigned NOT NULL,
     PRIMARY KEY (row)
   ) ENGINE = MyISAM;
 
-  insert into recon_tmp_tthemepseudorows select 0 union select 1;
+  insert into recon_tmp_t9themepseudorows select 0 union select 1;
 
-  CREATE temporary TABLE recon_tmp_tthemetrangid(
+  CREATE temporary TABLE recon_tmp_t9themetrangid(
     tran_gid int unsigned NOT NULL,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_tthemetranbrkpgid(
+  CREATE temporary TABLE recon_tmp_t9themetranbrkpgid(
     tranbrkp_gid int unsigned NOT NULL,
     excp_value double(15,2) not null default 0,
     tran_mult tinyint not null default 0,
@@ -227,7 +254,7 @@ me:BEGIN
     key idx_tran_gid(tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_tthemetranwithbrkpgid(
+  CREATE temporary TABLE recon_tmp_t9themetranwithbrkpgid(
     tran_gid int unsigned not null,
     tranbrkp_gid int unsigned NOT NULL,
     rec_count int not null default 0,
@@ -235,7 +262,7 @@ me:BEGIN
   ) ENGINE = MyISAM;
 
 
-  CREATE temporary TABLE recon_tmp_tthemesql(
+  CREATE temporary TABLE recon_tmp_t9themesql(
     sql_gid int(10) unsigned NOT NULL AUTO_INCREMENT,
     table_type char(1) default null,
     acc_mode char(1) default null,
@@ -269,9 +296,9 @@ me:BEGIN
 
   -- recon retails
   select
-    recon_name,recontype_code
+    recon_name,recontype_code,recon_rule_version
   into
-    v_recon_name,v_recontype_code
+    v_recon_name,v_recontype_code,v_recon_version
   from recon_mst_trecon
   where recon_code = in_recon_code
   and period_from <= curdate()
@@ -281,6 +308,7 @@ me:BEGIN
 
   set v_recontype_code = ifnull(v_recontype_code,'');
   set v_recon_name = ifnull(v_recon_name,'');
+  set v_recon_version = ifnull(v_recon_version,'');
 
   if v_recontype_code <> 'N' then
     set v_recon_value_flag = 'Y';
@@ -296,9 +324,10 @@ me:BEGIN
         a.theme_name,
         a.source_dataset_code,
         a.comparison_dataset_code
-      from recon_mst_ttheme as a
+      from recon_mst_tthemehistory as a
       where a.recon_code = in_recon_code
       and a.theme_code = in_theme_code
+      and a.recon_version = v_recon_version
       and a.theme_type_code = 'QCD_THEME_COMPARE_AGG'
       and a.hold_flag = 'N'
       and a.active_status = 'Y'
@@ -349,7 +378,7 @@ me:BEGIN
       set v_comparison_dataset_type = ifnull(v_comparison_dataset_type,'T');
 
       -- source from tran table
-      set v_source_head_sql = concat('insert into recon_tmp_tthemesource (',v_tran_fields,') ');
+      set v_source_head_sql = concat('insert into recon_tmp_t9themesource (',v_tran_fields,') ');
 
       set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
 
@@ -362,7 +391,7 @@ me:BEGIN
       end if;
 
       -- comparison from tran table
-      set v_comparison_head_sql = concat('insert into recon_tmp_tthemecomparison (',v_tran_fields,') ');
+      set v_comparison_head_sql = concat('insert into recon_tmp_t9themecomparison (',v_tran_fields,') ');
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
 
@@ -375,7 +404,7 @@ me:BEGIN
       end if;
 
       -- source from tranbrkp table
-      set v_source_headbrkp_sql = concat('insert into recon_tmp_tthemesource (',v_tranbrkp_fields,') ');
+      set v_source_headbrkp_sql = concat('insert into recon_tmp_t9themesource (',v_tranbrkp_fields,') ');
 
       set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
 
@@ -388,7 +417,7 @@ me:BEGIN
       end if;
 
       -- comparison from tranbrkp table
-      set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tthemecomparison (',v_tranbrkp_fields,') ');
+      set v_comparison_headbrkp_sql = concat('insert into recon_tmp_t9themecomparison (',v_tranbrkp_fields,') ');
 
       set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
 
@@ -412,11 +441,12 @@ me:BEGIN
               open_parentheses_flag,
               close_parentheses_flag,
               join_condition
-            from recon_mst_tthemefilter
+            from recon_mst_tthemefilterhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
-            order by filter_applied_on,themefilter_seqno,themefilter_gid;
+            order by filter_applied_on,themefilter_seqno;
 
             declare continue handler for not found set themefilter_done=1;
 
@@ -437,6 +467,7 @@ me:BEGIN
 
               if themefilter_done = 1 then leave themefilter_loop; end if;
 
+              set v_filter_field = ifnull(v_filter_field,'');
               set v_filter_value_flag = ifnull(v_filter_value_flag,'Y');
               set v_filter_value = ifnull(v_filter_value,'');
 
@@ -446,6 +477,16 @@ me:BEGIN
 
               if v_join_condition = '' then
                 set v_join_condition = 'and';
+              end if;
+
+              if v_filter_field = '' then
+                set v_join_condition = '';
+                set v_filter_value_flag = '';
+                set v_filter_value = '';
+              else
+                if v_join_condition = '' then
+                  set v_join_condition = 'and';
+                end if;
               end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
@@ -483,78 +524,79 @@ me:BEGIN
           set v_comparison_agg_field = '';
           set v_comparison_aggfunction_field = '';
 
-          drop temporary table if exists recon_tmp_tthemesource;
-          drop temporary table if exists recon_tmp_tthemecomparison;
-          drop temporary table if exists recon_tmp_tthemesourcedup;
+					/*
+          drop temporary table if exists recon_tmp_t9themesource;
+          drop temporary table if exists recon_tmp_t9themecomparison;
+          drop temporary table if exists recon_tmp_t9themesourcedup;
+					*/
+					
+          drop table if exists recon_tmp_t9themesource;
+          drop table if exists recon_tmp_t9themecomparison;
+          drop table if exists recon_tmp_t9themesourcedup;
 
-          /*
-          drop table if exists recon_tmp_tthemesource;
-          drop table if exists recon_tmp_tthemecomparison;
-          */
+          create /*temporary*/ table recon_tmp_t9themesource select * from recon_trn_ttranwithbrkp where 1 = 2;
+          alter table recon_tmp_t9themesource ENGINE = MyISAM;
+          alter table recon_tmp_t9themesource add primary key(tran_gid,tranbrkp_gid);
+          create index idx_excp_value on recon_tmp_t9themesource(excp_value);
+          create index idx_tran_date on recon_tmp_t9themesource(tran_date);
+          create index idx_recon_code on recon_tmp_t9themesource(recon_code);
+          create index idx_dataset_code on recon_tmp_t9themesource(recon_code,dataset_code);
 
-          create temporary table recon_tmp_tthemesource select * from recon_trn_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tthemesource ENGINE = MyISAM;
-          alter table recon_tmp_tthemesource add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tthemesource(excp_value);
-          create index idx_tran_date on recon_tmp_tthemesource(tran_date);
-          create index idx_recon_code on recon_tmp_tthemesource(recon_code);
-          create index idx_dataset_code on recon_tmp_tthemesource(recon_code,dataset_code);
+          create /*temporary*/ table recon_tmp_t9themecomparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          alter table recon_tmp_t9themecomparison ENGINE = MyISAM;
+          alter table recon_tmp_t9themecomparison add primary key(tran_gid,tranbrkp_gid);
+          create index idx_excp_value on recon_tmp_t9themecomparison(excp_value);
+          create index idx_tran_date on recon_tmp_t9themecomparison(tran_date);
+          create index idx_recon_code on recon_tmp_t9themecomparison(recon_code);
+          create index idx_dataset_cdoe on recon_tmp_t9themecomparison(recon_code,dataset_code);
 
-          create temporary table recon_tmp_tthemecomparison select * from recon_trn_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tthemecomparison ENGINE = MyISAM;
-          alter table recon_tmp_tthemecomparison add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tthemecomparison(excp_value);
-          create index idx_tran_date on recon_tmp_tthemecomparison(tran_date);
-          create index idx_recon_code on recon_tmp_tthemecomparison(recon_code);
-          create index idx_dataset_cdoe on recon_tmp_tthemecomparison(recon_code,dataset_code);
+          create /*temporary*/ table recon_tmp_t9themesourcedup select * from recon_trn_ttranwithbrkp where 1 = 2;
+          alter table recon_tmp_t9themesourcedup add primary key(tran_gid,tranbrkp_gid);
+          create index idx_excp_value on recon_tmp_t9themesourcedup(excp_value);
+          create index idx_tran_date on recon_tmp_t9themesourcedup(tran_date);
+          create index idx_dataset_code on recon_tmp_t9themesourcedup(recon_code,dataset_code);
+          alter table recon_tmp_t9themesourcedup ENGINE = MyISAM;
 
-          create temporary table recon_tmp_tthemesourcedup select * from recon_trn_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tthemesourcedup add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tthemesourcedup(excp_value);
-          create index idx_tran_date on recon_tmp_tthemesourcedup(tran_date);
-          create index idx_dataset_code on recon_tmp_tthemesourcedup(recon_code,dataset_code);
-          alter table recon_tmp_tthemesourcedup ENGINE = MyISAM;
-
-          drop temporary table if exists recon_tmp_tthemesourceagg;
-          drop temporary table if exists recon_tmp_tthemecomparisonagg;
-          drop temporary table if exists recon_tmp_tthemetranagg;
-
-          /*
-          drop table if exists recon_tmp_tthemesourceagg;
-          drop table if exists recon_tmp_tthemecomparisonagg;
-          drop table if exists recon_tmp_tthemetranagg;
-          */
+					/*
+          drop temporary table if exists recon_tmp_t9themesourceagg;
+          drop temporary table if exists recon_tmp_t9themecomparisonagg;
+          drop temporary table if exists recon_tmp_t9themetranagg;
+					*/
+					
+          drop table if exists recon_tmp_t9themesourceagg;
+          drop table if exists recon_tmp_t9themecomparisonagg;
+          drop table if exists recon_tmp_t9themetranagg;
 
           -- grouping temp table movement
           -- create agg temp tables
-          create temporary table recon_tmp_tthemesourceagg select * from recon_rpt_tthemeagg where 1 = 2;
-          alter table recon_tmp_tthemesourceagg ENGINE = MyISAM;
-          alter table recon_tmp_tthemesourceagg add primary key(themeagg_gid);
-          alter table recon_tmp_tthemesourceagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
+          create /*temporary*/ table recon_tmp_t9themesourceagg select * from recon_rpt_tthemeagg where 1 = 2;
+          alter table recon_tmp_t9themesourceagg ENGINE = MyISAM;
+          alter table recon_tmp_t9themesourceagg add primary key(themeagg_gid);
+          alter table recon_tmp_t9themesourceagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
 
-          create index idx_tran_value on recon_tmp_tthemesourceagg(tran_value);
-          create index idx_excp_value on recon_tmp_tthemesourceagg(excp_value);
-          create index idx_tran_date on recon_tmp_tthemesourceagg(tran_date);
+          create index idx_tran_value on recon_tmp_t9themesourceagg(tran_value);
+          create index idx_excp_value on recon_tmp_t9themesourceagg(excp_value);
+          create index idx_tran_date on recon_tmp_t9themesourceagg(tran_date);
 
-          create temporary table recon_tmp_tthemecomparisonagg select * from recon_rpt_tthemeagg where 1 = 2;
-          alter table recon_tmp_tthemecomparisonagg ENGINE = MyISAM;
-          alter table recon_tmp_tthemecomparisonagg add primary key(themeagg_gid);
-          alter table recon_tmp_tthemecomparisonagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
+          create /*temporary*/ table recon_tmp_t9themecomparisonagg select * from recon_rpt_tthemeagg where 1 = 2;
+          alter table recon_tmp_t9themecomparisonagg ENGINE = MyISAM;
+          alter table recon_tmp_t9themecomparisonagg add primary key(themeagg_gid);
+          alter table recon_tmp_t9themecomparisonagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
 
-          create index idx_tran_value on recon_tmp_tthemecomparisonagg(tran_value);
-          create index idx_excp_value on recon_tmp_tthemecomparisonagg(excp_value);
-          create index idx_tran_date on recon_tmp_tthemecomparisonagg(tran_date);
+          create index idx_tran_value on recon_tmp_t9themecomparisonagg(tran_value);
+          create index idx_excp_value on recon_tmp_t9themecomparisonagg(excp_value);
+          create index idx_tran_date on recon_tmp_t9themecomparisonagg(tran_date);
 
-          create temporary table recon_tmp_tthemetranagg select * from recon_rpt_tthemeagg where 1 = 2;
-          alter table recon_tmp_tthemetranagg ENGINE = MyISAM;
-          alter table recon_tmp_tthemetranagg add primary key(themeagg_gid);
-          alter table recon_tmp_tthemetranagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
+          create /*temporary*/ table recon_tmp_t9themetranagg select * from recon_rpt_tthemeagg where 1 = 2;
+          alter table recon_tmp_t9themetranagg ENGINE = MyISAM;
+          alter table recon_tmp_t9themetranagg add primary key(themeagg_gid);
+          alter table recon_tmp_t9themetranagg modify column themeagg_gid int unsigned AUTO_INCREMENT;
 
-          create index idx_rec_count on recon_tmp_tthemetranagg(rec_count);
+          create index idx_rec_count on recon_tmp_t9themetranagg(rec_count);
 
           -- index table
-          delete from recon_tmp_tthemeindex where sys_flag <> 'Y';
-          truncate recon_tmp_tthemesql;
+          delete from recon_tmp_t9themeindex where sys_flag <> 'Y';
+          truncate recon_tmp_t9themesql;
 
           condition_block:begin
             declare condition_done int default 0;
@@ -564,11 +606,12 @@ me:BEGIN
               a.comparison_field,a.comparison_criteria,
               a.open_parentheses_flag,a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_tthemecondition as a
+            from recon_mst_tthemeconditionhistory as a
             where a.theme_code = v_theme_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
-            order by themecondition_seqno,themecondition_gid;
+            order by themecondition_seqno;
 
             declare continue handler for not found set condition_done=1;
 
@@ -582,97 +625,97 @@ me:BEGIN
 
               set v_index_name = concat('idx_',v_source_field);
 
-              -- recon_tmp_tthemesource
-              if not exists(select index_name from recon_tmp_tthemeindex
-                            WHERE table_name = 'recon_tmp_tthemesource'
+              -- recon_tmp_t9themesource
+              if not exists(select index_name from recon_tmp_t9themeindex
+                            WHERE table_name = 'recon_tmp_t9themesource'
                             and index_name = v_index_name) then
 
                 if substr(v_source_field,1,3) = 'col' then
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemesource(',v_source_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t9themesource(',v_source_field,'(255))');
                 else
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemesource(',v_source_field,')');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t9themesource(',v_source_field,')');
                 end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
-                insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemesource',v_index_name;
+                insert into recon_tmp_t9themeindex(table_name,index_name) select 'recon_tmp_t9themesource',v_index_name;
               end if;
 
-              -- recon_tmp_tthemesourceagg
+              -- recon_tmp_t9themesourceagg
               if mid(v_source_field,1,3) = 'col' then
-                if not exists(select index_name from recon_tmp_tthemeindex
-                            WHERE table_name = 'recon_tmp_tthemesourceagg'
+                if not exists(select index_name from recon_tmp_t9themeindex
+                            WHERE table_name = 'recon_tmp_t9themesourceagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemesourceagg(',v_source_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t9themesourceagg(',v_source_field,'(255))');
 
                   call pr_run_sql(v_index_sql,@msg,@result);
 
-                  insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemesourceagg',v_index_name;
+                  insert into recon_tmp_t9themeindex(table_name,index_name) select 'recon_tmp_t9themesourceagg',v_index_name;
                 end if;
 
-                -- recon_tmp_tthemetranagg
-                if not exists(select index_name from recon_tmp_tthemeindex
-                            WHERE table_name = 'recon_tmp_tthemetranagg'
+                -- recon_tmp_t9themetranagg
+                if not exists(select index_name from recon_tmp_t9themeindex
+                            WHERE table_name = 'recon_tmp_t9themetranagg'
                             and index_name = v_index_name) then
 
                   if substr(v_source_field,1,3) = 'col' then
-                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemetranagg(',v_source_field,'(255))');
+                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t9themetranagg(',v_source_field,'(255))');
                   else
-                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tthemetranagg(',v_source_field,')');
+                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t9themetranagg(',v_source_field,')');
                   end if;
 
                   call pr_run_sql(v_index_sql,@msg,@result);
 
-                  insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemetranagg',v_index_name;
+                  insert into recon_tmp_t9themeindex(table_name,index_name) select 'recon_tmp_t9themetranagg',v_index_name;
                 end if;
               end if;
 
-              -- recon_tmp_tthemecomparison
+              -- recon_tmp_t9themecomparison
               set v_index_name = concat('idx_',v_comparison_field);
 
-              if not exists(select index_name from recon_tmp_tthemeindex
-                            WHERE table_name = 'recon_tmp_tthemecomparison'
+              if not exists(select index_name from recon_tmp_t9themeindex
+                            WHERE table_name = 'recon_tmp_t9themecomparison'
                             and index_name = v_index_name) then
 
                 if substr(v_comparison_field,1,3) = 'col' then
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemecomparison(',v_comparison_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t9themecomparison(',v_comparison_field,'(255))');
                 else
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemecomparison(',v_comparison_field,')');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t9themecomparison(',v_comparison_field,')');
                 end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
-                insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemecomparison',v_index_name;
+                insert into recon_tmp_t9themeindex(table_name,index_name) select 'recon_tmp_t9themecomparison',v_index_name;
               end if;
 
-              -- recon_tmp_tthemecomparisonagg
+              -- recon_tmp_t9themecomparisonagg
               if mid(v_comparison_field,1,3) = 'col' then
-                if not exists(select index_name from recon_tmp_tthemeindex
-                            WHERE table_name = 'recon_tmp_tthemecomparisonagg'
+                if not exists(select index_name from recon_tmp_t9themeindex
+                            WHERE table_name = 'recon_tmp_t9themecomparisonagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemecomparisonagg(',v_comparison_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t9themecomparisonagg(',v_comparison_field,'(255))');
 
                   call pr_run_sql(v_index_sql,@msg,@result);
 
-                  insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemecomparisonagg',v_index_name;
+                  insert into recon_tmp_t9themeindex(table_name,index_name) select 'recon_tmp_t9themecomparisonagg',v_index_name;
                 end if;
 
-                -- recon_tmp_tthemetranagg
-                if not exists(select index_name from recon_tmp_tthemeindex
-                            WHERE table_name = 'recon_tmp_tthemetranagg'
+                -- recon_tmp_t9themetranagg
+                if not exists(select index_name from recon_tmp_t9themeindex
+                            WHERE table_name = 'recon_tmp_t9themetranagg'
                             and index_name = v_index_name) then
 
                   if substr(v_comparison_field,1,3) = 'col' then
-                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemetranagg(',v_comparison_field,'(255))');
+                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t9themetranagg(',v_comparison_field,'(255))');
                   else
-                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tthemetranagg(',v_comparison_field,')');
+                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t9themetranagg(',v_comparison_field,')');
                   end if;
 
                   call pr_run_sql(v_index_sql,@msg,@result);
 
-                  insert into recon_tmp_tthemeindex(table_name,index_name) select 'recon_tmp_tthemetranagg',v_index_name;
+                  insert into recon_tmp_t9themeindex(table_name,index_name) select 'recon_tmp_t9themetranagg',v_index_name;
                 end if;
               end if;
 
@@ -726,10 +769,10 @@ me:BEGIN
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tthemesource set ');
+                set v_sql = concat(v_sql,'update recon_tmp_t9themesource set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format);
 
-                insert into recon_tmp_tthemesql(table_type,sql_query) values ('S',v_sql);
+                insert into recon_tmp_t9themesql(table_type,sql_query) values ('S',v_sql);
 
                 set v_extraction_criteria = 'EXACT';
                 set v_extraction_filter = 0;
@@ -745,23 +788,23 @@ me:BEGIN
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tthemecomparison set ');
+                set v_sql = concat(v_sql,'update recon_tmp_t9themecomparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
 
                 if v_recontype_code <> 'N' then
                   set v_sql = concat(v_sql,'where true ');
                 end if;
 
-                insert into recon_tmp_tthemesql(table_type,sql_query) values ('C',v_sql);
+                insert into recon_tmp_t9themesql(table_type,sql_query) values ('C',v_sql);
 
                 /*
 								if v_manytomany_match_flag = 'Y' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
 									set v_sql = '';
-									set v_sql = concat(v_sql,'update recon_tmp_tthemecomparison set ');
+									set v_sql = concat(v_sql,'update recon_tmp_t9themecomparison set ');
 									set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
                   set v_sql = concat(v_sql,'where true ');
 
-									insert into recon_tmp_tthemesql(table_type,sql_query) values ('C',v_sql);
+									insert into recon_tmp_t9themesql(table_type,sql_query) values ('C',v_sql);
 								end if;
                 */
 
@@ -810,8 +853,8 @@ me:BEGIN
             close condition_cursor;
           end condition_block;
 
-          truncate recon_tmp_tthemesource;
-          truncate recon_tmp_tthemecomparison;
+          truncate recon_tmp_t9themesource;
+          truncate recon_tmp_t9themecomparison;
 
           if v_source_condition = ' and ' or v_comparison_condition = ' and ' then
             set v_source_condition = ' and 1 = 2 ';
@@ -909,7 +952,7 @@ me:BEGIN
           sql_block:begin
             declare sql_done int default 0;
             declare sql_cursor cursor for
-            select sql_query from recon_tmp_tthemesql;
+            select sql_query from recon_tmp_t9themesql;
             declare continue handler for not found set sql_done=1;
 
             open sql_cursor;
@@ -924,14 +967,17 @@ me:BEGIN
           end sql_block;
 
           -- preload pseudorows
-          truncate recon_tmp_tthemepseudorows;
-          insert into recon_tmp_tthemepseudorows select 0 union select 1;
+          truncate recon_tmp_t9themepseudorows;
+          insert into recon_tmp_t9themepseudorows select 0 union select 1;
 
           -- get target addtional group field
           if v_group_flag = 'Y' then
             -- grp on source
-            select group_concat(concat('a.',grp_field)) into v_grp_field from recon_mst_tthemegrpfield
+            select
+              group_concat(concat('a.',grp_field)) into v_grp_field
+            from recon_mst_tthemegrpfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and grpfield_applied_on = 'S'
             and active_status = 'Y'
             and delete_flag = 'N';
@@ -953,8 +999,11 @@ me:BEGIN
             end if;
 
             -- grp on comparison
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_tthemegrpfield
+            select
+              group_concat(concat('b.',grp_field)) into v_grp_field
+            from recon_mst_tthemegrpfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and grpfield_applied_on = 'C'
             and active_status = 'Y'
             and delete_flag = 'N';
@@ -976,8 +1025,8 @@ me:BEGIN
             end if;
 					end if;
 
-          alter table recon_tmp_tthemecomparison ENGINE = MyISAM;
-          alter table recon_tmp_tthemesource ENGINE = MyISAM;
+          alter table recon_tmp_t9themecomparison ENGINE = MyISAM;
+          alter table recon_tmp_t9themesource ENGINE = MyISAM;
 
           -- source agg block
           agg_source_block:begin
@@ -988,8 +1037,9 @@ me:BEGIN
               themeagg_function,
               themeagg_field,
               themeagg_field_type
-            from recon_mst_tthemeaggfield
+            from recon_mst_tthemeaggfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and themeaggfield_applied_on = 'S'
             and active_status = 'Y'
             and delete_flag = 'N'
@@ -1018,7 +1068,7 @@ me:BEGIN
           end agg_source_block;
 
 					-- move records in source agg table
-					set v_sql = concat('insert into recon_tmp_tthemesourceagg (',substr(replace(v_source_groupby,'a.',''),2),v_source_agg_field,',');
+					set v_sql = concat('insert into recon_tmp_t9themesourceagg (',substr(replace(v_source_groupby,'a.',''),2),v_source_agg_field,',');
 					set v_sql = concat(v_sql,'rec_count,themeagg_json,src_comp_flag) ');
 					set v_sql = concat(v_sql,'select ',substr(replace(v_source_groupby,'a.',''),2),v_source_aggfunction_field,',');
 					set v_sql = concat(v_sql,'count(*),');
@@ -1034,9 +1084,10 @@ me:BEGIN
 					set v_sql = concat(v_sql,char(39), ']',char(39),') as json) as matched_json,');
 					set v_sql = concat(v_sql,char(39), 'S',char(39),' as src_comp_flag ');
 
-					set v_sql = concat(v_sql,'from recon_tmp_tthemesource ');
+					set v_sql = concat(v_sql,'from recon_tmp_t9themesource ');
 					set v_sql = concat(v_sql,'group by ',substr(replace(v_source_groupby,'a.',''),2));
 
+					select v_sql;
           call pr_run_sql(v_sql,@result,@msg);
 
           -- comparison agg block
@@ -1048,8 +1099,9 @@ me:BEGIN
               themeagg_function,
               themeagg_field,
               themeagg_field_type
-            from recon_mst_tthemeaggfield
+            from recon_mst_tthemeaggfieldhistory
             where theme_code = v_theme_code
+            and recon_version = v_recon_version
             and themeaggfield_applied_on = 'C'
             and active_status = 'Y'
             and delete_flag = 'N'
@@ -1077,7 +1129,7 @@ me:BEGIN
           end agg_comparison_block;
 
 					-- move records in comparison agg table
-					set v_sql = concat('insert into recon_tmp_tthemecomparisonagg (',substr(replace(v_comparison_groupby,'b.',''),2),v_comparison_agg_field,',');
+					set v_sql = concat('insert into recon_tmp_t9themecomparisonagg (',substr(replace(v_comparison_groupby,'b.',''),2),v_comparison_agg_field,',');
 					set v_sql = concat(v_sql,'rec_count,themeagg_json,src_comp_flag) ');
 					set v_sql = concat(v_sql,'select ',substr(replace(v_comparison_groupby,'b.',''),2),v_comparison_aggfunction_field,',');
 					set v_sql = concat(v_sql,'count(*),');
@@ -1093,9 +1145,10 @@ me:BEGIN
 					set v_sql = concat(v_sql,char(39), ']',char(39),') as json) as matched_json,');
 					set v_sql = concat(v_sql,char(39), 'C',char(39),' as src_comp_flag ');
 
-					set v_sql = concat(v_sql,'from recon_tmp_tthemecomparison ');
+					set v_sql = concat(v_sql,'from recon_tmp_t9themecomparison ');
 					set v_sql = concat(v_sql,'group by ',substr(replace(v_comparison_groupby,'b.',''),2));
 
+					select v_sql;
           call pr_run_sql(v_sql,@result,@msg);
 
           set v_themeagg_condition = '';
@@ -1114,13 +1167,14 @@ me:BEGIN
               a.open_parentheses_flag,
               a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_tthemeaggcondition as a
-            left join recon_mst_tthemeaggfield as b on a.themeagg_field = b.themeagg_field
+            from recon_mst_tthemeaggconditionhistory as a
+            left join recon_mst_tthemeaggfieldhistory as b on a.themeagg_field = b.themeagg_field
               and a.theme_code = b.theme_code
               and a.themeagg_applied_on = b.themeaggfield_applied_on
               and b.active_status = 'Y'
               and b.delete_flag = 'N'
             where a.theme_code = v_theme_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
             order by a.themeaggcondition_seqno;
@@ -1182,54 +1236,56 @@ me:BEGIN
           end if;
 
           -- inner join
-          set v_sql = concat('insert into recon_tmp_tthemetranagg(rec_count,themeagg_json) ');
+          set v_sql = concat('insert into recon_tmp_t9themetranagg(rec_count,themeagg_json) ');
           set v_sql = concat(v_sql,'select (a.rec_count+b.rec_count),JSON_MERGE_PRESERVE(a.themeagg_json,b.themeagg_json) ');
-          set v_sql = concat(v_sql,'from recon_tmp_tthemesourceagg as a ');
-          set v_sql = concat(v_sql,'inner join recon_tmp_tthemecomparisonagg as b on 1 = 1 ',v_theme_condition);
+          set v_sql = concat(v_sql,'from recon_tmp_t9themesourceagg as a ');
+          set v_sql = concat(v_sql,'inner join recon_tmp_t9themecomparisonagg as b on 1 = 1 ',v_theme_condition);
           set v_sql = concat(v_sql,'where 1 = 1 ',v_themeagg_condition);
 
+					select v_sql;
           call pr_run_sql(v_sql,@result,@msg);
 
           -- left join
-          set v_sql = concat('insert into recon_tmp_tthemetranagg(rec_count,themeagg_json) ');
+          set v_sql = concat('insert into recon_tmp_t9themetranagg(rec_count,themeagg_json) ');
           set v_sql = concat(v_sql,'select a.rec_count,a.themeagg_json ');
-          set v_sql = concat(v_sql,'from recon_tmp_tthemesourceagg as a ');
-          set v_sql = concat(v_sql,'left join recon_tmp_tthemecomparisonagg as b on 1 = 1 ',v_theme_condition);
+          set v_sql = concat(v_sql,'from recon_tmp_t9themesourceagg as a ');
+          set v_sql = concat(v_sql,'left join recon_tmp_t9themecomparisonagg as b on 1 = 1 ',v_theme_condition);
           set v_sql = concat(v_sql,'where 1 = 1 ',v_themeagg_condition);
           set v_sql = concat(v_sql,'and b.themeagg_gid is null ');
 
           call pr_run_sql(v_sql,@result,@msg);
 
           -- right join
-          set v_sql = concat('insert into recon_tmp_tthemetranagg(rec_count,themeagg_json) ');
+          set v_sql = concat('insert into recon_tmp_t9themetranagg(rec_count,themeagg_json) ');
           set v_sql = concat(v_sql,'select b.rec_count,b.themeagg_json ');
-          set v_sql = concat(v_sql,'from recon_tmp_tthemesourceagg as a ');
-          set v_sql = concat(v_sql,'right join recon_tmp_tthemecomparisonagg as b on 1 = 1 ',v_theme_condition);
+          set v_sql = concat(v_sql,'from recon_tmp_t9themesourceagg as a ');
+          set v_sql = concat(v_sql,'right join recon_tmp_t9themecomparisonagg as b on 1 = 1 ',v_theme_condition);
           set v_sql = concat(v_sql,'where 1 = 1 ',v_themeagg_condition);
           set v_sql = concat(v_sql,'and a.themeagg_gid is null ');
 
           call pr_run_sql(v_sql,@result,@msg);
+					leave me;
 
           -- insert in tranbrkp_gid table
-          select max(rec_count) into v_count from recon_tmp_tthemetranagg;
+          select max(rec_count) into v_count from recon_tmp_t9themetranagg;
           set v_count = ifnull(v_count,0);
 
-          truncate recon_tmp_tthemepseudorows;
+          truncate recon_tmp_t9themepseudorows;
 
           if v_count >= 2 then
-            insert into recon_tmp_tthemepseudorows select row from pseudo_rows1 where row <= v_count;
+            insert into recon_tmp_t9themepseudorows select row from pseudo_rows1 where row <= v_count;
           else
-            insert into recon_tmp_tthemepseudorows select 0 union select 1;
+            insert into recon_tmp_t9themepseudorows select 0 union select 1;
           end if;
 
-          truncate recon_tmp_tthemetranwithbrkpgid;
+          truncate recon_tmp_t9themetranwithbrkpgid;
 
-					insert ignore into recon_tmp_tthemetranwithbrkpgid (tran_gid,tranbrkp_gid)
+					insert ignore into recon_tmp_t9themetranwithbrkpgid (tran_gid,tranbrkp_gid)
 						select
-							JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemetranagg.themeagg_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tran_gid'))) AS tran_gid,
-							JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthemetranagg.themeagg_json, CONCAT('$[', recon_tmp_tthemepseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid
-						FROM recon_tmp_tthemetranagg
-						JOIN recon_tmp_tthemepseudorows
+							JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t9themetranagg.themeagg_json, CONCAT('$[', recon_tmp_t9themepseudorows.row, '].tran_gid'))) AS tran_gid,
+							JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t9themetranagg.themeagg_json, CONCAT('$[', recon_tmp_t9themepseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid
+						FROM recon_tmp_t9themetranagg
+						JOIN recon_tmp_t9themepseudorows
 						where rec_count > 0
 						HAVING tran_gid IS NOT NULL;
 
@@ -1239,7 +1295,7 @@ me:BEGIN
 						update ",v_tran_table," as a set
 							a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
 							concat(a.theme_code,',','",v_theme_name,"')))
-						where a.tran_gid in (select b.tran_gid from recon_tmp_tthemetranwithbrkpgid as b
+						where a.tran_gid in (select b.tran_gid from recon_tmp_t9themetranwithbrkpgid as b
               where a.tran_gid = b.tran_gid and b.tranbrkp_gid = 0)");
 
 					call pr_run_sql(v_sql,@msg,@result);
@@ -1249,7 +1305,7 @@ me:BEGIN
 						update ",v_tranbrkp_table," as a set
 							a.theme_code = concat(if(a.theme_code = '','",v_theme_name,"',
 							concat(a.theme_code,',','",v_theme_name,"')))
-						where (a.tran_gid,a.tranbrkp_gid) in (select b.tran_gid,b.tranbrkp_gid from recon_tmp_tthemetranwithbrkpgid as b
+						where (a.tran_gid,a.tranbrkp_gid) in (select b.tran_gid,b.tranbrkp_gid from recon_tmp_t9themetranwithbrkpgid as b
               where a.tran_gid = b.tran_gid
               and a.tranbrkp_gid = b.tranbrkp_gid
               and b.tranbrkp_gid > 0)");
@@ -1257,25 +1313,25 @@ me:BEGIN
 					call pr_run_sql(v_sql,@msg,@result);
 
           -- delete in index table
-          delete from recon_tmp_tthemeindex
-          where table_name in ('recon_tmp_tthemesourceagg','recon_tmp_tthemecomparisonagg','recon_tmp_tthemetranagg');
+          delete from recon_tmp_t9themeindex
+          where table_name in ('recon_tmp_t9themesourceagg','recon_tmp_t9themecomparisonagg','recon_tmp_t9themetranagg');
 
-          truncate recon_tmp_tthemesource;
-          truncate recon_tmp_tthemecomparison;
-          truncate recon_tmp_tthemesourcedup;
-          truncate recon_tmp_tthemetrangid;
-          truncate recon_tmp_tthemetranbrkpgid;
+          truncate recon_tmp_t9themesource;
+          truncate recon_tmp_t9themecomparison;
+          truncate recon_tmp_t9themesourcedup;
+          truncate recon_tmp_t9themetrangid;
+          truncate recon_tmp_t9themetranbrkpgid;
 
-          truncate recon_tmp_tthemesourceagg;
-          truncate recon_tmp_tthemecomparisonagg;
-          truncate recon_tmp_tthemetranagg;
+          truncate recon_tmp_t9themesourceagg;
+          truncate recon_tmp_t9themecomparisonagg;
+          truncate recon_tmp_t9themetranagg;
 
-          drop temporary table if exists recon_tmp_tthemesource;
-          drop temporary table if exists recon_tmp_tthemecomparison;
+          drop temporary table if exists recon_tmp_t9themesource;
+          drop temporary table if exists recon_tmp_t9themecomparison;
 
-          drop temporary table if exists recon_tmp_tthemesourceagg;
-          drop temporary table if exists recon_tmp_tthemecomparisonagg;
-          drop temporary table if exists recon_tmp_tthemetranagg;
+          drop temporary table if exists recon_tmp_t9themesourceagg;
+          drop temporary table if exists recon_tmp_t9themecomparisonagg;
+          drop temporary table if exists recon_tmp_t9themetranagg;
     end loop theme_loop;
 
     close theme_cursor;
@@ -1285,15 +1341,15 @@ me:BEGIN
 
   set out_msg = 'Theme updated successfully !';
 
-  drop temporary table if exists recon_tmp_tthemesource;
-  drop temporary table if exists recon_tmp_tthemecomparison;
-  drop temporary table if exists recon_tmp_tthemesourcedup;
-  drop temporary table if exists recon_tmp_tthemepseudorows;
-  drop temporary table if exists recon_tmp_tthemetrangid;
-  drop temporary table if exists recon_tmp_tthemetranbrkpgid;
-  drop temporary table if exists recon_tmp_tthemetranwithbrkpgid;
-  drop temporary table if exists recon_tmp_tthemeindex;
-  drop temporary table if exists recon_tmp_tthemesql;
+  drop temporary table if exists recon_tmp_t9themesource;
+  drop temporary table if exists recon_tmp_t9themecomparison;
+  drop temporary table if exists recon_tmp_t9themesourcedup;
+  drop temporary table if exists recon_tmp_t9themepseudorows;
+  drop temporary table if exists recon_tmp_t9themetrangid;
+  drop temporary table if exists recon_tmp_t9themetranbrkpgid;
+  drop temporary table if exists recon_tmp_t9themetranwithbrkpgid;
+  drop temporary table if exists recon_tmp_t9themeindex;
+  drop temporary table if exists recon_tmp_t9themesql;
 end $$
 
 DELIMITER ;

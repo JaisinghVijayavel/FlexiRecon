@@ -13,6 +13,7 @@ me:BEGIN
   declare v_app_datetime_format text default '';
 
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
+  set v_app_datetime_format = '%d-%m-%Y %H:%i:%s';
 
 	if in_jobtype_code = '0' then
 		select 
@@ -26,12 +27,13 @@ me:BEGIN
 			a.job_status,
 			a.job_remark,
 			b.jobstatus_desc,
-			c.jobtype_desc
+			c.jobtype_desc,
+      a.job_initiated_by
 		from recon_trn_tjob a
 		left join recon_mst_tjobstatus b on a.job_status = b.job_status
 		left join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code
 		left join recon_mst_trecon d on a.recon_code = d.recon_code
-		where 1 = 1 
+		where 1 = 1
 		and a.job_status IN ('I', 'P')    
 		and a.delete_flag = 'N'
 		order by a.job_gid desc;
@@ -47,7 +49,8 @@ me:BEGIN
 			a.job_status,
 			a.job_remark,
 			b.jobstatus_desc,
-			c.jobtype_desc
+			c.jobtype_desc,
+      a.job_initiated_by
 		from recon_trn_tjob a
 		inner join recon_mst_tjobstatus b on a.job_status = b.job_status
 		inner join recon_mst_tjobtype c on a.jobtype_code = c.jobtype_code

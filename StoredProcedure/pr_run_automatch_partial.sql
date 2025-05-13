@@ -948,6 +948,7 @@ me:BEGIN
           drop table if exists recon_tmp_t2source;
           drop table if exists recon_tmp_t2comparison;
           */
+
           create temporary table recon_tmp_t2source select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t2source add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t2source(excp_value);
@@ -1092,7 +1093,8 @@ me:BEGIN
               if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_source_field <> 'a.tran_date' then
 
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
@@ -1111,7 +1113,8 @@ me:BEGIN
               if (instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_comparison_field <> 'b.tran_date' then
 
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);

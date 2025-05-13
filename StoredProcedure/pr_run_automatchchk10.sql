@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_automatch` $$
-CREATE PROCEDURE `pr_run_automatch`(
+DROP PROCEDURE IF EXISTS `pr_run_automatchchk10` $$
+CREATE PROCEDURE `pr_run_automatchchk10`(
   in in_recon_code text,
   in in_rule_code text,
   in in_group_flag text,
@@ -19,10 +19,11 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 05-03-2025
+    updated Date : 29-04-2025
 
     Version : 1
   */
+
 
   declare v_acc_mode varchar(32) default '';
   declare v_source_acc_mode varchar(32) default '';
@@ -168,42 +169,6 @@ me:BEGIN
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
-  /*
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION
-  BEGIN
-    GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE,
-    @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
-
-    set @text = concat(@text,' ',err_msg);
-
-    SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
-
-    ROLLBACK;
-
-    select @text;
-
-    call pr_upd_job(v_job_gid,'F',@full_error,@msg,@result);
-
-    set out_msg = @full_error;
-    set out_result = 0;
-
-    SIGNAL SQLSTATE '99999' SET
-    MYSQL_ERRNO = @errno,
-    MESSAGE_TEXT = @text;
-  END;
-  */
-
-	-- set tran table
-  /*
-	set v_tran_table = concat(in_recon_code,'_tran');
-	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
-
-	set v_tranko_table = concat(in_recon_code,'_tranko');
-	set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
-
-	set v_ko_table = concat(in_recon_code,'_ko');
-	set v_kodtl_table = concat(in_recon_code,'_kodtl');
-  */
 
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
@@ -862,16 +827,16 @@ me:BEGIN
           set v_source_condition = ' and ';
           set v_comparison_condition = ' and ';
 
+          /*
           drop temporary table if exists recon_tmp_t1source;
           drop temporary table if exists recon_tmp_t1comparison;
+          */
           drop temporary table if exists recon_tmp_t1sourcedup;
 
-          /*
           drop table if exists recon_tmp_t1source;
           drop table if exists recon_tmp_t1comparison;
-          */
 
-          create temporary table recon_tmp_t1source select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t1source select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t1source ENGINE = MyISAM;
           alter table recon_tmp_t1source add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t1source(excp_value);
@@ -879,7 +844,7 @@ me:BEGIN
           create index idx_recon_code on recon_tmp_t1source(recon_code);
           create index idx_dataset_code on recon_tmp_t1source(recon_code,dataset_code);
 
-          create temporary table recon_tmp_t1comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t1comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t1comparison ENGINE = MyISAM;
           alter table recon_tmp_t1comparison add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t1comparison(excp_value);
@@ -1126,7 +1091,11 @@ me:BEGIN
           set v_source_sql = concat(v_source_sql,' ',v_source_condition);
           set v_source_sql = concat(v_source_sql,' ',v_sourcebase_filter);
 
+          select v_source_sql;
+
           call pr_run_sql(v_source_sql,@result,@msg);
+
+          select * from recon_tmp_t1source limit 10;
 
           -- source from tranbrkp table
           set v_source_sql = v_source_headbrkp_sql;
@@ -1222,6 +1191,7 @@ me:BEGIN
 						call pr_run_sql(v_comparison_sql,@result,@msg);
 					end if;
 
+
           -- sql block
           sql_block:begin
             declare sql_done int default 0;
@@ -1239,6 +1209,8 @@ me:BEGIN
             end loop sql_loop;
             close sql_cursor;
           end sql_block;
+
+          select * from recon_tmp_t1sql;
 
           -- preload pseudorows
           truncate recon_tmp_t1pseudorows;
@@ -1262,6 +1234,11 @@ me:BEGIN
               end if;
             end if;
 					end if;
+
+          select * from recon_tmp_t1source limit 10;
+          select * from recon_tmp_t1comparison limit 10;
+
+          leave me;
 
           alter table recon_tmp_t1comparison ENGINE = MyISAM;
           alter table recon_tmp_t1source ENGINE = MyISAM;
@@ -1902,6 +1879,9 @@ me:BEGIN
 						else
 							insert into recon_tmp_t1pseudorows select 0 union select 1;
             end if;
+
+            select 'vijay';
+            leave me;
 
             -- insert in ko table
 						set v_sql = concat("

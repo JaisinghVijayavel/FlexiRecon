@@ -15,9 +15,9 @@ me:begin
     Created Date : 26-03-2024
 
     Updated By : Vijayavel
-    Updated Date : 05-04-2025
+    Updated Date : 29-04-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recon_code text default '';
@@ -28,6 +28,7 @@ me:begin
   declare v_concurrent_ko_flag text default '';
 
   declare v_sql text default '';
+  declare v_txt text default '';
 
   -- get recon code
   select

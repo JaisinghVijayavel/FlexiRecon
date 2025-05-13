@@ -372,6 +372,8 @@ me:BEGIN
       fetch field_cursor into v_field_name,v_field_alias_name,v_field_type,v_field_length;
       if field_done = 1 then leave field_loop; end if;
 
+      set v_field_alias_name = ifnull(v_field_alias_name,v_field_name);
+
       set v_field = concat(fn_get_fieldtypeformat(in_recon_code,v_field_name,v_field_type,v_field_length),' as ',char(39),v_field_alias_name,char(39));
 
       /*
