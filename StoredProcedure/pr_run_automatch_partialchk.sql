@@ -148,6 +148,9 @@ me:BEGIN
 
   declare v_src_acc_mode char(1) default null;
   declare v_cmp_acc_mode char(1) default null;
+  declare v_tran_acc_mode char(1) default null;
+
+  declare v_src_comp_flag char(1) default null;
 
   declare v_recorder_source text default '';
   declare v_recorder_comparison text default '';
@@ -165,6 +168,8 @@ me:BEGIN
 
   declare v_preview_gid int default 0;
 
+  declare v_concurrent_ko_flag text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
@@ -181,15 +186,30 @@ me:BEGIN
 	set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
   */
 
-	set v_tran_table = 'recon_trn_ttran';
-	set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-	set v_tranko_table = 'recon_trn_ttranko';
-	set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
 
-	set v_ko_table = 'recon_trn_tko';
-	set v_kodtl_table = 'recon_trn_tkodtl';
-	set v_koroundoff_table = 'recon_trn_tkoroundoff';
+	  set v_tranko_table = concat(in_recon_code,'_tranko');
+	  set v_tranbrkpko_table = concat(in_recon_code,'_tranbrkpko');
+
+	  set v_ko_table = concat(in_recon_code,'_ko');
+	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
+	  set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+
+	  set v_tranko_table = 'recon_trn_ttranko';
+	  set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+	  set v_ko_table = 'recon_trn_tko';
+	  set v_kodtl_table = 'recon_trn_tkodtl';
+	  set v_koroundoff_table = 'recon_trn_tkoroundoff';
+  end if;
 
   set v_group_flag = in_group_flag;
 
@@ -222,33 +242,33 @@ me:BEGIN
 
   select database() into v_database_name;
 
-  drop temporary table if exists recon_tmp_tmatch;
-  drop temporary table if exists recon_tmp_tmatchdtl;
-  drop temporary table if exists recon_tmp_tmatchdtlgid;
-  drop temporary table if exists recon_tmp_tmatchdup;
-  drop temporary table if exists recon_tmp_tmatchparentgid;
-  drop temporary table if exists recon_tmp_tmatchko;
-  drop temporary table if exists recon_tmp_tmatchdiff;
-  drop temporary table if exists recon_tmp_tmatchdiffdtl;
-  drop temporary table if exists recon_tmp_tmanymatch;
-  drop temporary table if exists recon_tmp_tkodtl;
-  drop temporary table if exists recon_tmp_tkodtlsumm;
-  drop temporary table if exists recon_tmp_tpseudorows;
-  drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_ttrangid1;
-  drop temporary table if exists recon_tmp_ttrangid2;
-  drop temporary table if exists recon_tmp_ttranbrkpgid;
-  drop temporary table if exists recon_tmp_ttranwithbrkpgid;
-  drop temporary table if exists recon_tmp_tgid;
-  drop temporary table if exists recon_tmp_ttranroundoff;
+  drop temporary table if exists recon_tmp_t4match;
+  drop temporary table if exists recon_tmp_t4matchdtl;
+  drop temporary table if exists recon_tmp_t4matchdtlgid;
+  drop temporary table if exists recon_tmp_t4matchdup;
+  drop temporary table if exists recon_tmp_t4matchparentgid;
+  drop temporary table if exists recon_tmp_t4matchko;
+  drop temporary table if exists recon_tmp_t4matchdiff;
+  drop temporary table if exists recon_tmp_t4matchdiffdtl;
+  drop temporary table if exists recon_tmp_t4manymatch;
+  drop temporary table if exists recon_tmp_t4kodtl;
+  drop temporary table if exists recon_tmp_t4kodtlsumm;
+  drop temporary table if exists recon_tmp_t4pseudorows;
+  drop temporary table if exists recon_tmp_t4trangid;
+  drop temporary table if exists recon_tmp_t4trangid1;
+  drop temporary table if exists recon_tmp_t4trangid2;
+  drop temporary table if exists recon_tmp_t4tranbrkpgid;
+  drop temporary table if exists recon_tmp_t4tranwithbrkpgid;
+  drop temporary table if exists recon_tmp_t4gid;
+  drop temporary table if exists recon_tmp_t4tranroundoff;
 
-  drop temporary table if exists recon_tmp_tthresholddiff;
-  drop temporary table if exists recon_tmp_tthresholddiffdtl;
+  drop temporary table if exists recon_tmp_t4thresholddiff;
+  drop temporary table if exists recon_tmp_t4thresholddiffdtl;
 
-  drop temporary table if exists recon_tmp_tindex;
-  drop temporary table if exists recon_tmp_tsql;
+  drop temporary table if exists recon_tmp_t4index;
+  drop temporary table if exists recon_tmp_t4sql;
 
-  CREATE TEMPORARY TABLE recon_tmp_tindex(
+  CREATE TEMPORARY TABLE recon_tmp_t4index(
     table_name varchar(128) not null,
     index_name varchar(128) not null,
     sys_flag char(1) not null default 'N',
@@ -256,13 +276,14 @@ me:BEGIN
     key idx_sys_flag(sys_flag)
   ) ENGINE = MyISAM;
 
-  insert into recon_tmp_tindex select 'recon_tmp_tsource','idx_tran_date','Y';
-  insert into recon_tmp_tindex select 'recon_tmp_tcomparison','idx_tran_date','Y';
+  insert into recon_tmp_t4index select 'recon_tmp_t4source','idx_tran_date','Y';
+  insert into recon_tmp_t4index select 'recon_tmp_t4comparison','idx_tran_date','Y';
 
-  drop /*temporary*/ table if exists recon_tmp_tthresholddiff;
-  drop /*temporary*/ table if exists recon_tmp_tthresholddiffdtl;
+  drop table if exists recon_tmp_t4thresholddiff;
+  drop table if exists recon_tmp_t4thresholddiffdtl;
 
-  CREATE /*temporary*/ TABLE recon_tmp_tthresholddiff(
+  CREATE /*temporary*/ TABLE recon_tmp_t4thresholddiff(
+    matchdiff_gid int unsigned NOT NULL AUTO_INCREMENT,
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -272,13 +293,15 @@ me:BEGIN
     matched_json json NOT NULL,
     tran_acc_mode char(1) default null,
     group_flag char(1) not null default 'N',
+    many_to_many_flag char(1) not null default 'N',
     dup_flag char(1) not null default 'N',
-    PRIMARY KEY (tran_gid,tranbrkp_gid),
+    PRIMARY KEY (matchdiff_gid),
+    unique key idx_tran_gid(tran_gid,tranbrkp_gid),
     key idx_group_flag(group_flag),
     key idx_dup_flag(dup_flag)
   ) ENGINE = MyISAM;
 
-  create /*temporary*/ table recon_tmp_tthresholddiffdtl(
+  create /*temporary*/ table recon_tmp_t4thresholddiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL,
     parent_tranbrkp_gid int unsigned NOT NULL,
@@ -293,9 +316,9 @@ me:BEGIN
     key idx_tran_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  -- drop table if exists recon_tmp_tmatch;
+  drop table if exists recon_tmp_t4match;
 
-  CREATE temporary TABLE recon_tmp_tmatch(
+  CREATE /*temporary*/ TABLE recon_tmp_t4match(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -311,7 +334,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   );
 
-  create temporary table recon_tmp_tmatchdtl(
+  create temporary table recon_tmp_t4matchdtl(
     matchdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL,
     parent_tranbrkp_gid int unsigned NOT NULL,
@@ -327,18 +350,21 @@ me:BEGIN
     key idx_tran_gid(tran_gid,tranbrkp_gid)
   );
 
-  CREATE temporary TABLE recon_tmp_tmanymatch(
+  drop table if exists recon_tmp_t4manymatch;
+
+  CREATE /*temporary*/ TABLE recon_tmp_t4manymatch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     source_value double(15,2) not null default 0,
     comparison_value double(15,2) not null default 0,
     matched_count int not null default 0,
     tran_mult tinyint not null default 0,
+    tran_acc_mode char(1),
     matched_txt_json json NOT NULL,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tkodtl(
+  create temporary table recon_tmp_t4kodtl(
     kodtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     ko_gid int unsigned NOT NULL,
     tran_gid int unsigned NOT NULL,
@@ -351,7 +377,7 @@ me:BEGIN
     key idx_tranbrkp_gid(tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tkodtlsumm(
+  create temporary table recon_tmp_t4kodtlsumm(
     kodtlsumm_gid int unsigned NOT NULL AUTO_INCREMENT,
     max_ko_gid int unsigned NOT NULL,
     tran_gid int unsigned NOT NULL,
@@ -363,12 +389,12 @@ me:BEGIN
     key idx_tran_gid(tran_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdtlgid(
+  create temporary table recon_tmp_t4matchdtlgid(
     matchdtl_gid int unsigned NOT NULL,
     PRIMARY KEY (matchdtl_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdup(
+  create temporary table recon_tmp_t4matchdup(
     matchdup_gid int unsigned NOT NULL AUTO_INCREMENT,
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
@@ -378,7 +404,7 @@ me:BEGIN
     key idx_tranbrkp_gid(tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchparentgid(
+  create temporary table recon_tmp_t4matchparentgid(
     parent_tran_gid int unsigned NOT NULL,
     parent_tranbrkp_gid int unsigned not null default 0,
     rec_count int unsigned not null default 0,
@@ -387,7 +413,7 @@ me:BEGIN
     key idx_parent_tranbrkp_gid(parent_tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchko(
+  create temporary table recon_tmp_t4matchko(
     tran_gid int unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
     excp_value decimal(15,2) not null default 0,
@@ -400,7 +426,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdiff(
+  create temporary table recon_tmp_t4matchdiff(
     tran_gid int unsigned NOT NULL,
     tran_mult tinyint not null default 0,
     tran_value decimal(15,2) not null default 0,
@@ -410,7 +436,7 @@ me:BEGIN
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_tmatchdiffdtl(
+  create temporary table recon_tmp_t4matchdiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -428,29 +454,29 @@ me:BEGIN
     key idx_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_tpseudorows(
+  CREATE temporary TABLE recon_tmp_t4pseudorows(
     row int unsigned NOT NULL,
     PRIMARY KEY (row)
   ) ENGINE = MyISAM;
 
-  insert into recon_tmp_tpseudorows select 0 union select 1;
+  insert into recon_tmp_t4pseudorows select 0 union select 1;
 
-  CREATE temporary TABLE recon_tmp_ttrangid(
+  CREATE temporary TABLE recon_tmp_t4trangid(
     tran_gid int unsigned NOT NULL,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttrangid1(
+  CREATE temporary TABLE recon_tmp_t4trangid1(
     tran_gid int unsigned NOT NULL,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttrangid2(
+  CREATE temporary TABLE recon_tmp_t4trangid2(
     tran_gid int unsigned NOT NULL,
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttranbrkpgid(
+  CREATE temporary TABLE recon_tmp_t4tranbrkpgid(
     tranbrkp_gid int unsigned NOT NULL,
     excp_value double(15,2) not null default 0,
     tran_mult tinyint not null default 0,
@@ -459,27 +485,27 @@ me:BEGIN
     key idx_tran_gid(tran_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttranwithbrkpgid(
+  CREATE temporary TABLE recon_tmp_t4tranwithbrkpgid(
     tran_gid int unsigned not null,
     tranbrkp_gid int unsigned NOT NULL,
     rec_count int not null default 0,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_tgid(
+  CREATE temporary TABLE recon_tmp_t4gid(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned NOT NULL default 0,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_ttranroundoff(
+  CREATE temporary TABLE recon_tmp_t4tranroundoff(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned NOT NULL,
     roundoff_value double(15,2) NOT NULL default 0,
     PRIMARY KEY (tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  CREATE temporary TABLE recon_tmp_tsql(
+  CREATE temporary TABLE recon_tmp_t4sql(
     sql_gid int(10) unsigned NOT NULL AUTO_INCREMENT,
     table_type char(1) default null,
     tran_acc_mode char(1) default null,
@@ -619,7 +645,7 @@ me:BEGIN
       and a.active_status = 'Y'
       and a.system_match_flag = ifnull(v_system_matchoff,a.system_match_flag)
       and a.manual_match_flag = ifnull(v_manual_matchoff,a.manual_match_flag)
-      and a.rule_automatch_partial = if(v_recon_automatch_partial='N','Y',a.rule_automatch_partial)
+      -- and a.rule_automatch_partial = if(v_recon_automatch_partial='N','Y',a.rule_automatch_partial)
       and a.delete_flag = 'N'
       order by a.rule_order;
     declare continue handler for not found set applyrule_done=1;
@@ -663,6 +689,10 @@ me:BEGIN
       else
         set v_rule_threshold_plus_value = v_threshold_plus_value;
         set v_rule_threshold_minus_value = v_threshold_minus_value;
+      end if;
+
+      if v_rule_threshold_plus_value = 0 and v_rule_threshold_minus_value = 0 then
+        iterate applyrule_loop;
       end if;
 
       -- update job
@@ -739,7 +769,7 @@ me:BEGIN
       set v_comparison_dataset_type = ifnull(v_comparison_dataset_type,'T');
 
       -- source head for tran table
-      set v_source_head_sql = concat('insert into recon_tmp_tsource (',v_tran_fields,') ');
+      set v_source_head_sql = concat('insert into recon_tmp_t4source (',v_tran_fields,') ');
 
       if in_automatch_flag = 'Y' then
         set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
@@ -756,14 +786,16 @@ me:BEGIN
       end if;
 
       if v_recontype_code <> 'N' then
-        set v_source_head_sql = concat(v_source_head_sql,' and excp_value <> 0 and mapped_value = 0 ');
+        set v_source_head_sql = concat(v_source_head_sql,' and excp_value <> 0 and mapped_value = 0 and roundoff_value = 0 ');
         set v_source_head_sql = concat(v_source_head_sql,' and (excp_value - roundoff_value * tran_mult) <> 0 ');
       else
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_source_head_sql = concat(v_source_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tran table
-      set v_comparison_head_sql = concat('insert into recon_tmp_tcomparison (',v_tran_fields,') ');
+      set v_comparison_head_sql = concat('insert into recon_tmp_t4comparison (',v_tran_fields,') ');
 
       if in_automatch_flag = 'Y' then
         set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
@@ -780,14 +812,16 @@ me:BEGIN
       end if;
 
       if v_recontype_code <> 'N' then
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value <> 0 and mapped_value = 0 ');
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value <> 0 and mapped_value = 0 and roundoff_value = 0 ');
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and (excp_value - roundoff_value * tran_mult) <> 0 ');
       else
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
 
+      set v_comparison_head_sql = concat(v_comparison_head_sql,' and auto_match_flag = ''Y'' ');
+
       -- source head for tranbrkp table
-      set v_source_headbrkp_sql = concat('insert into recon_tmp_tsource (',v_tranbrkp_fields,') ');
+      set v_source_headbrkp_sql = concat('insert into recon_tmp_t4source (',v_tranbrkp_fields,') ');
 
       if in_automatch_flag = 'Y' then
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
@@ -809,8 +843,10 @@ me:BEGIN
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and 1 = 2 ');
       end if;
 
+      set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' and auto_match_flag = ''Y'' ');
+
       -- comparison head for tranbrkp table
-      set v_comparison_headbrkp_sql = concat('insert into recon_tmp_tcomparison (',v_tranbrkp_fields,') ');
+      set v_comparison_headbrkp_sql = concat('insert into recon_tmp_t4comparison (',v_tranbrkp_fields,') ');
 
       if in_automatch_flag = 'Y' then
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
@@ -831,6 +867,8 @@ me:BEGIN
       else
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and 1 = 2 ');
       end if;
+
+      set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' and auto_match_flag = ''Y'' ');
 
           basefilter_block:begin
             declare basefilter_done int default 0;
@@ -895,47 +933,62 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
-          set v_rule_condition = ' and ';
+          set v_rule_condition = ' and a.excp_value <> 0 and b.excp_value <> 0 and ';
           set v_rule_notnull_condition = ' and ';
           set v_rule_groupby = '';
 
           set v_source_condition = ' and ';
           set v_comparison_condition = ' and ';
 
-          drop temporary table if exists recon_tmp_tsource;
-          drop temporary table if exists recon_tmp_tcomparison;
-          drop temporary table if exists recon_tmp_tsourcedup;
+          drop temporary table if exists recon_tmp_t4source;
+          drop temporary table if exists recon_tmp_t4comparison;
+          drop temporary table if exists recon_tmp_t4sourcedup;
 
-          drop table if exists recon_tmp_tsource;
-          drop table if exists recon_tmp_tcomparison;
+          drop table if exists recon_tmp_t4source;
+          drop table if exists recon_tmp_t4comparison;
 
-          create /*temporary*/ table recon_tmp_tsource select * from recon_trn_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tsource add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tsource(excp_value);
-          create index idx_tran_date on recon_tmp_tsource(tran_date);
-          create index idx_tran_gid on recon_tmp_tsource(tran_gid);
-          create index idx_tranbrkp_gid on recon_tmp_tsource(tranbrkp_gid);
-          create index idx_dataset_code on recon_tmp_tsource(recon_code,dataset_code);
-          alter table recon_tmp_tsource ENGINE = MyISAM;
+          -- create source
+          create /*temporary*/ table recon_tmp_t4source select * from recon_trn_ttranwithbrkp where 1 = 2;
 
-          create /*temporary*/ table recon_tmp_tcomparison select * from recon_trn_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tcomparison add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tcomparison(excp_value);
-          create index idx_tran_date on recon_tmp_tcomparison(tran_date);
-          create index idx_tran_gid on recon_tmp_tcomparison(tran_gid);
-          create index idx_tranbrkp_gid on recon_tmp_tcomparison(tranbrkp_gid);
-          create index idx_dataset_code on recon_tmp_tcomparison(recon_code,dataset_code);
-          alter table recon_tmp_tcomparison ENGINE = MyISAM;
+          alter table recon_tmp_t4source add primary key(tran_gid,tranbrkp_gid);
+          alter table recon_tmp_t4source add match_flag char(1) not null default 'N';
 
-          create temporary table recon_tmp_tsourcedup select * from recon_trn_ttranwithbrkp where 1 = 2;
-          alter table recon_tmp_tsourcedup add primary key(tran_gid,tranbrkp_gid);
-          create index idx_excp_value on recon_tmp_tsourcedup(excp_value);
-          create index idx_tran_date on recon_tmp_tsourcedup(tran_date);
-          create index idx_dataset_code on recon_tmp_tsourcedup(recon_code,dataset_code);
-          alter table recon_tmp_tsourcedup ENGINE = MyISAM;
+          create index idx_excp_value on recon_tmp_t4source(excp_value);
+          create index idx_tran_date on recon_tmp_t4source(tran_date);
+          create index idx_tran_gid on recon_tmp_t4source(tran_gid);
+          create index idx_tranbrkp_gid on recon_tmp_t4source(tranbrkp_gid);
+          create index idx_dataset_code on recon_tmp_t4source(recon_code,dataset_code);
+          create index idx_match_flag on recon_tmp_t4source(match_flag);
 
-          delete from recon_tmp_tindex where index_name <> 'idx_tran_date';
-          truncate recon_tmp_tsql;
+          alter table recon_tmp_t4source ENGINE = MyISAM;
+
+          -- create comparison
+          create /*temporary*/ table recon_tmp_t4comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+
+          alter table recon_tmp_t4comparison add primary key(tran_gid,tranbrkp_gid);
+          alter table recon_tmp_t4comparison add match_flag char(1) not null default 'N';
+
+          create index idx_excp_value on recon_tmp_t4comparison(excp_value);
+          create index idx_tran_date on recon_tmp_t4comparison(tran_date);
+          create index idx_tran_gid on recon_tmp_t4comparison(tran_gid);
+          create index idx_tranbrkp_gid on recon_tmp_t4comparison(tranbrkp_gid);
+          create index idx_dataset_code on recon_tmp_t4comparison(recon_code,dataset_code);
+          create index idx_match_flag on recon_tmp_t4comparison(match_flag);
+
+          alter table recon_tmp_t4comparison ENGINE = MyISAM;
+
+          create temporary table recon_tmp_t4sourcedup select * from recon_trn_ttranwithbrkp where 1 = 2;
+
+          alter table recon_tmp_t4sourcedup add primary key(tran_gid,tranbrkp_gid);
+          alter table recon_tmp_t4sourcedup add match_flag char(1) not null default 'N';
+
+          create index idx_excp_value on recon_tmp_t4sourcedup(excp_value);
+          create index idx_tran_date on recon_tmp_t4sourcedup(tran_date);
+          create index idx_dataset_code on recon_tmp_t4sourcedup(recon_code,dataset_code);
+          alter table recon_tmp_t4sourcedup ENGINE = MyISAM;
+
+          delete from recon_tmp_t4index where index_name <> 'idx_tran_date';
+          truncate recon_tmp_t4sql;
 
           rule_block:begin
             declare rule_done int default 0;
@@ -963,42 +1016,42 @@ me:BEGIN
 
               set v_index_name = concat('idx_',v_source_field);
 
-              if not exists(select index_name from recon_tmp_tindex
-                            WHERE table_name = 'recon_tmp_tsource'
+              if not exists(select index_name from recon_tmp_t4index
+                            WHERE table_name = 'recon_tmp_t4source'
                             and index_name = v_index_name) then
 
                 if substr(v_source_field,1,3) = 'col' then
-                  set v_sql = concat('alter table recon_tmp_tsource modify column ',v_source_field,' varchar(255) default null');
+                  set v_sql = concat('alter table recon_tmp_t4source modify column ',v_source_field,' varchar(255) default null');
                   call pr_run_sql(v_sql,@msg,@result);
 
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t4source(',v_source_field,'(255))');
                 else
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_tsource(',v_source_field,')');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t4source(',v_source_field,')');
                 end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
-                insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tsource',v_index_name;
+                insert into recon_tmp_t4index(table_name,index_name) select 'recon_tmp_t4source',v_index_name;
               end if;
 
               set v_index_name = concat('idx_',v_comparison_field);
 
-              if not exists(select index_name from recon_tmp_tindex
-                            WHERE table_name = 'recon_tmp_tcomparison'
+              if not exists(select index_name from recon_tmp_t4index
+                            WHERE table_name = 'recon_tmp_t4comparison'
                             and index_name = v_index_name) then
 
                 if substr(v_comparison_field,1,3) = 'col' then
-                  set v_sql = concat('alter table recon_tmp_tcomparison modify column ',v_source_field,' varchar(255) default null');
+                  set v_sql = concat('alter table recon_tmp_t4comparison modify column ',v_source_field,' varchar(255) default null');
                   call pr_run_sql(v_sql,@msg,@result);
 
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t4comparison(',v_comparison_field,'(255))');
                 else
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_tcomparison(',v_comparison_field,')');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t4comparison(',v_comparison_field,')');
                 end if;
 
                 call pr_run_sql(v_index_sql,@msg,@result);
 
-                insert into recon_tmp_tindex(table_name,index_name) select 'recon_tmp_tcomparison',v_index_name;
+                insert into recon_tmp_t4index(table_name,index_name) select 'recon_tmp_t4comparison',v_index_name;
               end if;
 
               set v_source_field_org_type = fn_get_fieldorgtype(in_recon_code,v_source_field);
@@ -1058,10 +1111,10 @@ me:BEGIN
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tsource set ');
+                set v_sql = concat(v_sql,'update recon_tmp_t4source set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format);
 
-                insert into recon_tmp_tsql(table_type,tran_acc_mode,sql_query) values ('S',v_source_acc_mode,v_sql);
+                insert into recon_tmp_t4sql(table_type,tran_acc_mode,sql_query) values ('S',v_source_acc_mode,v_sql);
 
                 set v_extraction_criteria = 'EXACT';
                 set v_extraction_filter = 0;
@@ -1077,18 +1130,18 @@ me:BEGIN
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
+                set v_sql = concat(v_sql,'update recon_tmp_t4comparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
                 set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_comparison_acc_mode,char(39), ' ');
 
-                insert into recon_tmp_tsql(table_type,tran_acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
+                insert into recon_tmp_t4sql(table_type,tran_acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
 
                 set v_sql = '';
-                set v_sql = concat(v_sql,'update recon_tmp_tcomparison set ');
+                set v_sql = concat(v_sql,'update recon_tmp_t4comparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
                 set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_source_acc_mode,char(39),' ');
 
-                insert into recon_tmp_tsql(table_type,tran_acc_mode,sql_query) values ('C',v_source_acc_mode,v_sql);
+                insert into recon_tmp_t4sql(table_type,tran_acc_mode,sql_query) values ('C',v_source_acc_mode,v_sql);
 
                 set v_comparison_criteria = 'EXACT';
                 set v_comparison_filter = 0;
@@ -1132,8 +1185,8 @@ me:BEGIN
             close rule_cursor;
           end rule_block;
 
-          truncate recon_tmp_tsource;
-          truncate recon_tmp_tcomparison;
+          truncate recon_tmp_t4source;
+          truncate recon_tmp_t4comparison;
 
           if v_source_condition = ' and ' or v_comparison_condition = ' and ' then
             set v_source_condition = ' and 1 = 2 ';
@@ -1173,9 +1226,10 @@ me:BEGIN
           end if;
           */
 
+          select v_source_sql;
           call pr_run_sql(v_source_sql,@result,@msg);
 
-          update recon_tmp_tsource set excp_value = (excp_value - roundoff_value * tran_mult);
+          update recon_tmp_t4source set excp_value = (excp_value - roundoff_value * tran_mult);
 
           -- select v_source_sql;
           -- leave me;
@@ -1233,7 +1287,7 @@ me:BEGIN
 
           call pr_run_sql(v_comparison_sql,@result,@msg);
 
-          update recon_tmp_tcomparison set excp_value = (excp_value - roundoff_value * tran_mult);
+          update recon_tmp_t4comparison set excp_value = (excp_value - roundoff_value * tran_mult);
 
           -- select v_comparison_sql;
 
@@ -1266,7 +1320,7 @@ me:BEGIN
           sql_block:begin
             declare sql_done int default 0;
             declare sql_cursor cursor for
-            select sql_query from recon_tmp_tsql
+            select sql_query from recon_tmp_t4sql
                where table_type = 'S'
                or (table_type = 'C' and tran_acc_mode = v_comparison_acc_mode);
             declare continue handler for not found set sql_done=1;
@@ -1340,7 +1394,7 @@ me:BEGIN
 
               call pr_run_sql(v_comparison_sql,@result,@msg);
 
-              update recon_tmp_tcomparison set excp_value = (excp_value - roundoff_value * tran_mult)
+              update recon_tmp_t4comparison set excp_value = (excp_value - roundoff_value * tran_mult)
               where tran_acc_mode = v_source_acc_mode;
 
               -- comparison from tranbrkp table
@@ -1372,7 +1426,7 @@ me:BEGIN
               sql_block2:begin
                 declare sql_done2 int default 0;
                 declare sql_cursor2 cursor for
-                select sql_query from recon_tmp_tsql
+                select sql_query from recon_tmp_t4sql
                    where table_type = 'C' and tran_acc_mode = v_source_acc_mode;
                 declare continue handler for not found set sql_done2=1;
 
@@ -1392,14 +1446,14 @@ me:BEGIN
 
           if in_automatch_flag = 'N' then
             -- remove already mapped lines
-            delete from recon_tmp_tsource where (tran_gid,tranbrkp_gid) in
+            delete from recon_tmp_t4source where (tran_gid,tranbrkp_gid) in
             (
               select tran_gid,tranbrkp_gid from recon_trn_tpreviewdtl
               where job_gid = in_job_gid
               and delete_flag = 'N'
             );
 
-            delete from recon_tmp_tcomparison where (tran_gid,tranbrkp_gid) in
+            delete from recon_tmp_t4comparison where (tran_gid,tranbrkp_gid) in
             (
               select tran_gid,tranbrkp_gid from recon_trn_tpreviewdtl
               where job_gid = in_job_gid
@@ -1408,8 +1462,8 @@ me:BEGIN
           end if;
 
           -- remove duplicate
-          set v_trangid_sql = 'insert into recon_tmp_ttrangid ';
-          set v_trangid_sql = concat(v_trangid_sql,'select cast(group_concat(tran_gid) as unsigned) from recon_tmp_tsource as a ') ;
+          set v_trangid_sql = 'insert into recon_tmp_t4trangid ';
+          set v_trangid_sql = concat(v_trangid_sql,'select cast(group_concat(tran_gid) as unsigned) from recon_tmp_t4source as a ') ;
 
           -- set v_trangid_sql = concat(v_trangid_sql,' where dataset_code = ',char(39),v_source_dataset_code,char(39));
           set v_trangid_sql = concat(v_trangid_sql,' where 1 = 1 ');
@@ -1439,8 +1493,8 @@ me:BEGIN
           -- select v_trangid_sql;
           -- leave me;
 
-          set v_trangid_sql = 'insert into recon_tmp_ttranbrkpgid (tranbrkp_gid) ';
-          set v_trangid_sql = concat(v_trangid_sql,'select cast(group_concat(tranbrkp_gid) as unsigned) from recon_tmp_tsource as a ') ;
+          set v_trangid_sql = 'insert into recon_tmp_t4tranbrkpgid (tranbrkp_gid) ';
+          set v_trangid_sql = concat(v_trangid_sql,'select cast(group_concat(tranbrkp_gid) as unsigned) from recon_tmp_t4source as a ') ;
           -- set v_trangid_sql = concat(v_trangid_sql,' where dataset_code = ',char(39),v_source_dataset_code,char(39));
           set v_trangid_sql = concat(v_trangid_sql,' where 1 = 1 ');
 
@@ -1466,21 +1520,20 @@ me:BEGIN
 
           call pr_run_sql(v_trangid_sql,@msg,@result);
 
-          insert into recon_tmp_tsourcedup select * from recon_tmp_tsource where tran_gid not in (select tran_gid from recon_tmp_ttrangid) and tranbrkp_gid = 0;
-          insert into recon_tmp_tsourcedup select * from recon_tmp_tsource where tranbrkp_gid not in (select tranbrkp_gid from recon_tmp_ttranbrkpgid) and tranbrkp_gid > 0;
+          insert into recon_tmp_t4sourcedup select * from recon_tmp_t4source where tran_gid not in (select tran_gid from recon_tmp_t4trangid) and tranbrkp_gid = 0;
+          insert into recon_tmp_t4sourcedup select * from recon_tmp_t4source where tranbrkp_gid not in (select tranbrkp_gid from recon_tmp_t4tranbrkpgid) and tranbrkp_gid > 0;
 
-          delete from recon_tmp_tsource where tran_gid not in (select tran_gid from recon_tmp_ttrangid) and tranbrkp_gid = 0;
-          delete from recon_tmp_tsource where tranbrkp_gid not in (select tranbrkp_gid from recon_tmp_ttranbrkpgid) and tranbrkp_gid > 0;
+          delete from recon_tmp_t4source where tran_gid not in (select tran_gid from recon_tmp_t4trangid) and tranbrkp_gid = 0;
+          delete from recon_tmp_t4source where tranbrkp_gid not in (select tranbrkp_gid from recon_tmp_t4tranbrkpgid) and tranbrkp_gid > 0;
 
-          truncate recon_tmp_ttrangid;
-          truncate recon_tmp_ttranbrkpgid;
-
+          truncate recon_tmp_t4trangid;
+          truncate recon_tmp_t4tranbrkpgid;
 
           -- find matchoff diff value
           -- plus value
-          set v_match_sql = 'insert into recon_tmp_tthresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
+          set v_match_sql = 'insert into recon_tmp_t4thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
           set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,a.tran_mult,');
+          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
           set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
           set v_match_sql = concat(v_match_sql,'{');
           set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
@@ -1499,8 +1552,8 @@ me:BEGIN
           set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
           set v_match_sql = concat(v_match_sql,'}');
           set v_match_sql = concat(v_match_sql,']',char(39),') as json) as matched_json ');
-          set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-          set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+          set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+          set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
           set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
           set v_match_sql = concat(v_match_sql,'and (a.excp_value - b.excp_value) > 0 ');
@@ -1520,9 +1573,9 @@ me:BEGIN
           call pr_run_sql(v_match_sql,@msg,@result);
 
           -- minus value
-          set v_match_sql = 'insert ignore into recon_tmp_tthresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
+          set v_match_sql = 'insert ignore into recon_tmp_t4thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
           set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,a.tran_mult,');
+          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
           set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
           set v_match_sql = concat(v_match_sql,'{');
           set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
@@ -1541,8 +1594,8 @@ me:BEGIN
           set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
           set v_match_sql = concat(v_match_sql,'}');
           set v_match_sql = concat(v_match_sql,']',char(39),') as json) as matched_json ');
-          set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-          set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+          set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+          set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
           set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
           set v_match_sql = concat(v_match_sql,'and (b.excp_value - a.excp_value) > 0 ');
@@ -1561,26 +1614,26 @@ me:BEGIN
 
           call pr_run_sql(v_match_sql,@msg,@result);
 
-          truncate recon_tmp_tpseudorows;
-          insert into recon_tmp_tpseudorows select 0 union select 1;
+          truncate recon_tmp_t4pseudorows;
+          insert into recon_tmp_t4pseudorows select 0 union select 1;
 
-          insert into recon_tmp_tthresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
+          insert into recon_tmp_t4thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
             select
               tran_gid as parent_tran_gid,
               tranbrkp_gid as parent_tranbrkp_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
-            FROM recon_tmp_tthresholddiff
-            JOIN recon_tmp_tpseudorows
+              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS ko_value,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
+            FROM recon_tmp_t4thresholddiff
+            JOIN recon_tmp_t4pseudorows
             where group_flag = 'N'
             HAVING tran_gid IS NOT NULL;
 
           if v_group_flag = 'Y' then
             -- plus value
-            set v_match_sql = 'insert ignore into recon_tmp_tthresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t4thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
             set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
             set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) as diff_value,a.tran_mult,');
 
@@ -1603,8 +1656,8 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
 
-            set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+            set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
             set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
@@ -1626,10 +1679,10 @@ me:BEGIN
 
             call pr_run_sql(v_match_sql,@msg,@result);
 
-            insert ignore into recon_tmp_tgid select tran_gid,tranbrkp_gid from recon_tmp_tthresholddiff;
+            insert ignore into recon_tmp_t4gid select tran_gid,tranbrkp_gid from recon_tmp_t4thresholddiff;
 
             -- minus value
-            set v_match_sql = 'insert ignore into recon_tmp_tthresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t4thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
             set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
             set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) as diff_value,a.tran_mult,');
 
@@ -1652,8 +1705,8 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
 
-            set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+            set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
             set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
@@ -1675,52 +1728,180 @@ me:BEGIN
 
             call pr_run_sql(v_match_sql,@msg,@result);
 
-            select max(matched_count) into v_count from recon_tmp_tthresholddiff;
+            select max(matched_count) into v_count from recon_tmp_t4thresholddiff;
             set v_count = ifnull(v_count,0);
 
-            truncate recon_tmp_tpseudorows;
+            truncate recon_tmp_t4pseudorows;
 
             if v_count >= 2 then
-              insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+              insert into recon_tmp_t4pseudorows select row from pseudo_rows1 where row <= v_count;
             else
-              insert into recon_tmp_tpseudorows select 0 union select 1;
+              insert into recon_tmp_t4pseudorows select 0 union select 1;
             end if;
 
-            insert into recon_tmp_tthresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
+            insert into recon_tmp_t4thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
               select
                 tran_gid as parent_tran_gid,
                 tranbrkp_gid as parent_tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tthresholddiff.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
-              FROM recon_tmp_tthresholddiff
-              JOIN recon_tmp_tpseudorows
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS ko_value,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
+              FROM recon_tmp_t4thresholddiff
+              JOIN recon_tmp_t4pseudorows
               where group_flag = 'Y'
               HAVING tran_gid IS NOT NULL;
           end if;
 
-          truncate recon_tmp_tmatchdup;
-          truncate recon_tmp_tmatchparentgid;
+          -- update match flag in source table
+          update recon_tmp_t4source as a
+          inner join recon_tmp_t4thresholddiffdtl as b on a.tran_gid = b.tran_gid
+            and a.tranbrkp_gid = b.tranbrkp_gid
+          set a.match_flag = 'Y';
+
+          -- update match flag in comparison table
+          update recon_tmp_t4comparison as a
+          inner join recon_tmp_t4thresholddiffdtl as b on a.tran_gid = b.tran_gid
+            and a.tranbrkp_gid = b.tranbrkp_gid
+          set a.match_flag = 'Y';
+
+					-- many to many match
+					if v_manytomany_match_flag = 'Y' then
+						set v_match_sql = 'insert ignore into recon_tmp_t4manymatch (tran_gid,tranbrkp_gid,matched_count,';
+						set v_match_sql = concat(v_match_sql,'tran_mult,tran_acc_mode,source_value,comparison_value,matched_txt_json) ');
+						set v_match_sql = concat(v_match_sql,'select ');
+						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,a.tran_mult,a.tran_acc_mode,');
+						set v_match_sql = concat(v_match_sql,'a.excp_value as source_value,sum(b.excp_value*b.tran_mult) as comparison_value,');
+
+						set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[',char(39),',');
+						set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
+						set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(b.tran_mult as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"src_comp_flag":"C",');
+            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',b.tran_acc_mode,',char(39),'",');
+						set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
+						set v_match_sql = concat(v_match_sql,'}',char(39),' order by b.tran_gid,b.tranbrkp_gid),');
+						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
+
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
+						set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
+
+						set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
+
+            set v_match_sql = concat(v_match_sql,"where a.match_flag = 'N'
+              and b.match_flag = 'N'");
+
+						set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
+
+            -- add record order by
+            if v_recorder <> '' then
+              set v_match_sql = concat(v_match_sql,v_recorder);
+            end if;
+
+						call pr_run_sql(v_match_sql,@msg,@result);
+
+            -- plus value
+						-- insert in match table
+						set v_match_sql = 'insert into recon_tmp_t4thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
+						set v_match_sql = concat(v_match_sql,'select ',char(39),'M',char(39),',');
+						set v_match_sql = concat(v_match_sql,'max(tran_gid),max(tranbrkp_gid),sum(matched_count)+count(*) as matched_count,');
+						set v_match_sql = concat(v_match_sql,'(abs(sum(source_value*tran_mult)) - abs(comparison_value)),tran_mult,');
+						set v_match_sql = concat(v_match_sql,'JSON_MERGE_PRESERVE(');
+						set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[',char(39),',');
+						set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
+						set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(tran_gid as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(tranbrkp_gid as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(tran_mult as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
+            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',tran_acc_mode,',char(39),'",');
+						set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(source_value as nchar),',char(39));
+						set v_match_sql = concat(v_match_sql,'}',char(39),'),');
+						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json),matched_txt_json) as matched_json ');
+
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_t4manymatch ');
+            set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
+            set v_match_sql = concat(v_match_sql,'having (abs(sum(source_value*tran_mult))-abs(comparison_value)) > 0 ');
+            set v_match_sql = concat(v_match_sql,'and (abs(sum(source_value*tran_mult))-abs(comparison_value)) <= ',cast(v_rule_threshold_plus_value as nchar),' ');
+
+            select v_match_sql;
+						call pr_run_sql(v_match_sql,@msg,@result);
+
+            -- minus value
+						-- insert in match table
+						set v_match_sql = 'insert into recon_tmp_t4thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
+						set v_match_sql = concat(v_match_sql,'select ',char(39),'M',char(39),',');
+						set v_match_sql = concat(v_match_sql,'max(tran_gid),max(tranbrkp_gid),sum(matched_count)+count(*) as matched_count,');
+						set v_match_sql = concat(v_match_sql,'(abs(sum(source_value*tran_mult)) - abs(comparison_value)),tran_mult,');
+						set v_match_sql = concat(v_match_sql,'JSON_MERGE_PRESERVE(');
+						set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[',char(39),',');
+						set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
+						set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(tran_gid as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(tranbrkp_gid as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(tran_mult as nchar),',char(39),',');
+						set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
+            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',tran_acc_mode,',char(39),'",');
+						set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(source_value as nchar),',char(39));
+						set v_match_sql = concat(v_match_sql,'}',char(39),'),');
+						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json),matched_txt_json) as matched_json ');
+
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_t4manymatch ');
+            set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
+            set v_match_sql = concat(v_match_sql,'having (abs(comparison_value)-abs(sum(source_value*tran_mult))) > 0 ');
+            set v_match_sql = concat(v_match_sql,'and (abs(comparison_value)-abs(sum(source_value*tran_mult))) <= ',cast(v_rule_threshold_minus_value as nchar),' ');
+
+            select v_match_sql;
+						call pr_run_sql(v_match_sql,@msg,@result);
+
+						select max(matched_count) into v_count from recon_tmp_t4thresholddiff;
+						set v_count = ifnull(v_count,0);
+
+						truncate recon_tmp_t4pseudorows;
+
+						if v_count >= 2 then
+							insert into recon_tmp_t4pseudorows select row from pseudo_rows1 where row <= v_count;
+						else
+							insert into recon_tmp_t4pseudorows select 0 union select 1;
+						end if;
+
+            insert into recon_tmp_t4thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
+              select
+                tran_gid as parent_tran_gid,
+                tranbrkp_gid as parent_tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS ko_value,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4thresholddiff.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
+              FROM recon_tmp_t4thresholddiff
+              JOIN recon_tmp_t4pseudorows
+              where group_flag = 'M'
+              HAVING tran_gid IS NOT NULL;
+					end if;
+
+          -- Find Duplicates
+          truncate recon_tmp_t4matchdup;
+          truncate recon_tmp_t4matchparentgid;
 
           -- duplicate validation
-          insert into recon_tmp_tmatchdup (tran_gid,tranbrkp_gid,rec_count)
-            select tran_gid,tranbrkp_gid,count(*) from recon_tmp_tthresholddiffdtl
+          insert into recon_tmp_t4matchdup (tran_gid,tranbrkp_gid,rec_count)
+            select tran_gid,tranbrkp_gid,count(*) from recon_tmp_t4thresholddiffdtl
             group by tran_gid,tranbrkp_gid
             having count(*) > 1;
 
-          insert into recon_tmp_tmatchparentgid(parent_tran_gid,parent_tranbrkp_gid)
-            select b.parent_tran_gid,b.parent_tranbrkp_gid from recon_tmp_tmatchdup as a
-            inner join recon_tmp_tthresholddiffdtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
+          insert into recon_tmp_t4matchparentgid(parent_tran_gid,parent_tranbrkp_gid)
+            select b.parent_tran_gid,b.parent_tranbrkp_gid from recon_tmp_t4matchdup as a
+            inner join recon_tmp_t4thresholddiffdtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
             group by b.parent_tran_gid,b.parent_tranbrkp_gid;
 
-          update recon_tmp_tthresholddiff as a
-          inner join recon_tmp_tmatchparentgid as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
+          update recon_tmp_t4thresholddiff as a
+          inner join recon_tmp_t4matchparentgid as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
           set a.dup_flag = 'Y';
 
-          update recon_tmp_tthresholddiff as a
-          inner join recon_tmp_tthresholddiffdtl as b on a.tran_gid = b.tran_gid
+          update recon_tmp_t4thresholddiff as a
+          inner join recon_tmp_t4thresholddiffdtl as b on a.tran_gid = b.tran_gid
             and a.tranbrkp_gid = b.tranbrkp_gid
             and a.dup_flag = 'N'
           set a.tran_acc_mode = b.tran_acc_mode;
@@ -1729,7 +1910,7 @@ me:BEGIN
           source_block:begin
             declare source_done int default 0;
             declare source_cursor cursor for
-            select tran_gid,tranbrkp_gid,tran_acc_mode,diff_value,matched_count from recon_tmp_tthresholddiff
+            select tran_gid,tranbrkp_gid,tran_acc_mode,diff_value,matched_count from recon_tmp_t4thresholddiff
                where dup_flag = 'N';
             declare continue handler for not found set source_done=1;
 
@@ -1752,71 +1933,81 @@ me:BEGIN
               end if;
 
               if v_diff_value > 0 then
-                update recon_tmp_tsource set
-                  excp_value = excp_value - v_diff_value
-                where tran_gid = v_tran_gid
-                and tranbrkp_gid = v_tranbrkp_gid;
-
-                -- insert roundoff value
-                insert into recon_tmp_ttranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
-                select v_tran_gid,v_tranbrkp_gid,v_diff_value;
+                set v_src_comp_flag = 'S';
+                set v_tran_acc_mode = v_src_acc_mode;
               else
-                set v_diff_value = abs(v_diff_value);
-
-                comparison_block:begin
-                  declare comparison_done int default 0;
-                  declare comparison_cursor cursor for
-                  select tran_gid,tranbrkp_gid,ko_value from recon_tmp_tthresholddiffdtl
-                    where parent_tran_gid = v_tran_gid
-                    and parent_tranbrkp_gid = v_tranbrkp_gid
-                    and src_comp_flag = 'C'
-                    and tran_acc_mode = v_cmp_acc_mode
-                    order by ko_value;
-                  declare continue handler for not found set comparison_done=1;
-
-                  open comparison_cursor;
-
-                  comparison_loop: loop
-                    fetch comparison_cursor into v_tran_gid,v_tranbrkp_gid,v_ko_value;
-                    if comparison_done = 1 then leave comparison_loop; end if;
-
-                    if v_ko_value >= v_diff_value then
-                      update recon_tmp_tcomparison set
-                        excp_value = excp_value - v_diff_value
-                      where tran_gid = v_tran_gid
-                      and tranbrkp_gid = v_tranbrkp_gid;
-
-                      -- insert roundoff value
-                      insert into recon_tmp_ttranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
-                      select v_tran_gid,v_tranbrkp_gid,v_diff_value * -1;
-
-                      leave comparison_loop;
-                    else
-                      update recon_tmp_tcomparison set
-                        excp_value = 0
-                      where tran_gid = v_tran_gid
-                      and tranbrkp_gid = v_tranbrkp_gid;
-
-                      set v_diff_value = v_diff_value - v_ko_value;
-                    end if;
-                  end loop comparison_loop;
-
-                  close comparison_cursor;
-                end comparison_block;
+                set v_src_comp_flag = 'C';
+                set v_tran_acc_mode = v_cmp_acc_mode;
               end if;
+
+              -- adjust difference value
+							thresholddiff_block:begin
+								declare thresholddiff_done int default 0;
+								declare thresholddiff_cursor cursor for
+								select tran_gid,tranbrkp_gid,ko_value from recon_tmp_t4thresholddiffdtl
+									where parent_tran_gid = v_tran_gid
+									and parent_tranbrkp_gid = v_tranbrkp_gid
+									and src_comp_flag = v_src_comp_flag
+									and tran_acc_mode = v_tran_acc_mode
+									order by ko_value;
+								declare continue handler for not found set thresholddiff_done=1;
+
+								open thresholddiff_cursor;
+
+								thresholddiff_loop: loop
+									fetch thresholddiff_cursor into v_tran_gid,v_tranbrkp_gid,v_ko_value;
+									if thresholddiff_done = 1 then leave thresholddiff_loop; end if;
+
+									if v_ko_value >= v_diff_value then
+                    if v_src_comp_flag = 'S' then
+										  update recon_tmp_t4source set
+											  excp_value = excp_value - v_diff_value * tran_mult
+										  where tran_gid = v_tran_gid
+										  and tranbrkp_gid = v_tranbrkp_gid;
+                    else
+										  update recon_tmp_t4comparison set
+											  excp_value = excp_value - v_diff_value * tran_mult
+										  where tran_gid = v_tran_gid
+										  and tranbrkp_gid = v_tranbrkp_gid;
+                    end if;
+
+										-- insert roundoff value
+										insert into recon_tmp_t4tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
+											select v_tran_gid,v_tranbrkp_gid,v_diff_value;
+
+										leave thresholddiff_loop;
+									else
+                    if v_src_comp_flag = 'S' then
+										  update recon_tmp_t4source set
+											  excp_value = 0
+										  where tran_gid = v_tran_gid
+										  and tranbrkp_gid = v_tranbrkp_gid;
+                    else
+										  update recon_tmp_t4comparison set
+											  excp_value = 0
+										  where tran_gid = v_tran_gid
+										  and tranbrkp_gid = v_tranbrkp_gid;
+                    end if;
+
+										set v_diff_value = v_diff_value - v_ko_value;
+									end if;
+								end loop thresholddiff_loop;
+
+								close thresholddiff_cursor;
+							end thresholddiff_block;
             end loop source_loop;
             close source_cursor;
           end source_block;
 
-          select * from recon_tmp_tthresholddiff;
+          truncate recon_tmp_t4manymatch;
 
-          truncate recon_tmp_tmatchdup;
-          truncate recon_tmp_tmatchparentgid;
+          truncate recon_tmp_t4matchdup;
+          truncate recon_tmp_t4matchparentgid;
 
-          truncate recon_tmp_tthresholddiff;
-          truncate recon_tmp_tthresholddiffdtl;
+          truncate recon_tmp_t4thresholddiff;
+          truncate recon_tmp_t4thresholddiffdtl;
 
-          truncate recon_tmp_tpseudorows;
+          truncate recon_tmp_t4pseudorows;
 
           -- vijay start
 
@@ -1840,7 +2031,7 @@ me:BEGIN
 
 					-- many to many match
 					if v_manytomany_match_flag = 'Y' then
-						set v_match_sql = 'insert ignore into recon_tmp_tmanymatch (tran_gid,tranbrkp_gid,matched_count,';
+						set v_match_sql = 'insert ignore into recon_tmp_t4manymatch (tran_gid,tranbrkp_gid,matched_count,';
 						set v_match_sql = concat(v_match_sql,'tran_mult,source_value,comparison_value,matched_txt_json) ');
 						set v_match_sql = concat(v_match_sql,'select ');
 						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,a.tran_mult,');
@@ -1856,8 +2047,8 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'}',char(39),' order by b.tran_gid,b.tranbrkp_gid),');
 						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
 
-						set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
 						set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
 						set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
@@ -1869,10 +2060,11 @@ me:BEGIN
               set v_match_sql = concat(v_match_sql,v_recorder);
             end if;
 
+            -- select v_match_sql;
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- insert in match table
-						set v_match_sql = 'insert into recon_tmp_tmatch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+						set v_match_sql = 'insert into recon_tmp_t4match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'M',char(39),',');
 						set v_match_sql = concat(v_match_sql,'max(tran_gid),max(tranbrkp_gid),sum(matched_count)+count(*) as matched_count,');
 						set v_match_sql = concat(v_match_sql,'comparison_value as matched_value,tran_mult,');
@@ -1888,7 +2080,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'}',char(39),'),');
 						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json),matched_txt_json) as matched_json ');
 
-						set v_match_sql = concat(v_match_sql,'from recon_tmp_tmanymatch ');
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_t4manymatch ');
 
 						if v_recontype_code <> 'N' then
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
@@ -1904,65 +2096,69 @@ me:BEGIN
 							set v_match_sql = concat(v_match_sql,'group by matched_txt_json ');
 						end if;
 
+            -- select v_match_sql;
+            select v_match_sql;
 						call pr_run_sql(v_match_sql,@msg,@result);
 
-						select max(matched_count) into v_count from recon_tmp_tmatch;
+						select max(matched_count) into v_count from recon_tmp_t4match;
 						set v_count = ifnull(v_count,0);
 
-						truncate recon_tmp_tpseudorows;
+						truncate recon_tmp_t4pseudorows;
 
 						if v_count >= 2 then
-							insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+							insert into recon_tmp_t4pseudorows select row from pseudo_rows1 where row <= v_count;
 						else
-							insert into recon_tmp_tpseudorows select 0 union select 1;
+							insert into recon_tmp_t4pseudorows select 0 union select 1;
 						end if;
 
-						insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+						insert into recon_tmp_t4matchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
 							select
 								tran_gid as parent_tran_gid,
 								tranbrkp_gid as parent_tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
-							FROM recon_tmp_tmatch
-							JOIN recon_tmp_tpseudorows
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS ko_value,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_mult'))) AS tran_mult,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+							FROM recon_tmp_t4match
+							JOIN recon_tmp_t4pseudorows
 							where group_flag = 'M'
 							HAVING tran_gid IS NOT NULL;
 
 						-- clear matched records
-						truncate recon_tmp_ttrangid;
+						truncate recon_tmp_t4trangid;
 
-						insert into recon_tmp_ttrangid
-							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
+						insert into recon_tmp_t4trangid
+							select distinct tran_gid from recon_tmp_t4matchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_t4source as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_t4comparison as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid);
 
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_t4tranbrkpgid;
 
-						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
-							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
+						insert into recon_tmp_t4tranbrkpgid (tranbrkp_gid)
+							select distinct tranbrkp_gid from recon_tmp_t4matchdtl where tranbrkp_gid > 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_t4source as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t4tranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_t4comparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t4tranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						truncate recon_tmp_ttrangid;
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_t4trangid;
+						truncate recon_tmp_t4tranbrkpgid;
 					end if;
+
+          -- leave me;
 
 					-- one to many match
 					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' then
-            set v_match_sql = 'insert into recon_tmp_tmatch (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+            set v_match_sql = 'insert into recon_tmp_t4match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
             set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
             set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,');
 
@@ -2001,8 +2197,8 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'}',char(39),'),');
             set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
 
-            set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+            set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
             set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
 						set v_match_sql = concat(v_match_sql,'where 1 = 1 ');
@@ -2034,63 +2230,63 @@ me:BEGIN
             -- run match query one to many
             call pr_run_sql(v_match_sql,@msg,@result);
 
-            select max(matched_count) into v_count from recon_tmp_tmatch;
+            select max(matched_count) into v_count from recon_tmp_t4match;
             set v_count = ifnull(v_count,0);
 
-            truncate recon_tmp_tpseudorows;
+            truncate recon_tmp_t4pseudorows;
 
             if v_count >= 2 then
-              insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+              insert into recon_tmp_t4pseudorows select row from pseudo_rows1 where row <= v_count;
             else
-              insert into recon_tmp_tpseudorows select 0 union select 1;
+              insert into recon_tmp_t4pseudorows select 0 union select 1;
             end if;
 
-            insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+            insert into recon_tmp_t4matchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
               select
                 tran_gid as parent_tran_gid,
                 tranbrkp_gid as parent_tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
-              FROM recon_tmp_tmatch
-              JOIN recon_tmp_tpseudorows
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS ko_value,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_mult'))) AS tran_mult,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+              FROM recon_tmp_t4match
+              JOIN recon_tmp_t4pseudorows
               where group_flag = 'Y'
               HAVING tran_gid IS NOT NULL;
 
 						-- clear matched records
-						truncate recon_tmp_ttrangid;
+						truncate recon_tmp_t4trangid;
 
-						insert into recon_tmp_ttrangid
-							select distinct tran_gid from recon_tmp_tmatchdtl where tran_gid > 0 and tranbrkp_gid = 0;
+						insert into recon_tmp_t4trangid
+							select distinct tran_gid from recon_tmp_t4matchdtl where tran_gid > 0 and tranbrkp_gid = 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_t4source as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid);
+						delete a.* from recon_tmp_t4comparison as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid);
 
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_t4tranbrkpgid;
 
-						insert into recon_tmp_ttranbrkpgid (tranbrkp_gid)
-							select distinct tranbrkp_gid from recon_tmp_tmatchdtl where tranbrkp_gid > 0;
+						insert into recon_tmp_t4tranbrkpgid (tranbrkp_gid)
+							select distinct tranbrkp_gid from recon_tmp_t4matchdtl where tranbrkp_gid > 0;
 
-						delete a.* from recon_tmp_tsource as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_t4source as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t4tranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						delete a.* from recon_tmp_tcomparison as a
-            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b
+						delete a.* from recon_tmp_t4comparison as a
+            where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t4tranbrkpgid as b
               where a.tranbrkp_gid = b.tranbrkp_gid);
 
-						truncate recon_tmp_ttrangid;
-						truncate recon_tmp_ttranbrkpgid;
+						truncate recon_tmp_t4trangid;
+						truncate recon_tmp_t4tranbrkpgid;
 					 end if;
 
 					-- one to one match
           if v_manytomany_match_flag = 'N' then
-						set v_match_sql = 'insert into recon_tmp_tmatch (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,matched_value,matched_json) ';
+						set v_match_sql = 'insert into recon_tmp_t4match (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,matched_value,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
 						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,');
 
@@ -2128,8 +2324,8 @@ me:BEGIN
 
 						set v_match_sql = concat(v_match_sql,'}');
 						set v_match_sql = concat(v_match_sql,']',char(39),') as json) as matched_json ');
-						set v_match_sql = concat(v_match_sql,'from recon_tmp_tsource as a ');
-						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_tcomparison as b ');
+						set v_match_sql = concat(v_match_sql,'from recon_tmp_t4source as a ');
+						set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t4comparison as b ');
 						set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
 
 						if v_recontype_code <> 'N' then
@@ -2156,67 +2352,67 @@ me:BEGIN
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- pseudorows
-						select max(matched_count) into v_count from recon_tmp_tmatch;
+						select max(matched_count) into v_count from recon_tmp_t4match;
 						set v_count = ifnull(v_count,0);
 
-						truncate recon_tmp_tpseudorows;
+						truncate recon_tmp_t4pseudorows;
 
 						if v_count >= 2 then
-							insert into recon_tmp_tpseudorows select row from pseudo_rows1 where row <= v_count;
+							insert into recon_tmp_t4pseudorows select row from pseudo_rows1 where row <= v_count;
 						else
-							insert into recon_tmp_tpseudorows select 0 union select 1;
+							insert into recon_tmp_t4pseudorows select 0 union select 1;
 						end if;
 
 						-- select v_source_sql,v_comparison_sql,v_match_sql;
 						-- leave me;
 
-						insert into recon_tmp_tmatchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
+						insert into recon_tmp_t4matchdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult,src_comp_flag)
 							select
 								tran_gid as parent_tran_gid,
 								tranbrkp_gid as parent_tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS ko_value,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_tmatch.matched_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
-							FROM recon_tmp_tmatch
-							JOIN recon_tmp_tpseudorows
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS ko_value,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_mult'))) AS tran_mult,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t4match.matched_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+							FROM recon_tmp_t4match
+							JOIN recon_tmp_t4pseudorows
 							where group_flag = 'N'
 							HAVING tran_gid IS NOT NULL;
           end if;
 
           -- duplicate validation
-          insert into recon_tmp_tmatchdup (tran_gid,tranbrkp_gid,rec_count)
-            select tran_gid,tranbrkp_gid,count(*) from recon_tmp_tmatchdtl
+          insert into recon_tmp_t4matchdup (tran_gid,tranbrkp_gid,rec_count)
+            select tran_gid,tranbrkp_gid,count(*) from recon_tmp_t4matchdtl
             group by tran_gid,tranbrkp_gid
             having count(*) > 1;
 
-          insert into recon_tmp_tmatchparentgid(parent_tran_gid,parent_tranbrkp_gid)
-            select b.parent_tran_gid,b.parent_tranbrkp_gid from recon_tmp_tmatchdup as a
-            inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
+          insert into recon_tmp_t4matchparentgid(parent_tran_gid,parent_tranbrkp_gid)
+            select b.parent_tran_gid,b.parent_tranbrkp_gid from recon_tmp_t4matchdup as a
+            inner join recon_tmp_t4matchdtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
             group by b.parent_tran_gid,b.parent_tranbrkp_gid;
 
-          update recon_tmp_tmatch as a
-          inner join recon_tmp_tmatchparentgid as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
+          update recon_tmp_t4match as a
+          inner join recon_tmp_t4matchparentgid as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
           set a.dup_flag = 'Y';
 
-          update recon_tmp_tmatch set
+          update recon_tmp_t4match set
             matched_value = abs(matched_value),
             ko_flag = 'Y'
           where dup_flag = 'N';
 
           if in_automatch_flag = 'Y' then
-            truncate recon_tmp_tmatchko;
+            truncate recon_tmp_t4matchko;
 
             if v_recontype_code <> 'N' then
               -- match diff
 							set v_sql = concat("
-              insert into recon_tmp_tmatchdiff(tran_gid,tran_value,excp_value,mapped_value,tran_mult,diff_value)
+              insert into recon_tmp_t4matchdiff(tran_gid,tran_value,excp_value,mapped_value,tran_mult,diff_value)
               select
                 a.tran_gid,b.tran_value,b.excp_value,b.mapped_value,b.tran_mult,
                 b.excp_value - sum(a.ko_value*a.tran_mult)*b.tran_mult
-              from recon_tmp_tmatch as m
-              inner join recon_tmp_tmatchdtl as a on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
+              from recon_tmp_t4match as m
+              inner join recon_tmp_t4matchdtl as a on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
               inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
                 and b.excp_value > 0
                 and b.delete_flag = 'N'
@@ -2227,12 +2423,12 @@ me:BEGIN
 
 							call pr_run_sql(v_sql,@msg,@result);
 
-              if exists(select * from recon_tmp_tmatchdiff) then
+              if exists(select * from recon_tmp_t4matchdiff) then
 								-- diff block
 								diff_block:begin
 									declare diff_done int default 0;
 									declare diff_cursor cursor for
-									select tran_gid,tran_mult,mapped_value,diff_value from recon_tmp_tmatchdiff;
+									select tran_gid,tran_mult,mapped_value,diff_value from recon_tmp_t4matchdiff;
 									declare continue handler for not found set diff_done=1;
 
 									open diff_cursor;
@@ -2250,13 +2446,13 @@ me:BEGIN
                         v_excp_value
                       from
                       (
-                        select tranbrkp_gid,excp_value,tran_mult from recon_tmp_tsource
+                        select tranbrkp_gid,excp_value,tran_mult from recon_tmp_t4source
                         where tran_gid = v_tran_gid
                         and tranbrkp_gid > 0
 
                         union
 
-                        select tranbrkp_gid,excp_value,tran_mult from recon_tmp_tcomparison
+                        select tranbrkp_gid,excp_value,tran_mult from recon_tmp_t4comparison
                         where tran_gid = v_tran_gid
                         and tranbrkp_gid > 0
                       ) as a;
@@ -2283,8 +2479,8 @@ me:BEGIN
 														(
 															select
 																a.tranbrkp_gid
-															from recon_tmp_tmatchdtl as a
-															inner join recon_tmp_tmatch as m on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
+															from recon_tmp_t4matchdtl as a
+															inner join recon_tmp_t4match as m on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
 															where a.tran_gid = ",cast(v_tran_gid as nchar),"
 															and m.dup_flag = 'N'
 															and m.ko_flag = 'Y'
@@ -2309,8 +2505,8 @@ me:BEGIN
 													v_parent_tranbrkp_gid,
 													v_matched_count,
 													v_matched_value
-												from recon_tmp_tmatchdtl as a
-												inner join recon_tmp_tmatch as b on a.parent_tran_gid = b.tran_gid and a.parent_tranbrkp_gid = b.tranbrkp_gid
+												from recon_tmp_t4matchdtl as a
+												inner join recon_tmp_t4match as b on a.parent_tran_gid = b.tran_gid and a.parent_tranbrkp_gid = b.tranbrkp_gid
 												where a.tran_gid = v_tran_gid
 												and b.ko_flag = 'Y'
 												group by a.parent_tran_gid,a.parent_tranbrkp_gid,b.matched_count,b.matched_value
@@ -2318,14 +2514,14 @@ me:BEGIN
 												order by sum(a.ko_value*a.tran_mult)*v_tran_mult,count(*)
 												limit 0,1;
 
-												update recon_tmp_tmatch set
+												update recon_tmp_t4match set
 													ko_flag = 'D',
 													dup_flag = 'D'
 												where tran_gid = v_parent_tran_gid
 												and tranbrkp_gid = v_parent_tranbrkp_gid;
 
-												insert ignore into recon_tmp_tmatchdiffdtl
-													select * from recon_tmp_tmatchdtl
+												insert ignore into recon_tmp_t4matchdiffdtl
+													select * from recon_tmp_t4matchdtl
 													where parent_tran_gid = v_parent_tran_gid
 													and parent_tranbrkp_gid = v_parent_tranbrkp_gid;
                       end if;
@@ -2336,22 +2532,22 @@ me:BEGIN
 								end diff_block;
 
                 -- more than one record marked as duplicate
-                if exists(select * from recon_tmp_tmatch
+                if exists(select * from recon_tmp_t4match
                   where ko_flag = 'D') then
-                  truncate recon_tmp_ttrangid;
+                  truncate recon_tmp_t4trangid;
 
-                  insert into recon_tmp_ttrangid(tran_gid)
-                    select tran_gid from recon_tmp_tmatchdiffdtl
+                  insert into recon_tmp_t4trangid(tran_gid)
+                    select tran_gid from recon_tmp_t4matchdiffdtl
                     group by tran_gid
                     having count(*) > 1;
 
-                  insert into recon_tmp_ttranwithbrkpgid(tran_gid,tranbrkp_gid,rec_count)
-                    select a.parent_tran_gid,a.parent_tranbrkp_gid,count(*) from recon_tmp_tmatchdiffdtl as a
-                    inner join recon_tmp_ttrangid as b on a.tran_gid = b.tran_gid
+                  insert into recon_tmp_t4tranwithbrkpgid(tran_gid,tranbrkp_gid,rec_count)
+                    select a.parent_tran_gid,a.parent_tranbrkp_gid,count(*) from recon_tmp_t4matchdiffdtl as a
+                    inner join recon_tmp_t4trangid as b on a.tran_gid = b.tran_gid
                     group by a.parent_tran_gid,a.parent_tranbrkp_gid;
 
-                  update recon_tmp_tmatch as a
-                  inner join recon_tmp_ttranwithbrkpgid as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
+                  update recon_tmp_t4match as a
+                  inner join recon_tmp_t4tranwithbrkpgid as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid
                   set
                     a.dup_flag = 'N',
                     a.ko_flag = 'Y'
@@ -2360,8 +2556,8 @@ me:BEGIN
                 end if;
               end if;
 
-              update recon_tmp_tmatch as a
-              inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
+              update recon_tmp_t4match as a
+              inner join recon_tmp_t4matchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
                 and b.tranbrkp_gid > 0
                 and b.ko_flag = 'N'
               set b.ko_flag = 'Y'
@@ -2369,11 +2565,11 @@ me:BEGIN
 
               -- knockoff validation
 							set v_sql = concat("
-								insert into recon_tmp_tmatchko (tran_gid,ko_value,excp_value)
+								insert into recon_tmp_t4matchko (tran_gid,ko_value,excp_value)
 								select
 									a.tran_gid,sum(a.ko_value*a.tran_mult)*b.tran_mult,b.excp_value
-								from recon_tmp_tmatch as m
-								inner join recon_tmp_tmatchdtl as a on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
+								from recon_tmp_t4match as m
+								inner join recon_tmp_t4matchdtl as a on m.tran_gid = a.parent_tran_gid and m.tranbrkp_gid = a.parent_tranbrkp_gid
 								inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
 									and b.excp_value <> 0
 									and b.mapped_value = 0
@@ -2385,18 +2581,17 @@ me:BEGIN
 
 							call pr_run_sql(v_sql,@msg,@result);
 
-              update recon_tmp_tmatchdtl as a
-              inner join recon_tmp_tmatchko as b on a.tran_gid = b.tran_gid
+              update recon_tmp_t4matchdtl as a
+              inner join recon_tmp_t4matchko as b on a.tran_gid = b.tran_gid
               set a.ko_flag = 'Y';
 
-              update recon_tmp_tmatch as a
-              inner join recon_tmp_tmatchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
+              update recon_tmp_t4match as a
+              inner join recon_tmp_t4matchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
                 and b.ko_flag = 'N'
               set a.ko_flag = 'N'
               where a.dup_flag = 'N';
             end if;
 
-            select * from recon_tmp_tmatch;
             leave me;
 
             -- insert into knockoff
@@ -2414,34 +2609,34 @@ me:BEGIN
 								'",v_rule_code,"',
 								'",v_reversal_flag,"',
 								'N',matched_json,'N',sysdate(),'",in_user_code,"'
-							from recon_tmp_tmatch
+							from recon_tmp_t4match
 							where ko_flag = 'Y'");
-						
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
-							insert into recon_tmp_tkodtl
+							insert into recon_tmp_t4kodtl
 							( ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult)
 							select
 								ko_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS excp_value,
-								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult
+								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS excp_value,
+								JSON_UNQUOTE(JSON_EXTRACT(",v_ko_table,".kodtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_mult'))) AS tran_mult
 							FROM ",v_ko_table,"
-							JOIN recon_tmp_tpseudorows
+							JOIN recon_tmp_t4pseudorows
 							where job_gid = ",cast(in_job_gid as nchar),"
 							and kodtl_post_flag = 'N'
 							HAVING tran_gid IS NOT NULL
 							order by ko_gid");
-						
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- insert in kodtl table
 						set v_sql = concat("
 							insert into ",v_kodtl_table," (ko_gid,tran_gid,tranbrkp_gid,ko_value,ko_mult)
-								select ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_tkodtl");
-							
+								select ko_gid,tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_t4kodtl");
+
 						call pr_run_sql(v_sql,@msg,@result);
 
             if v_recontype_code <> 'N' then
@@ -2450,28 +2645,28 @@ me:BEGIN
 								insert into ",v_koroundoff_table," (ko_gid,tran_gid,tranbrkp_gid,roundoff_value)
 									select
 										b.ko_gid,b.tran_gid,b.tranbrkp_gid,a.roundoff_value
-									from recon_tmp_ttranroundoff as a
-									inner join recon_tmp_tkodtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid");
-									
+									from recon_tmp_t4tranroundoff as a
+									inner join recon_tmp_t4kodtl as b on a.tran_gid = b.tran_gid and a.tranbrkp_gid = b.tranbrkp_gid");
+
 							call pr_run_sql(v_sql,@msg,@result);
 
-              insert into recon_tmp_tkodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
+              insert into recon_tmp_t4kodtlsumm (max_ko_gid,tran_gid,ko_value,rec_count)
               select
                 max(ko_gid) as max_ko_gid,tran_gid,sum(ko_value*tran_mult) as ko_value,count(*) as rec_count
-              from recon_tmp_tkodtl
+              from recon_tmp_t4kodtl
               group by tran_gid;
 
               -- roundoff tranbrkp_gid = 0 cases
-              update recon_tmp_tkodtlsumm as a
-              inner join recon_tmp_ttranroundoff as b on a.tran_gid = b.tran_gid
+              update recon_tmp_t4kodtlsumm as a
+              inner join recon_tmp_t4tranroundoff as b on a.tran_gid = b.tran_gid
                 and b.tranbrkp_gid = 0
               set a.roundoff_value = a.roundoff_value + b.roundoff_value;
 
               -- roundoff tranbrkp_gid > 0 cases
-              update recon_tmp_tkodtlsumm as a
+              update recon_tmp_t4kodtlsumm as a
               inner join
               (
-                select tran_gid,sum(roundoff_value) as roundoff_value from recon_tmp_ttranroundoff
+                select tran_gid,sum(roundoff_value) as roundoff_value from recon_tmp_t4tranroundoff
                 where tranbrkp_gid > 0
                 group by tran_gid
               ) as b on a.tran_gid = b.tran_gid
@@ -2480,7 +2675,7 @@ me:BEGIN
               -- update in tran table
 							set v_sql = concat("
 								update ",v_tran_table," as a
-								inner join recon_tmp_tkodtlsumm as b on a.tran_gid = b.tran_gid
+								inner join recon_tmp_t4kodtlsumm as b on a.tran_gid = b.tran_gid
 								set a.excp_value = a.excp_value - (b.ko_value * a.tran_mult),
 										a.roundoff_value = a.roundoff_value + b.roundoff_value,
 										a.ko_gid = b.max_ko_gid,
@@ -2488,123 +2683,136 @@ me:BEGIN
 										a.theme_code = ''
 								where ((a.excp_value <> 0 and a.mapped_value = 0) or a.mapped_value > 0)
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
+
+              /*
+              -- zero roundoff value
+							set v_sql = concat("
+								update ",v_tran_table," as a
+								inner join recon_tmp_t4kodtlsumm as b on a.tran_gid = b.tran_gid
+								set a.excp_value = a.excp_value - a.roundoff_value
+								where a.excp_value = a.roundoff_value
+                and a.roundoff_value <> 0
+								and a.delete_flag = 'N'");
+
+							call pr_run_sql(v_sql,@msg,@result);
+              */
 
               -- update in tranbrkp table
 							set v_sql = concat("
 								update ",v_tranbrkp_table," as a
-								inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
+								inner join recon_tmp_t4kodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
 								set a.excp_value = a.excp_value - b.ko_value,
 										a.ko_gid = b.ko_gid,
 										a.ko_date = curdate(),
 										a.theme_code = ''
 								where a.excp_value <> 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               -- update in tranbrkp table
 							set v_sql = concat("
 								update ",v_tranbrkp_table," as a
-								inner join recon_tmp_ttranroundoff as r on a.tranbrkp_gid = r.tranbrkp_gid
-								inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
+								inner join recon_tmp_t4tranroundoff as r on a.tranbrkp_gid = r.tranbrkp_gid
+								inner join recon_tmp_t4kodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
 								set a.roundoff_value = r.roundoff_value
 								where a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
             else
 							set v_sql = concat("
 								update ",v_tran_table," as a
-								inner join recon_tmp_tkodtlsumm as b on a.tran_gid = b.tran_gid
+								inner join recon_tmp_t4kodtlsumm as b on a.tran_gid = b.tran_gid
 								set a.ko_gid = b.max_ko_gid,
 										a.ko_date = curdate(),
 										a.theme_code = ''
 								where a.ko_gid = 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
 
 							set v_sql = concat("
 								update ",v_tranbrkp_table," as a
-								inner join recon_tmp_tkodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
+								inner join recon_tmp_t4kodtl as b on a.tranbrkp_gid = b.tranbrkp_gid
 								set a.ko_gid = b.ko_gid,
 										a.ko_date = curdate(),
 										a.theme_code = ''
 								where a.ko_gid = 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
             end if;
 
             -- move tran table
-            truncate recon_tmp_ttrangid;
+            truncate recon_tmp_t4trangid;
 
 						set v_sql = concat("
-							insert into recon_tmp_ttrangid
-								select a.tran_gid from recon_tmp_tkodtlsumm as a
+							insert into recon_tmp_t4trangid
+								select a.tran_gid from recon_tmp_t4kodtlsumm as a
 								inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
 									and b.excp_value = 0
 									and b.mapped_value = 0
 									and b.delete_flag = 'N'");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("
 							insert into ",v_tranko_table,"
-								select t.* from recon_tmp_ttrangid as g
+								select t.* from recon_tmp_t4trangid as g
 								inner join ",v_tran_table," as t on g.tran_gid = t.tran_gid");
-								
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("delete a.* from ",v_tran_table," as a
-							where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)");
+							where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid)");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- move tranbrkp table
-            truncate recon_tmp_ttranbrkpgid;
+            truncate recon_tmp_t4tranbrkpgid;
 
-            insert into recon_tmp_ttranbrkpgid (tranbrkp_gid) select tranbrkp_gid from recon_tmp_tkodtl where tranbrkp_gid > 0;
+            insert into recon_tmp_t4tranbrkpgid (tranbrkp_gid) select tranbrkp_gid from recon_tmp_t4kodtl where tranbrkp_gid > 0;
 
 						set v_sql = concat("
 							insert into ",v_tranbrkpko_table,"
-								select b.* from recon_tmp_ttranbrkpgid as g
+								select b.* from recon_tmp_t4tranbrkpgid as g
 								inner join ",v_tranbrkp_table," as b on g.tranbrkp_gid = b.tranbrkp_gid");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("delete a.* from ",v_tranbrkp_table," as a
-							where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_ttranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid)");
+							where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t4tranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid)");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- move tran mapped_value > 0
             /*
-            truncate recon_tmp_ttrangid;
+            truncate recon_tmp_t4trangid;
 
 						set v_sql = concat("
-							insert into recon_tmp_ttrangid
-								select distinct a.tran_gid from recon_tmp_ttranbrkpgid as a
+							insert into recon_tmp_t4trangid
+								select distinct a.tran_gid from recon_tmp_t4tranbrkpgid as a
 								left join ",v_tranbrkp_table," as b on a.tran_gid = b.tran_gid and b.delete_flag = 'N'
 								where b.tran_gid is null");
 
 						call pr_run_sql(v_sql,@msg,@result);
             */
 
-            truncate recon_tmp_ttrangid1;
-            truncate recon_tmp_ttrangid2;
+            truncate recon_tmp_t4trangid1;
+            truncate recon_tmp_t4trangid2;
 
             -- set tran_gid1
 						set v_sql = concat("
-							insert into recon_tmp_ttrangid1
-								select distinct tran_gid from recon_tmp_ttranbrkpgid");
+							insert into recon_tmp_t4trangid1
+								select distinct tran_gid from recon_tmp_t4tranbrkpgid");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- set tran_gid2
 						set v_sql = concat("
-							insert into recon_tmp_ttrangid2
+							insert into recon_tmp_t4trangid2
 								select distinct tran_gid from ",v_tranbrkp_table,"
                 where recon_code = '",in_recon_code,"'
                 and tran_gid > 0
@@ -2614,36 +2822,36 @@ me:BEGIN
 
             -- move tran mapped_value > 0
 						set v_sql = concat("
-							insert into recon_tmp_ttrangid
-								select distinct a.tran_gid from recon_tmp_ttrangid1 as a
-								left join recon_tmp_ttrangid2 as b on a.tran_gid = b.tran_gid
+							insert into recon_tmp_t4trangid
+								select distinct a.tran_gid from recon_tmp_t4trangid1 as a
+								left join recon_tmp_t4trangid2 as b on a.tran_gid = b.tran_gid
 								where b.tran_gid is null");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
             -- keep excp value non-zero cases
-            truncate recon_tmp_tgid;
+            truncate recon_tmp_t4gid;
 
 						set v_sql = concat("
-							insert into recon_tmp_tgid(tran_gid) select tran_gid from ",v_tran_table," as a
-								where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)
+							insert into recon_tmp_t4gid(tran_gid) select tran_gid from ",v_tran_table," as a
+								where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid)
 								and a.excp_value <> 0
 								and a.delete_flag = 'N'");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
-            delete a.* from recon_tmp_ttrangid as a
-            where a.tran_gid in (select b.tran_gid from recon_tmp_tgid as b where a.tran_gid = b.tran_gid);
+            delete a.* from recon_tmp_t4trangid as a
+            where a.tran_gid in (select b.tran_gid from recon_tmp_t4gid as b where a.tran_gid = b.tran_gid);
 
 						set v_sql = concat("
 							insert into ",v_tranko_table,"
-								select t.* from recon_tmp_ttrangid as g
+								select t.* from recon_tmp_t4trangid as g
 								inner join ",v_tran_table," as t on g.tran_gid = t.tran_gid");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("delete a.* from ",v_tran_table," as a
-							where a.tran_gid in (select b.tran_gid from recon_tmp_ttrangid as b where a.tran_gid = b.tran_gid)");
+							where a.tran_gid in (select b.tran_gid from recon_tmp_t4trangid as b where a.tran_gid = b.tran_gid)");
 
 						call pr_run_sql(v_sql,@msg,@result);
 
@@ -2671,24 +2879,24 @@ me:BEGIN
             select
               @preview_gid:=@preview_gid+1,in_job_gid,sysdate(),matched_value,in_recon_code,
               v_rule_code,v_reversal_flag,matched_json,'N',sysdate(),in_user_code
-            from recon_tmp_tmatch
+            from recon_tmp_t4match
             where dup_flag = 'N'
             and tranbrkp_gid = 0;
 
             insert into recon_trn_tpreviewdtl
             ( previewdtl_gid,preview_gid,job_gid,tran_gid,tranbrkp_gid,excp_value,tran_mult,reversal_flag,src_comp_flag)
             select
-              recon_tmp_tpseudorows.row+1,
+              recon_tmp_t4pseudorows.row+1,
               preview_gid,
               job_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS excp_value,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS excp_value,
+              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_mult'))) AS tran_mult,
               v_reversal_flag,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+              JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag
             FROM recon_trn_tpreview
-            JOIN recon_tmp_tpseudorows
+            JOIN recon_tmp_t4pseudorows
             where job_gid = in_job_gid
             and previewdtl_post_flag = 'N'
             HAVING tran_gid IS NOT NULL;
@@ -2709,7 +2917,7 @@ me:BEGIN
               select
                 @preview_gid:=@preview_gid+1,in_job_gid,curdate(),matched_value,in_recon_code,v_rule_code,
                 v_reversal_flag,matched_json,'N',sysdate(),in_user_code
-              from recon_tmp_tmatch
+              from recon_tmp_t4match
               where 1 = 1
               and dup_flag = 'N'
               and tranbrkp_gid > 0;
@@ -2717,17 +2925,17 @@ me:BEGIN
 							insert into recon_trn_tpreviewdtl
 							( previewdtl_gid,preview_gid,job_gid,tran_gid,tranbrkp_gid,excp_value,tran_mult,reversal_flag,src_comp_flag)
 							select
-								recon_tmp_tpseudorows.row+1,
+								recon_tmp_t4pseudorows.row+1,
 								preview_gid,
 								job_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_gid'))) AS tran_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].ko_value'))) AS excp_value,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].tran_mult'))) AS tran_mult,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_gid'))) AS tran_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].ko_value'))) AS excp_value,
+								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].tran_mult'))) AS tran_mult,
 								v_reversal_flag,
-								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_tpseudorows.row, '].src_comp_flag'))) AS src_comp_flag
+								JSON_UNQUOTE(JSON_EXTRACT(recon_trn_tpreview.previewdtl_json, CONCAT('$[', recon_tmp_t4pseudorows.row, '].src_comp_flag'))) AS src_comp_flag
 							FROM recon_trn_tpreview
-							JOIN recon_tmp_tpseudorows
+							JOIN recon_tmp_t4pseudorows
 							where job_gid = in_job_gid
 							and previewdtl_post_flag = 'N'
 							HAVING tran_gid IS NOT NULL;
@@ -2749,7 +2957,7 @@ me:BEGIN
               and a.delete_flag = 'N';
 
               update recon_tmp_ttranbrkp as a
-							inner join recon_tmp_tmatchdtl as c on a.tranbrkp_gid = c.tranbrkp_gid and a.tran_gid = c.tran_gid
+							inner join recon_tmp_t4matchdtl as c on a.tranbrkp_gid = c.tranbrkp_gid and a.tran_gid = c.tran_gid
               inner join recon_trn_tpreviewdtl as b on c.tran_gid = b.tran_gid
                 and b.job_gid = in_job_gid
                 and b.preview_gid > v_preview_gid
@@ -2777,20 +2985,20 @@ me:BEGIN
 
           -- vijay end
 
-          truncate recon_tmp_tsource;
-          truncate recon_tmp_tcomparison;
-          truncate recon_tmp_tsourcedup;
-          truncate recon_tmp_tmatch;
-          truncate recon_tmp_tmatchdtl;
-          truncate recon_tmp_tmatchdtlgid;
-          truncate recon_tmp_tmatchdup;
-          truncate recon_tmp_tmatchparentgid;
-          truncate recon_tmp_tmatchko;
-          truncate recon_tmp_tmanymatch;
-          truncate recon_tmp_tkodtl;
-          truncate recon_tmp_tkodtlsumm;
-          truncate recon_tmp_ttrangid;
-          truncate recon_tmp_ttranbrkpgid;
+          truncate recon_tmp_t4source;
+          truncate recon_tmp_t4comparison;
+          truncate recon_tmp_t4sourcedup;
+          truncate recon_tmp_t4match;
+          truncate recon_tmp_t4matchdtl;
+          truncate recon_tmp_t4matchdtlgid;
+          truncate recon_tmp_t4matchdup;
+          truncate recon_tmp_t4matchparentgid;
+          truncate recon_tmp_t4matchko;
+          truncate recon_tmp_t4manymatch;
+          truncate recon_tmp_t4kodtl;
+          truncate recon_tmp_t4kodtlsumm;
+          truncate recon_tmp_t4trangid;
+          truncate recon_tmp_t4tranbrkpgid;
     end loop applyrule_loop;
 
     close applyrule_cursor;
@@ -2804,33 +3012,33 @@ me:BEGIN
     set out_msg = 'Preview ran successfully !';
   end if;
 
-  drop temporary table if exists recon_tmp_tsource;
-  drop temporary table if exists recon_tmp_tcomparison;
-  drop temporary table if exists recon_tmp_tsourcedup;
-  drop temporary table if exists recon_tmp_tmatch;
-  drop temporary table if exists recon_tmp_tmatchdtl;
-  drop temporary table if exists recon_tmp_tmatchdtlgid;
-  drop temporary table if exists recon_tmp_tmatchdup;
-  drop temporary table if exists recon_tmp_tmatchparentgid;
-  drop temporary table if exists recon_tmp_tmatchko;
-  drop temporary table if exists recon_tmp_tmatchdiff;
-  drop temporary table if exists recon_tmp_tmatchdiffdtl;
-  drop temporary table if exists recon_tmp_tmanymatch;
-  drop temporary table if exists recon_tmp_tkodtl;
-  drop temporary table if exists recon_tmp_tkodtlsumm;
-  drop temporary table if exists recon_tmp_tpseudorows;
-  drop temporary table if exists recon_tmp_ttrangid;
-  drop temporary table if exists recon_tmp_ttrangid1;
-  drop temporary table if exists recon_tmp_ttrangid2;
-  drop temporary table if exists recon_tmp_ttranbrkpgid;
-  drop temporary table if exists recon_tmp_ttranwithbrkpgid;
-  drop temporary table if exists recon_tmp_tindex;
-  drop temporary table if exists recon_tmp_tsql;
-  drop temporary table if exists recon_tmp_tgid;
-  drop temporary table if exists recon_tmp_ttranroundoff;
+  drop temporary table if exists recon_tmp_t4source;
+  drop temporary table if exists recon_tmp_t4comparison;
+  drop temporary table if exists recon_tmp_t4sourcedup;
+  drop temporary table if exists recon_tmp_t4match;
+  drop temporary table if exists recon_tmp_t4matchdtl;
+  drop temporary table if exists recon_tmp_t4matchdtlgid;
+  drop temporary table if exists recon_tmp_t4matchdup;
+  drop temporary table if exists recon_tmp_t4matchparentgid;
+  drop temporary table if exists recon_tmp_t4matchko;
+  drop temporary table if exists recon_tmp_t4matchdiff;
+  drop temporary table if exists recon_tmp_t4matchdiffdtl;
+  drop temporary table if exists recon_tmp_t4manymatch;
+  drop temporary table if exists recon_tmp_t4kodtl;
+  drop temporary table if exists recon_tmp_t4kodtlsumm;
+  drop temporary table if exists recon_tmp_t4pseudorows;
+  drop temporary table if exists recon_tmp_t4trangid;
+  drop temporary table if exists recon_tmp_t4trangid1;
+  drop temporary table if exists recon_tmp_t4trangid2;
+  drop temporary table if exists recon_tmp_t4tranbrkpgid;
+  drop temporary table if exists recon_tmp_t4tranwithbrkpgid;
+  drop temporary table if exists recon_tmp_t4index;
+  drop temporary table if exists recon_tmp_t4sql;
+  drop temporary table if exists recon_tmp_t4gid;
+  drop temporary table if exists recon_tmp_t4tranroundoff;
 
-  drop temporary table if exists recon_tmp_tthresholddiff;
-  drop temporary table if exists recon_tmp_tthresholddiffdtl;
+  drop temporary table if exists recon_tmp_t4thresholddiff;
+  drop temporary table if exists recon_tmp_t4thresholddiffdtl;
 end $$
 
 DELIMITER ;

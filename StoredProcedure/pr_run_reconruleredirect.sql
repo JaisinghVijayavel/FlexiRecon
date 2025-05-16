@@ -428,12 +428,14 @@ me:BEGIN
 				if v_rule_apply_on = 'T' then
 					call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 					call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+					call pr_run_automatch_partial_new(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 
 					if v_group_flag = 'MTM' then
 						set v_group_flag = 'OTM';
 
 						call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+						call pr_run_automatch_partial_new(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 					end if;
 				elseif v_rule_apply_on = 'S' then
 					call pr_run_posttranbrkprule(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
@@ -448,15 +450,15 @@ me:BEGIN
 			declare koseq_done int default 0;
 			declare v_koseq_type varchar(32);
 			declare v_koseq_ref_code varchar(32);
-			
+
 			declare koseq_cursor cursor for
 			select koseq_type,koseq_ref_code from recon_mst_tkoseq
-				where recon_code = in_recon_code 
-				and active_status = 'Y' 
-				and hold_flag = 'N' 
-				and delete_flag = 'N' 
+				where recon_code = in_recon_code
+				and active_status = 'Y'
+				and hold_flag = 'N'
+				and delete_flag = 'N'
 				order by koseq_no;
-				
+
 			declare continue handler for not found set koseq_done=1;
 
 			open koseq_cursor;
@@ -529,12 +531,14 @@ me:BEGIN
 					if v_rule_apply_on = 'T' then
 						call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+						call pr_run_automatch_partial_new(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 
 						if v_group_flag = 'MTM' then
 							set v_group_flag = 'OTM';
 
 							call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 							call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+							call pr_run_automatch_partial_new(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						end if;
 					elseif v_rule_apply_on = 'S' then
 						call pr_run_posttranbrkprule(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);

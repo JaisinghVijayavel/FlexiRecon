@@ -1358,7 +1358,8 @@ me:BEGIN
             set v_grp_field_condition = replace(v_grp_field_condition,',','and');
 
             -- comparison contra and mirror
-            if v_group_method_flag = 'B' and v_source_dataset_code <> v_comparison_dataset_code then
+            if v_group_method_flag = 'B' then
+              -- and v_source_dataset_code <> v_comparison_dataset_code
               -- comparison from tran table
               set v_comparison_sql = v_comparison_head_sql;
 
