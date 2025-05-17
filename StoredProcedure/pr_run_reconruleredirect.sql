@@ -427,14 +427,14 @@ me:BEGIN
 
 				if v_rule_apply_on = 'T' then
 					call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
-					call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+					-- call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 					call pr_run_automatch_partial_new(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 
 					if v_group_flag = 'MTM' then
 						set v_group_flag = 'OTM';
 
 						call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
-						call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+						-- call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						call pr_run_automatch_partial_new(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 					end if;
 				elseif v_rule_apply_on = 'S' then
@@ -466,7 +466,7 @@ me:BEGIN
 			koseq_loop: loop
 				fetch koseq_cursor into v_koseq_type,v_koseq_ref_code;
 				if koseq_done = 1 then leave koseq_loop; end if;
-				
+
 				if v_koseq_type = 'P' then
 					call pr_run_preprocess(in_recon_code,v_koseq_ref_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
 				elseif v_koseq_type = 'T' then
@@ -487,14 +487,14 @@ me:BEGIN
 						v_probable_match_flag
 					from recon_mst_trule
 					where recon_code = in_recon_code
-					and rule_code = v_koseq_ref_code 
+					and rule_code = v_koseq_ref_code
 					and hold_flag = 'N'
 					and active_status = 'Y'
 					and period_from <= curdate()
 					and (period_to >= curdate()
 					or until_active_flag = 'Y')
 					and delete_flag = 'N';
-					
+
 					set v_rule_code = ifnull(v_rule_code,'');
 					set v_rule_apply_on = ifnull(v_rule_apply_on,'');
 
@@ -530,14 +530,14 @@ me:BEGIN
 
 					if v_rule_apply_on = 'T' then
 						call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
-						call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+						-- call pr_run_automatch_partial(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						call pr_run_automatch_partial_new(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 
 						if v_group_flag = 'MTM' then
 							set v_group_flag = 'OTM';
 
 							call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
-							call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+							-- call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 							call pr_run_automatch_partial_new(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						end if;
 					elseif v_rule_apply_on = 'S' then
@@ -547,7 +547,7 @@ me:BEGIN
 
 			end loop koseq_loop;
 			close koseq_cursor;
-		end koseq_block;	
+		end koseq_block;
 	end if;
 	
   set v_job_input_param = concat(v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format),char(13),char(10));

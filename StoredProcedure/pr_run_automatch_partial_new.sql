@@ -1535,6 +1535,7 @@ me:BEGIN
           truncate recon_tmp_t5trangid;
           truncate recon_tmp_t5tranbrkpgid;
 
+          /*
           -- find matchoff diff value
           -- plus value
           set v_match_sql = 'insert into recon_tmp_t5thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
@@ -1771,9 +1772,10 @@ me:BEGIN
           inner join recon_tmp_t5thresholddiffdtl as b on a.tran_gid = b.tran_gid
             and a.tranbrkp_gid = b.tranbrkp_gid
           set a.match_flag = 'Y';
+          */
 
 					-- many to many match
-					if v_manytomany_match_flag = 'Y' then
+					-- if v_manytomany_match_flag = 'Y' then
 						set v_match_sql = 'insert ignore into recon_tmp_t5manymatch (tran_gid,tranbrkp_gid,matched_count,';
 						set v_match_sql = concat(v_match_sql,'tran_mult,tran_acc_mode,source_value,comparison_value,matched_txt_json) ');
 						set v_match_sql = concat(v_match_sql,'select ');
@@ -1883,7 +1885,7 @@ me:BEGIN
               JOIN recon_tmp_t5pseudorows
               where group_flag = 'M'
               HAVING tran_gid IS NOT NULL;
-					end if;
+					-- end if;
 
           -- Find Duplicates
           truncate recon_tmp_t5matchdup;
@@ -1970,7 +1972,7 @@ me:BEGIN
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t5comparison set
-											  excp_value = excp_value - v_diff_value * tran_mult 
+											  excp_value = excp_value - v_diff_value * tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
@@ -1992,6 +1994,10 @@ me:BEGIN
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
+
+										-- insert roundoff value
+										insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
+											select v_tran_gid,v_tranbrkp_gid,v_ko_value;
 
 										set v_diff_value = v_diff_value - v_ko_value;
 									end if;

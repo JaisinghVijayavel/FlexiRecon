@@ -1802,6 +1802,8 @@ me:BEGIN
             end if;
 
 						call pr_run_sql(v_match_sql,@msg,@result);
+            select v_match_sql;
+            leave me;
 
             -- plus value
 						-- insert in match table
@@ -1998,6 +2000,8 @@ me:BEGIN
             end loop source_loop;
             close source_cursor;
           end source_block;
+
+          leave me;
 
           truncate recon_tmp_t4manymatch;
 
