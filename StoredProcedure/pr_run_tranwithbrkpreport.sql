@@ -108,7 +108,7 @@ me:BEGIN
 
   -- calc exception value based on roundoff value
   update recon_rpt_ttranwithbrkp set
-    excp_value = excp_value - roundoff_value
+    excp_value = excp_value - roundoff_value * tran_mult
   where job_gid = in_job_gid
   and rptsession_gid = in_rptsession_gid;
 
