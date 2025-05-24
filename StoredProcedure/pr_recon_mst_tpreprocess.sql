@@ -5,21 +5,25 @@ CREATE PROCEDURE `pr_recon_mst_tpreprocess`(
   inout in_preprocess_gid int(10),
   inout in_preprocess_code varchar(32),
   in in_preprocess_desc text,
-  in in_recon_code varchar(32), 
-  in in_hold_flag varchar(32), 
+  in in_recon_code varchar(32),
+  in in_hold_flag varchar(32),
   in in_get_recon_field varchar(32),
-  in in_set_recon_field varchar(32), 
+  in in_set_recon_field varchar(32),
   in in_process_method varchar(32),
   in in_process_query text,
-  in in_expression text, 
+  in in_expression text,
   in in_process_function text,
-  in in_lookup_dataset_code varchar(32), 
-  in in_lookup_multi_return_flag varchar(32), 
+  in in_lookup_dataset_code varchar(32),
+  in in_lookup_multi_return_flag varchar(32),
   in in_lookup_return_field varchar(32),
   in in_returnflag varchar(32),
   in in_preprocess_order varchar(32),
   in in_postprocessflag varchar(32),
   in in_cumulative_flag varchar(32),
+  in in_source_dataset_code varchar(32),
+  in in_comparison_dataset_code varchar(32),
+  in in_opening_flag varchar(32),
+  in in_recorderby_type varchar(32),
   in in_active_status char(1),
   in in_user_code varchar(32),
   in in_role_code varchar(32),
@@ -65,9 +69,9 @@ me:BEGIN
 		if in_lookup_multi_return_flag ='Y' THEN
 			set in_returnflag ='N';
 		end if;
-      --  if in_process_method ='QCD_EXPRESSION' THEN
-		-- set in_process_function =fn_get_expressionformat(in_recon_code,in_expression);
-		-- end if;
+
+
+
 	end if;
 
 	if in_action = "UPDATE"  or in_action = "DELETE" then
@@ -79,7 +83,7 @@ me:BEGIN
 		end if;
 	end if;
 
-	-- Duplicate validation
+
 	if in_action = 'INSERT' then
 		if exists (select preprocess_gid from recon_mst_tpreprocess where preprocess_desc = in_preprocess_desc  and recon_code=in_recon_code and delete_flag = 'N') then
 			set err_msg := concat(err_msg,'Duplicate Preprocess,');
@@ -108,10 +112,16 @@ me:BEGIN
 		leave me;
 	end if;
 
-  if in_process_method ='QCD_EXPRESSION' or in_process_method = 'QCD_AGGEXP' THEN
+  if in_process_method ='QCD_EXPRESSION' THEN
     set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,false);
   elseif in_process_method ='QCD_CUMULATIVEXP' THEN
     set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,true);
+  elseif in_process_method = 'QCD_AGGEXP' then
+    if in_cumulative_flag = 'Y' then
+      set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,true);
+    else
+      set in_process_function =fn_get_expressionformat(in_recon_code,in_set_recon_field,in_expression,false);
+    end if;
   end if;
 
 	if (in_action = 'INSERT') then
@@ -126,76 +136,85 @@ me:BEGIN
 			set_recon_field,
 			process_method,
 			process_query,
-      process_expression,
+            process_expression,
 			process_function,
-      cumulative_flag,
+            cumulative_flag,
+            opening_flag,
 			lookup_dataset_code,
-      lookup_multi_return_flag,
+            lookup_multi_return_flag,
 			lookup_return_field,
-      lookup_group_flag,
+            lookup_group_flag,
+            source_dataset_code,
+            comparison_dataset_code,
+            recorderby_type,
 			preprocess_order,
-      postprocess_flag,
+            postprocess_flag,
 			hold_flag,
 			active_status,
 			insert_date,
 			insert_by)
 		VALUES
-		(
-      in_preprocess_code,
+		(   in_preprocess_code,
 			in_preprocess_desc,
 			in_recon_code,
 			in_get_recon_field,
 			in_set_recon_field,
 			in_process_method,
 			in_process_query,
-      in_expression,
+            in_expression,
 			in_process_function,
-      in_cumulative_flag,
+            in_cumulative_flag,
+            in_opening_flag,
 			in_lookup_dataset_code,
-      in_lookup_multi_return_flag,
+            in_lookup_multi_return_flag,
 			in_lookup_return_field,
-      in_returnflag,
+            in_returnflag,
+            in_source_dataset_code,
+            in_comparison_dataset_code,
+            in_recorderby_type,
 			in_preprocess_order,
-      in_postprocessflag,
+            in_postprocessflag,
 			in_hold_flag,
 			in_active_status,
 			sysdate(),
-			in_user_code
-    );
-
+			in_user_code);
 		select max(preprocess_gid) into v_preprocess_gid from recon_mst_tpreprocess;
-
 		set in_preprocess_gid = v_preprocess_gid;
 		Set in_preprocess_code = in_preprocess_code;
-
 		set out_result = 1;
 		set out_msg ='Record saved successfully.. !';
     elseif(in_action = 'UPDATE') then
-      UPDATE recon_mst_tpreprocess SET
-		    preprocess_code = in_preprocess_code,
-		    preprocess_desc = in_preprocess_desc,
-		    recon_code = in_recon_code,
-		    get_recon_field = in_get_recon_field,
-		    set_recon_field = in_set_recon_field,
-		    process_method = in_process_method,
-		    process_query = in_process_query,
+        UPDATE recon_mst_tpreprocess
+		SET
+		preprocess_code = in_preprocess_code,
+		preprocess_desc = in_preprocess_desc,
+		recon_code = in_recon_code,
+		get_recon_field = in_get_recon_field,
+		set_recon_field = in_set_recon_field,
+		process_method = in_process_method,
+		process_query = in_process_query,
         process_expression=in_expression,
-		    process_function = in_process_function,
+		process_function = in_process_function,
         cumulative_flag = in_cumulative_flag,
-		    lookup_dataset_code = in_lookup_dataset_code,
+        opening_flag = in_opening_flag,
+		lookup_dataset_code = in_lookup_dataset_code,
         lookup_multi_return_flag=in_lookup_multi_return_flag,
-		    lookup_return_field = in_lookup_return_field,
+		lookup_return_field = in_lookup_return_field,
         lookup_group_flag = in_returnflag,
         postprocess_flag = in_postprocessflag,
-		    preprocess_order = in_preprocess_order,
-		    hold_flag = in_hold_flag,
-		    active_status = in_active_status,
-		    update_date = sysdate(),
-		    update_by = in_user_code
-		  WHERE preprocess_gid = in_preprocess_gid;
+		preprocess_order = in_preprocess_order,
+		hold_flag = in_hold_flag,
+        source_dataset_code=in_source_dataset_code,
+        comparison_dataset_code=in_comparison_dataset_code,
+        recorderby_type = in_recorderby_type,
+		active_status = in_active_status,
+		update_date = sysdate(),
+		update_by = in_user_code
+		WHERE preprocess_gid = in_preprocess_gid;
 
-      set out_result = 1;
-		  set out_msg = 'Record Updated Successfully.. !';
+        set out_result = 1;
+		set out_msg = 'Record Updated Successfully.. !';
+
 	elseif(in_action = 'DELETE') then
 		update recon_mst_tpreprocess set
 			active_status='N',delete_flag = 'Y',
@@ -206,9 +225,7 @@ me:BEGIN
 		set out_result = 1;
 		set out_msg = 'Record deleted successfully.. !';
 	elseif(in_action = 'DELETEPREPROCESS') then
-	  set v_process_method = (select process_method from recon_mst_tpreprocess
-                            where preprocess_code=in_preprocess_code and delete_flag = 'N');
-
+	set v_process_method = (select process_method from recon_mst_tpreprocess where preprocess_code=in_preprocess_code and delete_flag = 'N');
 		if(v_process_method='QCD_FUNCTION') then
 			update recon_mst_tpreprocessfilter set
 				update_date = sysdate(),
@@ -218,10 +235,9 @@ me:BEGIN
 
 			update recon_mst_tpreprocess set
 				process_function = '',
-        get_recon_field = '',
-        set_recon_field = ''
-			where preprocess_code=in_preprocess_code
-      and delete_flag = 'N';
+                get_recon_field = '',
+                set_recon_field = ''
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
 
 		elseif(v_process_method='QCD_LOOKUP') then
 			update recon_mst_tpreprocesscondition set
@@ -229,24 +245,56 @@ me:BEGIN
 				update_by = in_action_by,
 				active_status = 'N'  ,
 				delete_flag = 'Y'
-			where preprocess_code=in_preprocess_code
-      and delete_flag = 'N';
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
+
+            update pr_recon_mst_tpreprocesslookup set
+				update_date = sysdate(),
+				update_by = in_action_by,
+				active_status = 'N'  ,
+				delete_flag = 'Y'
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
 
 			update recon_mst_tpreprocess set
 				lookup_dataset_code = '',
-        set_recon_field='',
+                set_recon_field='',
 				lookup_return_field = ''
-			where preprocess_code=in_preprocess_code
-      and delete_flag = 'N';
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
 
 		elseif(v_process_method='QCD_QUERY') then
 			update recon_mst_tpreprocess set
 				process_query = ''
-			where preprocess_code=in_preprocess_code
-      and delete_flag = 'N';
-		end if;
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
+		elseif(v_process_method='QCD_EXPRESSION') then
+			update recon_mst_tpreprocess set
+				process_expression = ''
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
+		elseif(v_process_method='QCD_CUMULATIVEXP') then
+			update recon_mst_tpreprocess set
+				process_expression = ''
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
 
-    set out_result = 1;
+             update pr_recon_mst_tpreprocessrecorder set
+				update_date = sysdate(),
+				update_by = in_action_by,
+				active_status = 'N'  ,
+				delete_flag = 'Y'
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
+
+		elseif(v_process_method='QCD_AGGEXP') then
+			update recon_mst_tpreprocess set
+				process_expression = ''	,
+                cumulative_flag='',
+                opening_flag=''
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
+
+             update pr_recon_mst_tpreprocessagg set
+				update_date = sysdate(),
+				update_by = in_action_by,
+				active_status = 'N'  ,
+				delete_flag = 'Y'
+			where preprocess_code=in_preprocess_code and delete_flag = 'N';
+		end if;
+        set out_result = 1;
 		set out_msg = 'Record deleted successfully.. !';
 	end if;
 END $$

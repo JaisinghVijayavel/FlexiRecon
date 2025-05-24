@@ -218,7 +218,7 @@ me:BEGIN
 	where rule_code in 
 	(
 		select rule_code from recon_mst_trule 
-		where recon_code = in_recon_code 
+		where recon_code = in_recon_code
 		and delete_flag = 'N'
 	)  
 	and delete_flag = 'N';
@@ -636,7 +636,7 @@ me:BEGIN
 		open_parentheses_flag,close_parentheses_flag,join_condition,
 		recon_version,active_status,insert_date,insert_by
 	)
-	select 
+	select
 		theme_code,themeaggcondition_seqno,themeagg_applied_on,
 		themeagg_field,themeagg_criteria,themeagg_value_flag,themeagg_value,
 		open_parentheses_flag,close_parentheses_flag,join_condition,
@@ -658,7 +658,11 @@ me:BEGIN
     process_expression,process_function,lookup_dataset_code,
 		lookup_multi_return_flag,lookup_return_field,
     lookup_group_flag,postprocess_flag,preprocess_order,hold_flag,
-		recon_version,active_status,insert_date,insert_by
+		recon_version,active_status,insert_date,insert_by,
+    cumulative_flag, opening_flag,group_flag,agg_flag,
+    lookup_agg_return_function,
+    source_dataset_code, comparison_dataset_code,
+    recorderby_type
 	)
 	select
 		preprocess_code,preprocess_desc,recon_code,
@@ -666,7 +670,11 @@ me:BEGIN
     process_expression,process_function,lookup_dataset_code,
 		lookup_multi_return_flag,lookup_return_field,
     lookup_group_flag,postprocess_flag,preprocess_order,hold_flag,
-		recon_version,active_status,sysdate(),in_user_code
+		recon_version,active_status,sysdate(),in_user_code,
+    cumulative_flag, opening_flag,group_flag,agg_flag,
+    lookup_agg_return_function,
+    source_dataset_code, comparison_dataset_code,
+    recorderby_type
 	from recon_mst_tpreprocess
 	where recon_code = in_recon_code
 	and recon_version = in_reconrule_version
@@ -755,17 +763,17 @@ me:BEGIN
 	) 
 	and recon_version = in_reconrule_version 
 	and delete_flag = 'N';
-    
-  replace into recon_mst_tpreprocessgrpfieldhistory 
+
+  replace into recon_mst_tpreprocessgrpfieldhistory
   (
 		preprocess_code,grpfield_seqno,grp_field,
 		recon_version,active_status,insert_date,insert_by
 	)
-  SELECT 
+  SELECT
     preprocess_code,grpfield_seqno,grp_field,
 		recon_version,active_status,sysdate(),in_user_code
   from recon_mst_tpreprocessgrpfield
-	where preprocess_code in 
+	where preprocess_code in
 	(
 		select preprocess_code from recon_mst_tpreprocess 
 		where recon_code = in_recon_code 
@@ -809,17 +817,17 @@ me:BEGIN
 	from recon_mst_truleaggfield
   where rule_code in 
 	(
-		select rule_code from recon_mst_trule 
-		where recon_code = in_recon_code 
+		select rule_code from recon_mst_trule
+		where recon_code = in_recon_code
 		and delete_flag = 'N'
-	) 
-	and recon_version = in_reconrule_version	
+	)
+	and recon_version = in_reconrule_version
 	and delete_flag = 'N';
-    
+
 	drop temporary table if exists recon_tmp_trule;
 	drop temporary table if exists recon_tmp_ttheme;
 	drop temporary table if exists recon_tmp_tpreprocess;
-    
+
 	set out_msg = 'Recon rule version updated successfully !';
 	set out_result = 1;
 END $$

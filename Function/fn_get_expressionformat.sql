@@ -44,11 +44,15 @@ me:begin
   until v_split_col = ''
   end repeat;
 
+  if lower(mid(trim(v_expression),1,3)) = 'col' then
+    set v_expression = concat("cast(",v_expression," as decimal(15,2))");
+  end if;
+
   if in_cumulative_flag = true then
     set v_expression = concat('@cumulative_value := @cumulative_value + ',v_expression);
   end if;
 
-  if lower(mid(trim(in_set_recon_field),1,3)) = 'col' then
+  if lower(mid(trim(in_set_recon_field),1,3)) = 'col' and 1 = 2 then
     set v_expression = concat('cast(',v_expression,' as nchar)');
   else
     set v_field_type = fn_get_fieldtype(in_recon_code,in_set_recon_field);
