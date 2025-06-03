@@ -82,10 +82,11 @@ me:BEGIN
     and col2 = '",in_ip_type,"'
     and col3 <> ''
     and col5 <> ''
-    and cast(col6 as decimal(15,2)) <> 0
-    -- and col9 <> 'TALLIED' ",
+    and cast(col6 as decimal(15,2)) <> 0 ",
     if(in_cycle_date is null,"",concat("and col12 = '",cast(in_cycle_date as nchar),"' ")),
     "and delete_flag = 'N'");
+
+    -- and col9 <> 'TALLIED' ",
 
   call pr_run_sql2(v_sql,@msg,@result);
 
@@ -178,7 +179,6 @@ me:BEGIN
         and col74 is null
         and delete_flag = 'N';
       end if;
-
 
       -- case 2
       if v_iut_status <> 'TALLIED' then

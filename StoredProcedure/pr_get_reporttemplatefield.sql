@@ -11,6 +11,7 @@ BEGIN
     declare v_report_code text default '';
     declare v_recon_code text default '';
     declare v_recon_flag text default '';
+    declare v_report_exec_type text default '';
     declare v_src_table_name text default '';
     declare v_rpt_table_name text default '';
     declare v_recon_field_prefix text default '';
@@ -40,11 +41,13 @@ BEGIN
 		select
 			table_name,
 			src_table_name,
+      report_exec_type,
 			recon_field_prefix,
 			recon_flag
 		into
 			v_rpt_table_name,
 			v_src_table_name,
+      v_report_exec_type,
 			v_recon_field_prefix,
 			v_recon_flag
 		from recon_mst_treport
@@ -53,6 +56,7 @@ BEGIN
 
 		set v_rpt_table_name = ifnull(v_rpt_table_name,'');
 		set v_src_table_name = ifnull(v_src_table_name,'');
+    set v_report_exec_type = ifnull(v_report_exec_type,'');
 		set v_recon_field_prefix = ifnull(v_recon_field_prefix,'');
 		set v_recon_flag = ifnull(v_recon_flag,'');
 
@@ -87,7 +91,9 @@ BEGIN
       select
         v_report_code,
         a.report_field,
-        fn_get_reconfieldname(v_recon_code,a.report_field) as report_field_desc,
+        if(v_report_exec_type = 'D',
+          fn_get_datasetfieldname(in_report_code,a.report_field),
+          fn_get_reconfieldname(v_recon_code,a.report_field)) as report_field_desc,
         a.display_desc,
         a.display_flag,
         a.display_order,
@@ -97,6 +103,8 @@ BEGIN
       and a.active_status = 'Y'
       and a.delete_flag = 'N'
       order by a.display_order;
+
+      set @sno := 999;
 
       insert ignore into recon_tmp_treportparam
       (
@@ -189,6 +197,58 @@ BEGIN
       end if;
     end if;
 
+    if v_report_exec_type = 'D' then
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        display_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        dataset_table_field,
+        field_name,
+        field_name,
+        @sno := @sno + 1
+      FROM recon_mst_tdatasetfield
+      WHERE dataset_code = in_report_code
+      and active_status = 'Y'
+      and delete_flag = 'N'
+      order by dataset_seqno;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        display_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        'dataset_gid',
+        'Dataset Id',
+        'Dataset Id',
+        998;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        display_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        'scheduler_gid',
+        'Scheduler Id',
+        'Scheduler Id',
+        999;
+    end if;
+
     select
       reportparam_code as report_field,
       reportparam_desc as report_field_desc,
@@ -196,7 +256,7 @@ BEGIN
       display_flag,
       reportparam_order as display_order
     from recon_tmp_treportparam
-    order by reportparam_order;
+    order by display_flag desc,reportparam_order asc;
 
     drop temporary table if exists recon_tmp_treportparam;
 END $$

@@ -13,6 +13,7 @@ CREATE PROCEDURE `pr_fetch_reporttemplate`
 BEGIN
 	declare v_report_code text default '';
 	declare v_recon_code text default '';
+  declare v_report_exec_type text default '';
 
   declare v_file_path text default '';
   declare v_file_name text default '';
@@ -36,6 +37,17 @@ BEGIN
     set v_report_code = in_report_code;
     set v_recon_code = in_recon_code;
   end if;
+
+  -- get report_exec_type
+  select
+    report_exec_type
+  into
+    v_report_exec_type
+  from recon_mst_treport
+  where report_code = v_report_code
+  and delete_flag = 'N';
+
+  set v_report_exec_type = ifnull(v_report_exec_type,'');
 
   if in_reporttemplate_code <> '' then
 		select
@@ -93,10 +105,12 @@ BEGIN
 			a.reporttemplatefilter_gid,
 			a.filter_seqno,
 			a.report_field,
-			fn_get_reconfieldname(v_recon_code,a.report_field) as reportparam_value,
+      if(v_report_exec_type = 'D',
+         fn_get_datasetfieldname(in_report_code,a.report_field),
+         fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
-			fn_get_reportfiltervalue(in_recon_code,in_user_code,a.filter_value) as filter_value,
+			fn_get_reportfiltervalue(in_recon_code,'',a.filter_value,in_user_code) as filter_value,
 			a.open_parentheses_flag,
 			a.close_parentheses_flag,
 			a.join_condition,
@@ -116,10 +130,12 @@ BEGIN
 			1 as reporttemplatefilter_gid,
 			a.filter_seqno,
 			a.report_field,
-			fn_get_reconfieldname(v_recon_code,a.report_field) as reportparam_value,
+      if(v_report_exec_type = 'D',
+         fn_get_datasetfieldname(in_report_code,a.report_field),
+         fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
-			fn_get_reportfiltervalue(in_recon_code,in_user_code,a.filter_value) as filter_value,
+			fn_get_reportfiltervalue(in_recon_code,'',a.filter_value,in_user_code) as filter_value,
 			a.open_parentheses_flag,
 			a.close_parentheses_flag,
 			a.join_condition,
@@ -157,8 +173,10 @@ BEGIN
 			a.report_field,
 			a.sorting_order,
 			a.active_status,
-			fn_get_reconfieldname(v_recon_code,report_field) as reportparam_value
-		from recon_mst_treporttemplatesorting  a
+      if(v_report_exec_type = 'D',
+         fn_get_datasetfieldname(in_report_code,report_field),
+         fn_get_reconfieldname(v_recon_code,report_field)) as reportparam_value
+    from recon_mst_treporttemplatesorting  a
 		where reporttemplate_code = in_reporttemplate_code
 		and a.active_status = 'Y'
 		and a.delete_flag = 'N'
@@ -170,7 +188,9 @@ BEGIN
 			a.report_field,
 			a.sorting_order,
 			a.active_status,
-			fn_get_reconfieldname(v_recon_code,report_field) as reportparam_value
+      if(v_report_exec_type = 'D',
+         fn_get_datasetfieldname(in_report_code,report_field),
+         fn_get_reconfieldname(v_recon_code,report_field)) as reportparam_value
 		from recon_mst_treportsorting  a
 		where report_code = v_report_code
 		and a.active_status = 'Y'

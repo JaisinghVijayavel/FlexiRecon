@@ -4,12 +4,12 @@ DROP function IF EXISTS `fn_get_reportfiltervalue` $$
 CREATE function `fn_get_reportfiltervalue`
 (
   in_recon_code text,
-  in_condition text,
-  in_filter_value text,
-  in_user_code text
+  in_user_code text,
+  in_filter_value text
 ) returns text
 begin
   declare v_closure_date text default '';
+  declare v_cycle_date text default '';
 
   if in_filter_value = '$CURDATE$' then
     return cast(curdate() as nchar);
@@ -28,11 +28,23 @@ begin
     where recon_code = in_recon_code
     and delete_flag = 'N';
 
-    set v_closure_date = ifnull(v_clousre_date,'2000-01-01');
+    set v_closure_date = ifnull(v_closure_date,'2000-01-01');
 
     return v_closure_date;
+  elseif in_filter_value = '$RECONCYCLEDATE$' or in_filter_value = '$CYCLEDATE$' then
+    select
+      cast(recon_cycle_date as nchar)
+    into
+      v_cycle_date
+    from recon_mst_trecon
+    where recon_code = in_recon_code
+    and delete_flag = 'N';
+
+    set v_cycle_date = ifnull(v_cycle_date,'2000-01-01');
+
+    return v_cycle_date;
   elseif in_filter_value = '$CONDITION$' then
-    return in_condition;
+    return in_filter_value;
   else
     return in_filter_value;
   end if;

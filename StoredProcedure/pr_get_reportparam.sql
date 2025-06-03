@@ -86,6 +86,9 @@ BEGIN
       where report_code = in_report_code
       and report_exec_type = 'D'
       and delete_flag = 'N') then
+
+      set @sno := 0;
+
       insert ignore into recon_tmp_treportparam
       (
         report_code,
@@ -103,6 +106,32 @@ BEGIN
       and active_status = 'Y'
       and delete_flag = 'N'
       order by dataset_seqno;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        'dataset_gid',
+        'Dataset Id',
+        998;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        'scheduler_gid',
+        'Scheduler Id',
+        999;
     else
       insert into recon_tmp_treportparam
       (

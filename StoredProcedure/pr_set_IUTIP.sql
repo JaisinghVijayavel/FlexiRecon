@@ -724,6 +724,7 @@ me:begin
 					set v_sql = concat("insert into ",v_tranbrkp_table,"
 						(
               scheduler_gid,
+              tran_gid,
               recon_code,
               dataset_code,
               tranbrkp_dataset_code,
@@ -754,6 +755,7 @@ me:begin
 						)
 						select
               1,
+              tran_gid,
               '",in_recon_code,"',
               dataset_code,
               '",v_tranbrkp_ds_code,"',

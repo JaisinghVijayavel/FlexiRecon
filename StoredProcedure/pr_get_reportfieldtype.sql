@@ -43,6 +43,7 @@ me:BEGIN
     field_alias_name text,
     field_type varchar(32),
     field_length varchar(32),
+    display_flag varchar(32) not null default 'N',
     display_order decimal(7,3) not null default 0,
     primary key (field_name),
     key idx_display_order(display_order)
@@ -96,14 +97,14 @@ me:BEGIN
     and delete_flag = 'N') then
     set @sno := 0;
 
-    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order)
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order,display_flag)
     select
       a.report_field,
       a.display_desc,
       fn_get_fieldtype(b.recon_code,a.report_field) as field_type,
       -- ifnull(b.recon_field_type,'') as field_type,
       ifnull(b.recon_field_length,'') as field_length,
-      a.display_order
+      a.display_order,a.display_flag
     from recon_mst_treporttemplatefield as a
     left join recon_mst_treconfield as b on a.report_field = b.recon_field_name
       and b.recon_code = in_recon_code
@@ -136,6 +137,13 @@ me:BEGIN
     where dataset_code = in_report_code
     and delete_flag = 'N'
     order by dataset_field_sno;
+
+    insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order)
+    select 'scheduler_gid',
+           'Scheduler Id',
+           'INTEGER',
+           0,
+           0;
   elseif exists(select field_name from recon_mst_tsystemfield
     where table_name = v_table_name
     and delete_flag = 'N') then
@@ -326,7 +334,7 @@ me:BEGIN
     select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
   end if;
 
-  select * from recon_tmp_tfield;
+  select * from recon_tmp_tfield order by display_flag desc;
 
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;

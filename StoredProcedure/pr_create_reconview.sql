@@ -6,7 +6,8 @@ BEGIN
   DECLARE done INT DEFAULT FALSE;
   DECLARE v_sql TEXT DEFAULT '';
   DECLARE v_view_name VARCHAR(128);
-  DECLARE v_table_name VARCHAR(128) DEFAULT 'recon_trn_ttran';
+  DECLARE v_tran_table VARCHAR(128) DEFAULT 'recon_trn_ttran';
+  DECLARE v_tranbrkp_table VARCHAR(128) DEFAULT 'recon_trn_ttranbrkp';
   DECLARE v_select_line TEXT;
 
   -- Cursor variables
@@ -43,7 +44,7 @@ BEGIN
 		  FROM recon_mst_tsystemfield AS a
 		  INNER JOIN recon_mst_tfieldstru AS b ON a.field_name = b.field_name AND b.delete_flag = 'N'
 		  WHERE a.active_status = 'Y'
-      AND a.table_name = v_table_name
+      AND a.table_name = v_tran_table
       AND a.delete_flag = 'N'
     ) AS c ORDER BY c.display_order;
 
@@ -89,7 +90,15 @@ BEGIN
   SET v_sql = LEFT(v_sql, LENGTH(v_sql) - 2);
 
   -- Final CREATE VIEW SQL
-  SET @full_sql = CONCAT('CREATE VIEW ', v_view_name, ' AS SELECT ', v_sql, ' FROM ', v_table_name, " WHERE recon_code = '",in_recon_code,"'");
+  SET @full_sql = CONCAT("CREATE VIEW ", v_view_name, " AS
+    SELECT ", v_sql, ",0 as 'Supporting Tran Id' FROM ", v_tran_table, "
+    WHERE recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'
+    union
+    SELECT ", v_sql, ",tranbrkp_gid as 'Supporting Tran Id' FROM ", v_tranbrkp_table, "
+    WHERE recon_code = '",in_recon_code,"'
+    and delete_flag = 'N'
+   ");
   -- select @full_sql;
 
   PREPARE stmt FROM @full_sql;

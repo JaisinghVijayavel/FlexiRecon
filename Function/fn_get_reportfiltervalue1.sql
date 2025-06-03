@@ -1,14 +1,12 @@
 ﻿DELIMITER $$
 
-DROP function IF EXISTS `fn_get_reportfiltervaluenew` $$
-CREATE function `fn_get_reportfiltervaluenew`
-(
-  in_archival_code text,
+DROP FUNCTION IF EXISTS `fn_get_reportfiltervalue` $$
+CREATE FUNCTION `fn_get_reportfiltervalue`(
   in_recon_code text,
   in_condition text,
   in_filter_value text,
   in_user_code text
-) returns text
+) RETURNS text CHARSET latin1
 begin
   declare v_closure_date text default '';
   declare v_cycle_date text default '';
@@ -21,8 +19,6 @@ begin
     return in_recon_code;
   elseif in_filter_value = '$USERCODE$' then
     return in_user_code;
-  elseif in_filter_value = '$ARCHIVALCODE$' then
-    return in_archival_code;
   elseif in_filter_value = '$RECONCLOSUREDATE$' then
     select
       cast(recon_closure_date as nchar)

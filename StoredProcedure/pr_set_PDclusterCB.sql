@@ -22,9 +22,11 @@ me:BEGIN
 
   declare v_pdrecon_code text default '';
   declare v_sql text default '';
+  declare v_dsdb_name text default '';
+
   declare v_unitds_code text default 'DS276';
   declare v_cbds_code text default 'DS426';
-  declare v_dsdb_name text default '';
+  declare v_tranbrkp_ds_code text default 'DS277';
 
   declare v_unit_name text default '';
   declare v_cycle_date date default null;
@@ -93,7 +95,7 @@ me:BEGIN
       -- update IUT CB Flag
       update recon_trn_ttran set
         col74 = null,
-        col75 = null 
+        col75 = null
       where recon_code = in_recon_code
       and col38 = v_pdrecon_code
       and delete_flag = 'N';
@@ -116,6 +118,17 @@ me:BEGIN
 
 		close pdrecon_cursor;
 	end pdrecon_block;
+
+  -- update adj entry IUT CB Type
+  -- col22 - Event
+  -- col75 - IUT CB Type
+  update recon_trn_ttranbrkp as a
+  inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
+    and b.delete_flag = 'N'
+  set a.col75 = b.col75
+  where a.recon_code = in_recon_code
+  and a.col22 = 'Adj Entry'
+  and a.delete_flag = 'N';
 
   set out_msg = 'Success';
   set out_result = 1;

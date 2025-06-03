@@ -75,8 +75,7 @@ me:BEGIN
     where col1 = '",in_unit_name,"'
     and col2 = 'UHID - Deposit CB'
     and col3 <> ''
-    and cast(col6 as decimal(15,2)) <> 0
-    -- and col9 <> 'TALLIED' ",
+    and cast(col6 as decimal(15,2)) <> 0 ",
     if(in_cycle_date is null,"",concat("and col12 = '",cast(in_cycle_date as nchar),"' ")),
     "and delete_flag = 'N'");
 
