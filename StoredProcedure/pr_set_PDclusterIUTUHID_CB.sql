@@ -33,6 +33,7 @@ me:BEGIN
   declare v_cb_amount decimal(15,2) default 0;
   declare v_iut_cb_amount decimal(15,2) default 0;
   declare v_iut_status text default '';
+  declare v_adjentry_flag text default '';
 
   drop temporary table if exists recon_tmp_tcb;
 
@@ -136,6 +137,30 @@ me:BEGIN
       set v_iut_cb_amount = ifnull(@closing_balance,0);
       set v_count = ifnull(@cb_rec_count,0);
 
+      -- Adj Entry
+      select
+        sum(cast(col53 as decimal(15,2))),count(*)
+      into
+        @closing_balance,@cb_rec_count
+      from recon_trn_ttranbrkp
+      where recon_code = in_recon_code
+      and col38 = in_pdrecon_code
+      and col20 = v_uhid_no
+      and cast(col53 as decimal(15,2)) <> 0
+      and col16 = 'Adj Entry'
+      and delete_flag = 'N'
+      LOCK IN SHARE MODE;
+
+      set v_iut_cb_amount = ifnull(@closing_balance,0);
+      set v_count = ifnull(@cb_rec_count,0);
+
+      -- adjentry flag
+      if @cb_rec_count > 0 then
+        set v_adjentry_flag = 'Y';
+      else
+        set v_adjentry_flag = 'N';
+      end if;
+
       set v_iut_status = '';
 
       if v_count = 0 then
@@ -166,6 +191,19 @@ me:BEGIN
         and cast(col53 as decimal(15,2)) <> 0
         and col74 is null
         and delete_flag = 'N';
+
+        if v_adjentry_flag = 'Y' then
+          update recon_trn_ttranbrkp set
+            col74 = 'Y',
+            col75 = 'UHID - Deposit CB'
+          where recon_code = in_recon_code
+          and col38 = in_pdrecon_code
+          and col20 = v_uhid_no
+          and col16 = 'Adj Entry'
+          and cast(col53 as decimal(15,2)) <> 0
+          and col74 is null
+          and delete_flag = 'N';
+        end if;
       end if;
 	  end loop cb_loop;
 

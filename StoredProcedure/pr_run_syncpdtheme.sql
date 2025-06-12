@@ -8,6 +8,16 @@ CREATE PROCEDURE `pr_run_syncpdtheme`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date : 06-06-2025
+
+    Updated By : Vijayavel
+    updated Date :
+
+    Version : 1
+  */
+
   declare v_sql text default '';
   declare v_tran_table text default '';
   declare v_tranbrkp_table text default '';
@@ -20,6 +30,7 @@ me:BEGIN
   declare v_fromunit_field text default '';
   declare v_tounit_field text default '';
   declare v_iutrefno_field text default '';
+
   declare v_actiontaken_field text default '';
   declare v_entryflag_field text default '';
   declare v_entryrefno_field text default '';
@@ -31,6 +42,7 @@ me:BEGIN
   declare v_recon_fromunit_field text default '';
   declare v_recon_tounit_field text default '';
   declare v_recon_iutrefno_field text default '';
+
   declare v_recon_actiontaken_field text default '';
   declare v_recon_entryflag_field text default '';
   declare v_recon_entryrefno_field text default '';
@@ -107,9 +119,11 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      /*
       b.",v_recon_actiontaken_field," = '',
       b.",v_recon_entryflag_field," = '',
       b.",v_recon_entryrefno_field," = '',
+      */
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
     and a.cluster_name = 'CHENNAI'
@@ -131,9 +145,11 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      /*
       b.",v_recon_actiontaken_field," = '',
       b.",v_recon_entryflag_field," = '',
       b.",v_recon_entryrefno_field," = '',
+      */
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
     and a.cluster_name = 'CHENNAI'
@@ -152,9 +168,11 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      /*
       b.",v_recon_actiontaken_field," = '',
       b.",v_recon_entryflag_field," = '',
       b.",v_recon_entryrefno_field," = '',
+      */
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
     and a.cluster_name = 'CHENNAI'
@@ -172,9 +190,11 @@ me:BEGIN
       b.",v_recon_closingbalance_field," = '',
       b.",v_recon_fromunit_field," = '',
       b.",v_recon_tounit_field," = '',
+      /*
       b.",v_recon_actiontaken_field," = '',
       b.",v_recon_entryflag_field," = '',
       b.",v_recon_entryrefno_field," = '',
+      */
       b.",v_recon_iutrefno_field," = ''
     where a.active_status = 'Y'
     and a.cluster_name = 'CHENNAI'
@@ -249,9 +269,11 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
+      /*
       a.",v_recon_actiontaken_field," = b.action_tobe_taken,
       a.",v_recon_entryflag_field," = b.entry_flag,
       a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      */
       a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
@@ -270,9 +292,11 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
+      /*
       a.",v_recon_actiontaken_field," = b.action_tobe_taken,
       a.",v_recon_entryflag_field," = b.entry_flag,
       a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      */
       a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
@@ -289,9 +313,11 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
+      /*
       a.",v_recon_actiontaken_field," = b.action_tobe_taken,
       a.",v_recon_entryflag_field," = b.entry_flag,
       a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      */
       a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 
@@ -308,9 +334,11 @@ me:BEGIN
       a.",v_recon_closingbalance_field," = b.closing_balance,
       a.",v_recon_fromunit_field," = b.from_unit,
       a.",v_recon_tounit_field," = b.to_unit,
+      /*
       a.",v_recon_actiontaken_field," = b.action_tobe_taken,
       a.",v_recon_entryflag_field," = b.entry_flag,
       a.",v_recon_entryrefno_field," = b.entry_ref_no,
+      */
       a.",v_recon_iutrefno_field," = b.iut_ref_no
     ");
 

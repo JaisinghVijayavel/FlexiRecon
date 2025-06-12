@@ -1,12 +1,12 @@
 ﻿DELIMITER $$
 
-DROP function IF EXISTS `fn_get_reportfiltervalue` $$
-CREATE function `fn_get_reportfiltervalue`
-(
+DROP FUNCTION IF EXISTS `fn_get_reportfiltervalue` $$
+CREATE FUNCTION `fn_get_reportfiltervalue`(
   in_recon_code text,
-  in_user_code text,
-  in_filter_value text
-) returns text
+  in_condition text,
+  in_filter_value text,
+  in_user_code text
+) RETURNS text CHARSET latin1
 begin
   declare v_closure_date text default '';
   declare v_cycle_date text default '';
@@ -44,7 +44,7 @@ begin
 
     return v_cycle_date;
   elseif in_filter_value = '$CONDITION$' then
-    return in_filter_value;
+    return in_condition;
   else
     return in_filter_value;
   end if;

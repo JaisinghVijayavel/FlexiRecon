@@ -109,6 +109,17 @@ me:begin
       set err_flag = true;
       set err_msg = concat(err_msg,'Access denied !');
     end if;
+  elseif v_dataset_code = 'IUTENTRY' then
+    if exists
+      (
+        select a.iutentry_gid from recon_trn_tiutentry as a
+        where a.scheduler_gid = in_scheduler_gid
+        and a.iutentry_status = 'C'
+        and a.delete_flag = 'N'
+      ) then
+      set err_flag = true;
+      set err_msg = concat(err_msg,'Access denied !');
+    end if;
   else
     set v_count = 0;
 
@@ -204,6 +215,8 @@ me:begin
     delete from recon_trn_tmanualtran where scheduler_gid = in_scheduler_gid;
   elseif v_dataset_code = 'POSTMANUAL' then
     delete from recon_trn_tmanualtranbrkp where scheduler_gid = in_scheduler_gid;
+  elseif v_dataset_code = 'IUTENTRY' then
+    delete from recon_trn_tiutentry where scheduler_gid = in_scheduler_gid;
   elseif v_dataset_code = 'ACCBALANCE' then
     delete from recon_trn_taccbal where scheduler_gid = in_scheduler_gid;
   else

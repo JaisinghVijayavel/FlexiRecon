@@ -729,12 +729,12 @@ me:BEGIN
   replace into recon_mst_tpreprocesslookuphistory
   (
 		preprocess_code,lookup_seqno,lookup_return_field,set_recon_field,
-    reverse_update_flag,
+    reverse_update_flag,value_flag,
 		recon_version,active_status,insert_date,insert_by
 	)
   SELECT
     preprocess_code,lookup_seqno,lookup_return_field,set_recon_field,
-    reverse_update_flag,
+    reverse_update_flag,value_flag,
 		recon_version,active_status,sysdate(),in_user_code
   from recon_mst_tpreprocesslookup
 	where preprocess_code in

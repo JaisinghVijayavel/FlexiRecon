@@ -70,6 +70,7 @@ me:BEGIN
   declare v_lookup_update_fields text default '';
   declare v_lookup_filter text default '';
   declare v_reverse_update_flag text default '';
+  declare v_value_flag text default '';
 
   declare v_filter_applied_on text default '';
   declare v_filter_field text default '';
@@ -291,6 +292,8 @@ me:BEGIN
         set v_process_method = 'C';
       elseif v_process_method = 'QCD_AGGEXP' then
         set v_process_method = 'A';
+      elseif v_process_method = 'QCD_LOOKUP_EXPRESSION' then
+        set v_process_method = 'LE';
       end if;
 
       if in_postprocess_flag = 'Y' then
@@ -477,7 +480,8 @@ me:BEGIN
 							select
 								set_recon_field,
 								lookup_return_field,
-                reverse_update_flag
+                reverse_update_flag,
+                value_flag
 							from recon_mst_tpreprocesslookuphistory
 							where preprocess_code = v_preprocess_code
               and recon_version = v_recon_version
@@ -490,20 +494,30 @@ me:BEGIN
 						open updfield_cursor;
 
 						updfield_loop: loop
-							fetch updfield_cursor into v_set_recon_field,v_lookup_return_field,v_reverse_update_flag;
+							fetch updfield_cursor into v_set_recon_field,v_lookup_return_field,
+                                         v_reverse_update_flag,v_value_flag;
 
 							if updfield_done = 1 then leave updfield_loop; end if;
 
 							set v_set_recon_field = ifnull(v_set_recon_field,'');
 							set v_lookup_return_field = ifnull(v_lookup_return_field,'');
 							set v_reverse_update_flag = ifnull(v_reverse_update_flag,'N');
+              set v_value_flag = ifnull(v_value_flag,'N');
 
 							if v_set_recon_field <> '' and v_lookup_return_field <> '' then
                 if v_reverse_update_flag = 'Y' then
                   -- update lookup dataset field
-								  set v_lookup_update_fields = concat(v_lookup_update_fields,',b.',v_lookup_return_field,'=cast(a.',v_set_recon_field,' as nchar)');
+                  if v_value_flag = 'Y' then
+								    set v_lookup_update_fields = concat(v_lookup_update_fields,',b.',v_lookup_return_field,' = ',char(39),v_set_recon_field,char(39),' ');
+                  else
+								    set v_lookup_update_fields = concat(v_lookup_update_fields,',b.',v_lookup_return_field,' = cast(a.',v_set_recon_field,' as nchar) ');
+                  end if;
                 else
-								  set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,'=b.',v_lookup_return_field);
+                  if v_value_flag = 'Y' then
+								    set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,' = ',char(39),v_lookup_return_field,char(39),' ');
+                  else
+								    set v_lookup_update_fields = concat(v_lookup_update_fields,',a.',v_set_recon_field,' = b.',v_lookup_return_field,' ');
+                  end if;
                 end if;
 							end if;
 						end loop updfield_loop;
@@ -725,13 +739,21 @@ me:BEGIN
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
-        set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
         set v_sql = concat(v_sql,v_orderby_field);
 
         call pr_run_sql('set @sno := 0',@msg,@result);
 
         call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+      elseif v_process_method = 'LE' then
+        -- Lookup Expression
+        set v_sql = concat('update ',v_lookup_dataset_code,' set ');
+        set v_sql = concat(v_sql,v_lookup_return_field,' = ',v_process_function,' ');
+        set v_sql = concat(v_sql,'where true ');
+        set v_sql = concat(v_sql,v_lookup_filter);
+        set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+        call pr_run_sql(v_sql,@msg,@result);
       elseif v_process_method = 'C' then
         if v_recon_date_flag = 'Y' then
           if v_recon_date_field <> 'tran_date' then

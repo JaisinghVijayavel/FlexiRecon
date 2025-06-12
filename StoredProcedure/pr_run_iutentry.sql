@@ -110,6 +110,7 @@ me:BEGIN
     ipop_no varchar(32) default null,
     from_unit varchar(255) default null,
     to_unit varchar(255) default null,
+    dataset_name varchar(255) default null,
     reftxt_tran_gid varchar(32),
     reftxt_tranbrkp_gid varchar(32),
     valid_flag char(1) not null default 'N',
@@ -234,7 +235,7 @@ me:BEGIN
   -- duplicate tran_gid,tranbrkp_gid validation
   insert into recon_tmp_trefgid(ref_tran_gid,ref_tranbrkp_gid)
     select ref_tran_gid,ref_tranbrkp_gid from recon_trn_tiutentry
-    where iutentry_status in ('C','P')
+    where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N'
     group by ref_tran_gid,ref_tranbrkp_gid
     having count(*) > 1;
@@ -268,6 +269,7 @@ me:BEGIN
       and a.col51 is null
     set b.valid_flag = 'Y',
         b.tran_gid = a.tran_gid,
+        b.dataset_name = a.col7,
         b.bill_no = a.col19,
         b.ipop_no = a.col21
     ");
@@ -303,10 +305,32 @@ me:BEGIN
     set
       a.bill_no = b.bill_no,
       a.ipop_no = b.ipop_no,
+      a.dataset_name = b.dataset_name,
       b.from_unit = a.from_unit_name,
       b.to_unit = a.to_unit_name
     where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N';
+
+  -- col2  - support tran id
+  -- col4  - Tran Date
+  -- col7  - Dataset
+  -- col9  - Exception Value
+  -- col12 - Dr/Cr Mult
+  -- col13 - Theme
+  -- col19 - Bill No
+  -- col20 - uhid
+  -- col21 - IP/OP No
+  -- col22 - Event
+  -- col29 - Line Category
+  -- col38 - Source Recon Code
+  -- col41 - IUT Entry Flag
+  -- col42 - IUT Location
+  -- col44 - UHID Multi Location Flag
+  -- col45 - IUT Recon Code
+  -- col47 - IUT IP/OP
+  -- col50 - IUT Loc Code
+  -- col54 - IUT Theme
+  -- col75 - IUT CB Type
 
 		-- cr location
 		set v_sql=concat("insert into ",v_tranbrkp_table,"
@@ -314,10 +338,12 @@ me:BEGIN
 				scheduler_gid,
 				recon_code,
 				col4,
+        col7,
 				col8,
 				col9,
 				col11,
 				col12,
+        col13,
 				col16,
 				col17,
 				col18,
@@ -336,16 +362,19 @@ me:BEGIN
 				col48,
 				col49,
 				col51,
-        col53
+        col53,
+        col54
 			)
 			select
 				1,
 				recon_code,
 				cast(entry_date as nchar),
+        dataset_name,
 				cast(tran_value as nchar),
 				cast(tran_value as nchar),
 				tran_acc_mode,
 				cast(tran_mult as nchar),
+        'IUT Manual',
 				'Entry',
 				cast(dr_amount as nchar),
 				cast(cr_amount as nchar),
@@ -364,7 +393,8 @@ me:BEGIN
 				from_unit_name,
 				to_unit_name,
 				entry_ref_no,
-        '0'
+        '0',
+        'IUT Manual'
 			from recon_trn_tiutentry
 			where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
 			and delete_flag = 'N'

@@ -35,6 +35,7 @@ me:BEGIN
   declare v_cb_amount decimal(15,2) default 0;
   declare v_iut_cb_amount decimal(15,2) default 0;
   declare v_iut_status text default '';
+  declare v_adjentry_flag text default '';
 
   drop temporary table if exists recon_tmp_tcb;
 
@@ -140,7 +141,8 @@ me:BEGIN
       where recon_code = in_recon_code
       and col38 = in_pdrecon_code
       and col20 = v_uhid_no
-      and col21 = v_ip_no
+      and col19 not like '%-OC%'
+      and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
       and cast(col53 as decimal(15,2)) <> 0
       and col74 is null
       and delete_flag = 'N'
@@ -148,6 +150,33 @@ me:BEGIN
 
       set v_iut_cb_amount = ifnull(@closing_balance,0);
       set v_count = ifnull(@cb_rec_count,0);
+
+      -- Adj Entry Sum
+      select
+        sum(cast(col53 as decimal(15,2))),count(*)
+      into
+        @closing_balance,@cb_rec_count
+      from recon_trn_ttranbrkp
+      where recon_code = in_recon_code
+      and col38 = in_pdrecon_code
+      and col20 = v_uhid_no
+      and col19 not like '%-OC%'
+      and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
+      and cast(col53 as decimal(15,2)) <> 0
+      and col16 = 'Adj Entry'
+      and col74 is null
+      and delete_flag = 'N'
+      LOCK IN SHARE MODE;
+
+      set v_iut_cb_amount = v_iut_cb_amount + ifnull(@closing_balance,0);
+      set v_count = v_count + ifnull(@cb_rec_count,0);
+
+      -- adjentry flag
+      if @cb_rec_count > 0 then
+        set v_adjentry_flag = 'Y';
+      else
+        set v_adjentry_flag = 'N';
+      end if;
 
       set v_iut_status = '';
 
@@ -174,10 +203,26 @@ me:BEGIN
         where recon_code = in_recon_code
         and col38 = in_pdrecon_code
         and col20 = v_uhid_no
-        and col21 = v_ip_no
+        and col19 not like '%-OC%'
+        and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
         and cast(col53 as decimal(15,2)) <> 0
         and col74 is null
         and delete_flag = 'N';
+
+        if v_adjentry_flag = 'Y' then
+          update recon_trn_ttranbrkp set
+            col74 = 'Y',
+            col75 = in_ip_type
+          where recon_code = in_recon_code
+          and col38 = in_pdrecon_code
+          and col16 = 'Adj Entry'
+          and col20 = v_uhid_no
+          and col19 not like '%-OC%'
+          and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
+          and cast(col53 as decimal(15,2)) <> 0
+          and col74 is null
+          and delete_flag = 'N';
+        end if;
       end if;
 
       -- case 2
@@ -191,8 +236,7 @@ me:BEGIN
 				where recon_code = in_recon_code
 				and col38 = in_pdrecon_code
 				and col20 = v_uhid_no
-        and col19 not like '%-OC%'
-				and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
+        and col21 = v_ip_no
         and cast(col53 as decimal(15,2)) <> 0
 				and col74 is null
 				and delete_flag = 'N'
@@ -200,6 +244,32 @@ me:BEGIN
 
 				set v_iut_cb_amount = ifnull(@closing_balance,0);
 				set v_count = ifnull(@cb_rec_count,0);
+
+        -- Adj Entry Sum
+        select
+          sum(cast(col53 as decimal(15,2))),count(*)
+        into
+          @closing_balance,@cb_rec_count
+        from recon_trn_ttranbrkp
+        where recon_code = in_recon_code
+        and col38 = in_pdrecon_code
+        and col20 = v_uhid_no
+        and col21 = v_ip_no
+        and cast(col53 as decimal(15,2)) <> 0
+        and col16 = 'Adj Entry'
+        and col74 is null
+        and delete_flag = 'N'
+        LOCK IN SHARE MODE;
+
+        set v_iut_cb_amount = v_iut_cb_amount + ifnull(@closing_balance,0);
+        set v_count = v_count + ifnull(@cb_rec_count,0);
+
+        -- adjentry flag
+        if @cb_rec_count > 0 then
+          set v_adjentry_flag = 'Y';
+        else
+          set v_adjentry_flag = 'N';
+        end if;
 
 				set v_iut_status = '';
 
@@ -221,26 +291,25 @@ me:BEGIN
 
         call pr_run_sql2(v_sql,@msg,@result);
 
-        if v_iut_status = 'TALLIED' then
-					update recon_trn_ttran set
-						col74 = 'Y',
-            col75 = in_ip_type
-					where recon_code = in_recon_code
-					and col38 = in_pdrecon_code
-					and col20 = v_uhid_no
-          and col19 not like '%-OC%'
-				  and (col21 = v_ip_no or col21 = col20 or col21 = '' or col21 is null)
-          and cast(col53 as decimal(15,2)) <> 0
-					and col74 is null
-					and delete_flag = 'N';
-				end if;
+        -- update in tran table
+        update recon_trn_ttran set
+          col74 = 'Y',
+          col75 = in_ip_type
+        where recon_code = in_recon_code
+        and col38 = in_pdrecon_code
+        and col20 = v_uhid_no
+        and col21 = v_ip_no
+        and cast(col53 as decimal(15,2)) <> 0
+        and col74 is null
+        and delete_flag = 'N';
 
-        if v_iut_status = '' then
-					update recon_trn_ttran set
+        if v_adjentry_flag = 'Y' then
+					update recon_trn_ttranbrkp set
 						col74 = 'Y',
             col75 = in_ip_type
 					where recon_code = in_recon_code
 					and col38 = in_pdrecon_code
+          and col16 = 'Adj Entry'
 					and col20 = v_uhid_no
 				  and col21 = v_ip_no
           and cast(col53 as decimal(15,2)) <> 0
