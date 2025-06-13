@@ -223,13 +223,14 @@ me:begin
   -- Scenario 9
 
   -- find agg negative values
-  set v_sql = concat("insert into recon_tmp_tuhiddr9 (uhid_no,recon_code,loc_code,dataset_name,dr_amount)
+  set v_sql = concat("insert into recon_tmp_tuhiddr9 (uhid_no,recon_code,loc_code,dataset_name,dr_amount,min_tran_gid)
     select
       `Registration No_`,
       `Recon Code_`,
       `Location Code`,
       `Dataset_`,
-      sum(cast(`Exception Value_` as decimal(15,2))*cast(`Dr/Cr Mult_` as signed))
+      sum(cast(`Exception Value_` as decimal(15,2))*cast(`Dr/Cr Mult_` as signed)),
+      min(`Tran Id`)
     from ",v_recon_view,"
     where true
     and (`Theme_` = ''
@@ -302,7 +303,7 @@ me:begin
     select a.uhid_no,a.dr_amount from recon_tmp_tuhiddr9 as a
     inner join recon_tmp_tuhidcr9 as b on a.uhid_no = b.uhid_no
     group by a.uhid_no,a.dr_amount
-    having abs(a.dr_amount) <= sum(b.cr_amount);
+    having abs(a.dr_amount) = sum(b.cr_amount);
 
   delete from recon_tmp_tuhiddr9 where uhid_no not in (select uhid_no from recon_tmp_tuhid);
   delete from recon_tmp_tuhidcr9 where uhid_no not in (select uhid_no from recon_tmp_tuhid);
@@ -313,13 +314,13 @@ me:begin
 	cr9_block:begin
 		declare cr9_done int default 0;
 		declare cr9_cursor cursor for
-		  select uhid_no,cr_amount,recon_code,loc_code,dataset_name from recon_tmp_tuhidcr9;
+		  select uhid_no,cr_amount,recon_code,loc_code,dataset_name,min_tran_gid from recon_tmp_tuhidcr9;
 		declare continue handler for not found set cr9_done=1;
 
 		open cr9_cursor;
 
 		cr9_loop: loop
-			fetch cr9_cursor into v_uhid_no,v_cr_amount,v_cr_recon_code,v_cr_loc_code,v_cr_dataset;
+			fetch cr9_cursor into v_uhid_no,v_cr_amount,v_cr_recon_code,v_cr_loc_code,v_cr_dataset,v_tran_cr_min_gid;
 
 			if cr9_done = 1 then leave cr9_loop; end if;
 
@@ -328,6 +329,7 @@ me:begin
       set v_cr_loc_code = ifnull(v_cr_loc_code,'');
       set v_cr_recon_code = ifnull(v_cr_recon_code,'');
       set v_cr_dataset = ifnull(v_cr_dataset,'');
+      set v_tran_cr_min_gid = ifnull(v_tran_cr_min_gid,0);
 
       set v_succ_flag = false;
 
@@ -349,39 +351,39 @@ me:begin
       set v_bal_amount = ifnull(v_bal_amount,0);
       set v_tran_dr_min_gid = ifnull(v_tran_dr_min_gid,0);
 
-      if v_dr_uhid_no <> '' and v_bal_amount >= v_cr_amount then
+      if v_dr_uhid_no <> '' and v_bal_amount > 0 and v_cr_amount > 0 then
         set v_ref_no = fn_get_autocode('IUT');
 
-        -- update in credit line
-				set v_sql = concat("update ",v_tran_table," set
+        if v_bal_amount = v_dr_amount then
+          -- update in credit line
+				  set v_sql = concat("update ",v_tran_table," set
 						col41 = 'Y',
 						col45 = '", v_dr_recon_code ,"',
-						col46 = '",cast(v_cr_amount as nchar),"',
+						col46 = col37,
 						col47 = 'IUT9',
 						col50 = '", v_dr_loc_code ,"',
 						col51 = '",v_ref_no,"',
 						col54 = 'IUT9'
-				where recon_code = '",in_recon_code,"'
-				and (col13 = ''
-				or col13 like '%IUT%'
-				or col13 = 'UHID - Deposit CB'
-				or col13 = 'IP Deposit'
-				or col13 = 'IP Refund')
-				and col20 = '",cast(v_uhid_no as nchar),"'
-				and col38 = '",v_cr_recon_code,"'
-				and col47 is null
-				and col44 = 'Y'
-				and delete_flag = 'N'
-				");
+				  where recon_code = '",in_recon_code,"'
+				  and (col13 = ''
+				  or col13 like '%IUT%'
+				  or col13 = 'UHID - Deposit CB'
+				  or col13 = 'IP Deposit'
+				  or col13 = 'IP Refund')
+				  and col20 = '",cast(v_uhid_no as nchar),"'
+				  and col38 = '",v_cr_recon_code,"'
+				  and col47 is null
+				  and col44 = 'Y'
+				  and delete_flag = 'N'
+				  ");
 
-				call pr_run_sql2(v_sql,@msg,@result);
+				  call pr_run_sql2(v_sql,@msg,@result);
 
-        if v_bal_amount = v_dr_amount then
           -- update in debit line
 				  set v_sql = concat("update ",v_tran_table," set
 						col41 = 'Y',
 						col45 = '", v_cr_recon_code ,"',
-						col46 = '",cast(v_cr_amount as nchar),"',
+						col46 = -'",cast(v_cr_amount as nchar),"',
 						col47 = 'IUT9',
 						col50 = '", v_cr_loc_code ,"',
 						col51 = '",v_ref_no,"',
@@ -417,8 +419,59 @@ me:begin
 				  ");
 
 				  call pr_run_sql2(v_sql,@msg,@result);
-
         else
+          if v_bal_amount < v_cr_amount then
+            set v_cr_amount = v_bal_amount;
+
+            -- update in credit line
+				    set v_sql = concat("update ",v_tran_table," set
+						  col41 = 'Y',
+						  col45 = '", v_dr_recon_code ,"',
+						  col46 = '",cast(v_cr_amount as nchar),"',
+						  col47 = 'IUT9',
+						  col50 = '", v_dr_loc_code ,"',
+						  col51 = '",v_ref_no,"',
+						  col54 = 'IUT9'
+				    where tran_gid = '",cast(v_tran_cr_min_gid as nchar),"'
+				    and (col13 = ''
+				    or col13 like '%IUT%'
+				    or col13 = 'UHID - Deposit CB'
+				    or col13 = 'IP Deposit'
+				    or col13 = 'IP Refund')
+				    and col20 = '",cast(v_uhid_no as nchar),"'
+				    and col38 = '",v_cr_recon_code,"'
+				    and col47 is null
+				    and col44 = 'Y'
+				    and delete_flag = 'N'
+				    ");
+
+				    call pr_run_sql2(v_sql,@msg,@result);
+          else
+            -- update in credit line
+				    set v_sql = concat("update ",v_tran_table," set
+						  col41 = 'Y',
+						  col45 = '", v_dr_recon_code ,"',
+						  col46 = col37,
+						  col47 = 'IUT9',
+						  col50 = '", v_dr_loc_code ,"',
+						  col51 = '",v_ref_no,"',
+						  col54 = 'IUT9'
+				    where recon_code = '",in_recon_code,"'
+				    and (col13 = ''
+				    or col13 like '%IUT%'
+				    or col13 = 'UHID - Deposit CB'
+				    or col13 = 'IP Deposit'
+				    or col13 = 'IP Refund')
+				    and col20 = '",cast(v_uhid_no as nchar),"'
+				    and col38 = '",v_cr_recon_code,"'
+				    and col47 is null
+				    and col44 = 'Y'
+				    and delete_flag = 'N'
+				    ");
+
+				    call pr_run_sql2(v_sql,@msg,@result);
+          end if;
+
           -- Add Adj Entry
 					set v_sql = concat("insert into ",v_tranbrkp_table,"
 						(
@@ -476,12 +529,12 @@ me:begin
 							col38,
 							col43,
 							'",v_dr_recon_code,"',
-							'",cast(v_cr_amount as nchar),"',
-							'IUT',
+							'",cast(v_cr_amount*-1 as nchar),"',
+							'IUT9',
 							col48,
 							'",v_dr_loc_code,"',
 							'",v_ref_no,"',
-							'",cast(v_cr_amount*-1 as nchar),"'
+							'",cast(v_cr_amount as nchar),"'
 					  from ",v_tran_table,"
 					  where tran_gid = ",cast(v_tran_dr_min_gid as nchar),"
 					  and delete_flag = 'N'
@@ -498,6 +551,7 @@ me:begin
 						dataset_code,
 						tranbrkp_dataset_code,
 						col4,
+						col7,
 						col8,
 						col9,
 						col11,
@@ -525,23 +579,24 @@ me:begin
 						'",v_ds_code,"',
 						'",v_tranbrkp_ds_code,"',
 						cast(sysdate() as nchar),
-						cast(cr_amount as nchar),
-						cast(cr_amount as nchar),
+            '",v_cr_dataset,"',
+            cast(",cast(v_cr_amount as nchar)," as nchar),
+						cast(",cast(v_cr_amount as nchar)," as nchar),
 						'D',
 						'-1',
             'IUT9','IUT9',
 						'Entry',
-						cast(cr_amount as nchar),
 						'0.00',
+						cast(",cast(v_cr_amount as nchar)," as nchar),
 						'",v_uhid_no,"',
 						'Entry',
 						'Entry',
 						'Entry',
-						cast(cr_amount as nchar),
+						concat('-',cast(",cast(v_cr_amount as nchar)," as nchar)),
 						'",v_cr_recon_code,"',
 						'",v_cr_loc_code,"',
 						'",v_dr_recon_code,"',
-						cast(cr_amount as nchar),
+						concat('-',cast(",cast(v_cr_amount as nchar)," as nchar)),
             'IUT9',
 						'",v_dr_loc_code,"',
 						'",v_ref_no,"'
@@ -560,6 +615,7 @@ me:begin
 						dataset_code,
 						tranbrkp_dataset_code,
 						col4,
+            col7,
 						col8,
 						col9,
 						col11,
@@ -587,23 +643,24 @@ me:begin
 						'",v_ds_code,"',
 						'",v_tranbrkp_ds_code,"',
 						cast(sysdate() as nchar),
-						cast(cr_amount as nchar),
-						cast(cr_amount as nchar),
+            '",v_dr_dataset,"',
+						cast(",cast(v_cr_amount as nchar)," as nchar),
+						cast(",cast(v_cr_amount as nchar)," as nchar),
 						'C',
 						'1',
             'IUT9','IUT9',
 						'Entry',
-						cast(cr_amount as nchar),
+						cast(",cast(v_cr_amount as nchar)," as nchar),
 						'0.00',
 						'",v_uhid_no,"',
 						'Entry',
 						'Entry',
 						'Entry',
-						cast(cr_amount as nchar),
+						cast(",cast(v_cr_amount as nchar)," as nchar),
 						'",v_dr_recon_code,"',
 						'",v_dr_loc_code,"',
 						'",v_cr_recon_code,"',
-						cast(cr_amount as nchar),
+						cast(",cast(v_cr_amount as nchar)," as nchar),
             'IUT9',
 						'",v_cr_loc_code,"',
 						'",v_ref_no,"'
