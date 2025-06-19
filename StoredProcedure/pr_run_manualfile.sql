@@ -16,9 +16,8 @@ me:BEGIN
   declare v_txt text default '';
 
   select
-    b.target_dataset_code,a.file_name into v_dataset_code,v_file_name
+    a.dataset_code,a.file_name into v_dataset_code,v_file_name
   from con_trn_tscheduler as a
-  inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code and b.delete_flag = 'N'
   where a.scheduler_gid = in_scheduler_gid
   and a.delete_flag = 'N';
 
@@ -30,6 +29,7 @@ me:BEGIN
     call pr_run_manualpostfile(in_scheduler_gid,'',in_ip_addr,in_user_code,@out_msg,@out_result);
   elseif v_dataset_code = 'THEMEMANUAL'
     or v_dataset_code = 'FIELDUPDATE'
+    or v_dataset_code = 'IUTFIELDUPDATE'
     or v_dataset_code = 'IUTENTRY' then
     if v_dataset_code = 'THEMEMANUAL' then
 	    call pr_ins_job('','M',in_scheduler_gid,concat('Theme manual - ',v_file_name),v_file_name,
@@ -52,6 +52,13 @@ me:BEGIN
       set v_job_gid = @out_job_gid;
 
       call pr_run_iutentry(in_scheduler_gid,v_job_gid,@out_msg,@out_result);
+    elseif v_dataset_code = 'IUTFIELDUPDATE' then
+	    call pr_ins_job('','M',in_scheduler_gid,concat('IUT field update - ',v_file_name),v_file_name,
+        in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+
+      set v_job_gid = @out_job_gid;
+
+      call pr_set_iutfieldupdate(in_scheduler_gid,in_user_code,'','',@out_msg,@out_result);
     end if;
 
     call pr_upd_job(v_job_gid,'C','Completed',@msg,@result);

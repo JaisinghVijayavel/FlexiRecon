@@ -16,6 +16,11 @@ begin
 
   select @@collation_database into v_collation;
 
+  if in_ident_value_flag = 'Y' then
+    -- get $FIELD$ value
+    set in_ident_value = fn_get_filtervalue('',in_ident_value,'');
+  end if;
+
 	-- filter criteria
   set v_filter_field = trim(in_filter_criteria);
 
@@ -25,7 +30,7 @@ begin
     set v_filter_field = in_filter_field;
   end if;
 
-  
+
   set v_filter_field = fn_get_filterformat(v_filter_field,in_add_filter);
 
   -- comparison criteria =

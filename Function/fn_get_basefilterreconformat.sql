@@ -48,6 +48,11 @@ begin
     end if;
   end if;
 
+  if in_ident_value_flag = 'Y' then
+    -- get $FIELD$ value
+    set in_ident_value = fn_get_filtervalue(in_recon_code,in_ident_value,'');
+  end if;
+
   if in_ident_value_flag <> 'Y' and lower(substr(in_ident_value,1,3)) = 'col' then
     set v_ident_field_type = fn_get_fieldtype(in_recon_code,in_ident_value);
 

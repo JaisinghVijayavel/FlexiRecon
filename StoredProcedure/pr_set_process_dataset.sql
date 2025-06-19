@@ -94,7 +94,7 @@ me:begin
     a.pipeline_code,
     a.scheduled_date,
     a.file_name,
-    b.target_dataset_code,
+    a.dataset_code,
     c.dataset_name,
     a.scheduler_parameters,
     c.dataset_table_name
@@ -107,9 +107,11 @@ me:begin
     v_scheduler_param,
     v_dataset_table_name
   from con_trn_tscheduler as a
+  /*
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code
     and b.delete_flag = 'N'
-  inner join recon_mst_tdataset as c on b.target_dataset_code = c.dataset_code
+  */
+  inner join recon_mst_tdataset as c on a.dataset_code = c.dataset_code
     and c.active_status = 'Y'
     and c.delete_flag = 'N'
   where a.scheduler_gid = in_scheduler_gid
@@ -226,6 +228,16 @@ me:begin
       select
         scheduler_gid,recon_code,entry_date,entry_ref_no,uhid_no,entry_value,
         from_loc_code,to_loc_code,iut_ipop,ref_tran_gid,ref_tranbrkp_gid,sysdate()
+      from ",v_dataset_table_name,"
+      where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+      and delete_flag = 'N'");
+  elseif v_dataset_code = 'IUTFIELDUPDATE' then
+    set v_sql = concat("insert into recon_trn_tiutfieldupdate
+      (
+        scheduler_gid,recon_code,pd_tranbrkp_gid,pd_tran_gid,field_desc,field_value
+      )
+      select
+        scheduler_gid,recon_code,pd_tranbrkp_gid,pd_tran_gid,recon_field_desc,field_value
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");

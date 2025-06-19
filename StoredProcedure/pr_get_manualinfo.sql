@@ -26,8 +26,7 @@ me:BEGIN
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
 
   -- dataset_code
-  select b.target_dataset_code into v_dataset_code from con_trn_tscheduler as a
-  inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code and b.delete_flag = 'N'
+  select a.dataset_code into v_dataset_code from con_trn_tscheduler as a
   where a.scheduler_gid = in_scheduler_gid
   and a.delete_flag = 'N';
 
@@ -90,6 +89,20 @@ me:BEGIN
     where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N'
     limit 0,1;
+  elseif v_dataset_code = 'IUTFIELDUPDATE' then
+    select
+      b.recon_code,
+      b.recon_name,
+      b.recontype_code
+    into
+      v_recon_code,
+      v_recon_name,
+      v_recontype_code
+    from recon_trn_tiutfieldupdate as a
+    inner join recon_mst_trecon as b on a.recon_code = b.recon_code and b.delete_flag = 'N'
+    where a.scheduler_gid = in_scheduler_gid
+    and a.delete_flag = 'N'
+    limit 0,1;
   elseif v_dataset_code = 'IUTENTRY' then
     select
       a.recon_code,
@@ -137,7 +150,7 @@ me:BEGIN
     where recon_code = v_recon_code
     and delete_flag = 'N';
   else
-    select 'Invalid Recon' as 'Recon Name','Invalid Recon Type' as 'Recon Type';
+    select concat('Invalid Recon ',v_recon_code) as 'Recon Name','Invalid Recon Type' as 'Recon Type';
   end if;
 
   -- return manual match info
@@ -309,6 +322,31 @@ me:BEGIN
       field_desc as 'Field',
       field_value as 'Field Value'
     from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N';
+  elseif v_dataset_code = 'IUTFIELDUPDATE' then
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tiutfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+    /*
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+    */
+
+    select scheduler_gid as 'Scheduler Id',
+      pd_tran_gid as 'PD Tran Id',
+      pd_tranbrkp_gid as 'PD Supporting Tran Id',
+      field_desc as 'Field',
+      field_value as 'Field Value'
+    from recon_trn_tiutfieldupdate
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N';
   elseif v_dataset_code = 'IUTENTRY' then

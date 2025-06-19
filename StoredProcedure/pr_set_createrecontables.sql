@@ -111,7 +111,7 @@ begin
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add primary key
-  set v_sql = concat('alter table ',v_table,' modify tran_gid int PRIMARY KEY');
+  set v_sql = concat('alter table ',v_table,' modify tranbrkp_gid int PRIMARY KEY');
   call pr_run_sql(v_sql,@msg,@result);
 
   -- add scheduler_gid

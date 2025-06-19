@@ -610,6 +610,10 @@ me:BEGIN
               set v_filter_value_flag = ifnull(v_filter_value_flag,'Y');
               set v_filter_value = ifnull(v_filter_value,'');
 
+              if v_filter_value_flag = 'Y' then
+                set v_filter_value = fn_get_filtervalue(in_recon_code,v_filter_value,'');
+              end if;
+
               set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
               set v_join_condition = ifnull(v_join_condition,'');
