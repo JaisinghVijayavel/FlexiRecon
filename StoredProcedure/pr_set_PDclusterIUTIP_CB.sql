@@ -151,6 +151,9 @@ me:BEGIN
       set v_iut_cb_amount = ifnull(@closing_balance,0);
       set v_count = ifnull(@cb_rec_count,0);
 
+      set v_adjentry_flag = 'N';
+
+      /*
       -- Adj Entry Sum
       select
         sum(cast(col53 as decimal(15,2))),count(*)
@@ -177,6 +180,7 @@ me:BEGIN
       else
         set v_adjentry_flag = 'N';
       end if;
+      */
 
       set v_iut_status = '';
 
@@ -243,8 +247,9 @@ me:BEGIN
 				LOCK IN SHARE MODE;
 
 				set v_iut_cb_amount = ifnull(@closing_balance,0);
-				set v_count = ifnull(@cb_rec_count,0);
+        set v_count = ifnull(@cb_rec_count,0);
 
+        /*
         -- Adj Entry Sum
         select
           sum(cast(col53 as decimal(15,2))),count(*)
@@ -270,7 +275,9 @@ me:BEGIN
         else
           set v_adjentry_flag = 'N';
         end if;
+        */
 
+        set v_adjentry_flag = 'N';
 				set v_iut_status = '';
 
 				if v_count = 0 then
