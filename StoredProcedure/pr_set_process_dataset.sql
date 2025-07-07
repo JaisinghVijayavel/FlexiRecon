@@ -327,12 +327,6 @@ me:begin
 
   set out_msg = 'Success';
   set out_result = 1;
-
-  if v_msg <> 'Success' then
-    if v_dataset_code = 'IUTENTRY' then
-      call pr_upd_job(v_job_gid,'F',concat('Failed download file for reference !'),@msg,@result);
-    end if;
-  end if;
 end $$
 
 DELIMITER ;

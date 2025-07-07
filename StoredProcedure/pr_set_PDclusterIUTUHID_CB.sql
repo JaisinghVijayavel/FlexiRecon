@@ -36,6 +36,7 @@ me:BEGIN
   declare v_adjentry_flag text default '';
 
   drop temporary table if exists recon_tmp_tcb;
+  drop temporary table if exists recon_tmp_tuhidadjentry;
 
   create temporary table recon_tmp_tcb(
     cb_gid int unsigned NOT NULL AUTO_INCREMENT,
@@ -46,6 +47,11 @@ me:BEGIN
     cb_amount decimal(15,2) not null default 0,
     PRIMARY KEY (cb_gid),
     key idx_uhid_no(uhid_no)
+  ) ENGINE = MyISAM;
+
+  create temporary table recon_tmp_tuhidadjentry(
+    uhid_no varchar(64) not null,
+    PRIMARY KEY (uhid_no)
   ) ENGINE = MyISAM;
 
   -- Closing Balance Columns
@@ -81,6 +87,16 @@ me:BEGIN
     "and delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg,@result);
+
+  -- adj entry uhid
+  insert into recon_tmp_tuhidadjentry(uhid_no)
+  select
+    distinct col20
+  from recon_trn_ttranbrkp
+  where recon_code = in_recon_code
+  and col16 = 'Adj Entry'
+  and delete_flag = 'N'
+  LOCK IN SHARE MODE;
 
   -- Cluster Recon Field Columns
   -- col6 - Dataset Code
@@ -138,34 +154,35 @@ me:BEGIN
       set v_count = ifnull(@cb_rec_count,0);
 
       set v_adjentry_flag = 'N';
-
-      /*
-      -- Adj Entry
-      select
-        sum(cast(col53 as decimal(15,2))),count(*)
-      into
-        @closing_balance,@cb_rec_count
-      from recon_trn_ttranbrkp
-      where recon_code = in_recon_code
-      and col38 = in_pdrecon_code
-      and col20 = v_uhid_no
-      and cast(col53 as decimal(15,2)) <> 0
-      and col16 = 'Adj Entry'
-      and delete_flag = 'N'
-      LOCK IN SHARE MODE;
-
-      set v_iut_cb_amount = v_iut_cb_amount + ifnull(@closing_balance,0);
-      set v_count = v_count + ifnull(@cb_rec_count,0);
-
-      -- adjentry flag
-      if @cb_rec_count > 0 then
-        set v_adjentry_flag = 'Y';
-      else
-        set v_adjentry_flag = 'N';
-      end if;
-      */
-
       set v_iut_status = '';
+
+      if exists(select uhid_no from recon_tmp_tuhidadjentry
+        where uhid_no = v_uhid_no) then
+
+        -- Adj Entry
+        select
+          sum(cast(col53 as decimal(15,2))),count(*)
+        into
+          @closing_balance,@cb_rec_count
+        from recon_trn_ttranbrkp
+        where recon_code = in_recon_code
+        and col38 = in_pdrecon_code
+        and col20 = v_uhid_no
+        and cast(col53 as decimal(15,2)) <> 0
+        and col16 = 'Adj Entry'
+        and delete_flag = 'N'
+        LOCK IN SHARE MODE;
+
+        set v_iut_cb_amount = v_iut_cb_amount + ifnull(@closing_balance,0);
+        set v_count = v_count + ifnull(@cb_rec_count,0);
+
+        -- adjentry flag
+        if @cb_rec_count > 0 then
+          set v_adjentry_flag = 'Y';
+        else
+          set v_adjentry_flag = 'N';
+        end if;
+      end if;
 
       if v_count = 0 then
         set v_iut_status = 'NOT AVAILABLE';

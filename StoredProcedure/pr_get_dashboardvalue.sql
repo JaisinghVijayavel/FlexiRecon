@@ -152,12 +152,12 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg2,@result2);
 
 	select
-		ifnull(count(*),0),ifnull(sum(excp_value) - sum(roundoff_value) * sum(tran_mult),0)
+		ifnull(count(*),0),ifnull(sum(excp_value-roundoff_value),0)
   into
     v_openingexcp_count,v_openingexcp_value
 	from recon_tmp_ttrangid
 	where excp_value <> 0
-	and (excp_value - roundoff_value * tran_mult) <> 0
+	and (excp_value - roundoff_value) <> 0
 	and tran_date < in_period_from;
 
 	set v_openingexcp_value = ifnull(v_openingexcp_value,0);
@@ -170,6 +170,7 @@ me:BEGIN
 	where recon_code = in_recon_code
 	and tran_date >= in_period_from
 	and tran_date <= in_period_to
+  and excp_value <> roundoff_value 
 	and delete_flag='N';
 
 	select
@@ -196,6 +197,25 @@ me:BEGIN
 
   set v_ko_count = ifnull(@v_ko_count,0);
   set v_ko_value = ifnull(@v_ko_value,0);
+
+  -- partial ko count
+  set v_sql = concat("
+	select
+		ifnull(count(*),0),ifnull(sum(excp_value),0) as tranvalue
+  into
+    @v_ko_count,@v_ko_value
+	from ",v_tran_table,"
+	where recon_code = '",in_recon_code,"'
+	and tran_date >= '",cast(in_period_from as nchar),"'
+	and tran_date <= '",cast(in_period_to as nchar),"'
+	and tran_value != excp_value and excp_value != 0 and tran_value != 0 and excp_value = roundoff_value
+	and delete_flag='N'
+	LOCK IN SHARE MODE");
+
+  call pr_run_sql2(v_sql,@msg2,@result2);
+
+  set v_ko_count = v_ko_count + ifnull(@v_ko_count,0);
+  set v_ko_value = v_ko_value + ifnull(@v_ko_value,0);
 
   set v_sql = concat("
 	select
@@ -225,7 +245,7 @@ me:BEGIN
 	where recon_code = in_recon_code
 	and tran_date >= in_period_from
 	and tran_date <= in_period_to
-	and tran_value != excp_value and excp_value != 0 and tran_value != 0
+	and tran_value != excp_value and excp_value != 0 and tran_value != 0 and excp_value != roundoff_value
 	and delete_flag='N';
 
 	select
@@ -236,7 +256,7 @@ me:BEGIN
 		v_partialexp_value
 	from recon_tmp_ttran
 	where recon_code = in_recon_code
-	and tran_value != excp_value and excp_value != 0 and tran_value != 0
+	and tran_value != excp_value and excp_value != 0 and tran_value != 0 and excp_value != roundoff_value
 	and delete_flag='N';
 
 	select

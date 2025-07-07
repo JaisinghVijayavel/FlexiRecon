@@ -82,6 +82,7 @@ me:BEGIN
   declare v_tran_gid int default 0;
   declare v_tranbrkp_gid int default 0;
   declare v_tran_mult tinyint default 0;
+  declare v_base_tran_mult tinyint default 0;
   declare v_excp_value double(15,2) default 0;
   declare v_ko_value double(15,2) default 0;
   declare v_match_gid int default 0;
@@ -312,6 +313,7 @@ me:BEGIN
     ko_value decimal(15,2) not null default 0,
     src_comp_flag char(1) default null,
     tran_acc_mode char(1) default null,
+    tran_mult tinyint not null default 0,
     dup_flag char(1) not null default 'N',
     PRIMARY KEY (matchdiffdtl_gid),
     key idx_parent_tran_gid(parent_tran_gid,parent_tranbrkp_gid),
@@ -1830,7 +1832,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json),matched_txt_json) as matched_json ');
 
 						set v_match_sql = concat(v_match_sql,'from recon_tmp_t5manymatch ');
-            set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
+            set v_match_sql = concat(v_match_sql,'group by cast(matched_txt_json as nchar),comparison_value,tran_mult ');
             set v_match_sql = concat(v_match_sql,'having (abs(sum(source_value*tran_mult))-abs(comparison_value)) > 0 ');
             set v_match_sql = concat(v_match_sql,'and (abs(sum(source_value*tran_mult))-abs(comparison_value)) <= ',cast(v_rule_threshold_plus_value as nchar),' ');
 
@@ -1855,7 +1857,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json),matched_txt_json) as matched_json ');
 
 						set v_match_sql = concat(v_match_sql,'from recon_tmp_t5manymatch ');
-            set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
+            set v_match_sql = concat(v_match_sql,'group by cast(matched_txt_json as nchar),comparison_value,tran_mult ');
             set v_match_sql = concat(v_match_sql,'having (abs(comparison_value)-abs(sum(source_value*tran_mult))) > 0 ');
             set v_match_sql = concat(v_match_sql,'and (abs(comparison_value)-abs(sum(source_value*tran_mult))) <= ',cast(v_rule_threshold_minus_value as nchar),' ');
 
@@ -1872,7 +1874,8 @@ me:BEGIN
 							insert into recon_tmp_t5pseudorows select 0 union select 1;
 						end if;
 
-            insert into recon_tmp_t5thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
+            insert into recon_tmp_t5thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,
+                ko_value,src_comp_flag,tran_acc_mode,tran_mult)
               select
                 tran_gid as parent_tran_gid,
                 tranbrkp_gid as parent_tranbrkp_gid,
@@ -1880,7 +1883,8 @@ me:BEGIN
                 JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
                 JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].ko_value'))) AS ko_value,
                 JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode,
+                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_mult'))) AS tran_mult
               FROM recon_tmp_t5thresholddiff
               JOIN recon_tmp_t5pseudorows
               where group_flag = 'M'
@@ -1916,14 +1920,14 @@ me:BEGIN
           source_block:begin
             declare source_done int default 0;
             declare source_cursor cursor for
-            select tran_gid,tranbrkp_gid,tran_acc_mode,diff_value,matched_count from recon_tmp_t5thresholddiff
+            select tran_gid,tranbrkp_gid,tran_acc_mode,diff_value,matched_count,tran_mult from recon_tmp_t5thresholddiff
                where dup_flag = 'N';
             declare continue handler for not found set source_done=1;
 
             open source_cursor;
 
             source_loop: loop
-              fetch source_cursor into v_tran_gid,v_tranbrkp_gid,v_src_acc_mode,v_diff_value,v_matched_count;
+              fetch source_cursor into v_tran_gid,v_tranbrkp_gid,v_src_acc_mode,v_diff_value,v_matched_count,v_base_tran_mult;
               if source_done = 1 then leave source_loop; end if;
 
               if v_recontype_code = 'B'
@@ -1950,7 +1954,7 @@ me:BEGIN
 							thresholddiff_block:begin
 								declare thresholddiff_done int default 0;
 								declare thresholddiff_cursor cursor for
-								select tran_gid,tranbrkp_gid,ko_value from recon_tmp_t5thresholddiffdtl
+								select tran_gid,tranbrkp_gid,ko_value,tran_mult from recon_tmp_t5thresholddiffdtl
 									where parent_tran_gid = v_tran_gid
 									and parent_tranbrkp_gid = v_tranbrkp_gid
 									and src_comp_flag = v_src_comp_flag
@@ -1961,25 +1965,25 @@ me:BEGIN
 								open thresholddiff_cursor;
 
 								thresholddiff_loop: loop
-									fetch thresholddiff_cursor into v_tran_gid,v_tranbrkp_gid,v_ko_value;
+									fetch thresholddiff_cursor into v_tran_gid,v_tranbrkp_gid,v_ko_value,v_tran_mult;
 									if thresholddiff_done = 1 then leave thresholddiff_loop; end if;
 
 									if v_ko_value >= v_diff_value then
                     if v_src_comp_flag = 'S' then
 										  update recon_tmp_t5source set
-											  excp_value = excp_value - v_diff_value * tran_mult
+											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t5comparison set
-											  excp_value = excp_value - v_diff_value * tran_mult
+											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
 
 										-- insert roundoff value
 										insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
-											select v_tran_gid,v_tranbrkp_gid,v_diff_value;
+											select v_tran_gid,v_tranbrkp_gid,v_diff_value*v_tran_mult*v_base_tran_mult;
 
 										leave thresholddiff_loop;
 									else
@@ -1997,7 +2001,7 @@ me:BEGIN
 
 										-- insert roundoff value
 										insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
-											select v_tran_gid,v_tranbrkp_gid,v_ko_value;
+											select v_tran_gid,v_tranbrkp_gid,v_ko_value*v_tran_mult*v_base_tran_mult;
 
 										set v_diff_value = v_diff_value - v_ko_value;
 									end if;
@@ -2093,7 +2097,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'from recon_tmp_t5manymatch ');
 
 						if v_recontype_code <> 'N' then
-							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
+							set v_match_sql = concat(v_match_sql,'group by cast(matched_txt_json as nchar),comparison_value,tran_mult ');
 
               if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
                 -- contra
@@ -2103,7 +2107,7 @@ me:BEGIN
 							  set v_match_sql = concat(v_match_sql,'having sum(source_value*tran_mult) = comparison_value ');
               end if;
 						else
-							set v_match_sql = concat(v_match_sql,'group by matched_txt_json ');
+							set v_match_sql = concat(v_match_sql,'group by cast(matched_txt_json as nchar) ');
 						end if;
 
             -- select v_match_sql;
@@ -2619,7 +2623,7 @@ me:BEGIN
 								'N',matched_json,'N',sysdate(),'",in_user_code,"'
 							from recon_tmp_t5match
 							where ko_flag = 'Y'");
-						
+
 						call pr_run_sql(v_sql,@msg,@result);
 
 						set v_sql = concat("

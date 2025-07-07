@@ -236,7 +236,7 @@ me:BEGIN
   inner join ",v_tran_table," as t on r.recon_code = t.recon_code
     and t.tran_date < '",cast(in_period_from as nchar),"'
     and t.excp_value <> 0
-    and (t.excp_value - t.roundoff_value * t.tran_mult) <> 0
+    and (t.excp_value - t.roundoff_value) <> 0
     and t.delete_flag = 'N'
     LOCK IN SHARE MODE) as a");
 
@@ -252,7 +252,7 @@ me:BEGIN
   inner join ",v_tranko_table," as t on r.recon_code = t.recon_code
     and t.tran_date < '",cast(in_period_from as nchar),"'
     and t.excp_value <> 0
-    and (t.excp_value - t.roundoff_value * t.tran_mult) <> 0
+    and (t.excp_value - t.roundoff_value) <> 0
     and t.delete_flag = 'N'
     LOCK IN SHARE MODE) as a");
 
@@ -296,7 +296,7 @@ me:BEGIN
     count(*) into v_excp_count
   from recon_tmp_ttrangid
   where excp_value <> 0
-  and (excp_value - roundoff_value * tran_mult) <> 0;
+  and (excp_value - roundoff_value) <> 0;
 
   set v_excp_count = ifnull(v_excp_count,0);
 
@@ -304,7 +304,7 @@ me:BEGIN
     count(*) into v_openingexcp_count
   from recon_tmp_ttrangid
   where excp_value <> 0
-  and (excp_value - roundoff_value * tran_mult) <> 0
+  and (excp_value - roundoff_value) <> 0
   and tran_date < in_period_from;
 
   set v_openingexcp_count = ifnull(v_openingexcp_count,0);
@@ -342,7 +342,7 @@ me:BEGIN
   from recon_tmp_ttrangid
   where excp_value <> 0
   and tran_value <> excp_value
-  and (excp_value - roundoff_value * tran_mult) <> 0
+  and (excp_value - roundoff_value) <> 0
   and tran_date >= in_period_from;
 
   select  v_recon_count          as recon_count,
@@ -384,7 +384,7 @@ me:BEGIN
     right join recon_mst_taging as c on datediff(curdate(),t.tran_date) between c.aging_from and c.aging_to
       and c.delete_flag = 'N'
     where t.excp_value <> 0
-    and (t.excp_value - t.roundoff_value * tran_mult) <> 0
+    and (t.excp_value - t.roundoff_value) <> 0
     group by c.aging_gid,c.aging_desc
   ) as ex on ag.aging_gid = ex.aging_gid;
 

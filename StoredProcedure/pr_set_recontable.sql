@@ -7,8 +7,7 @@ CREATE PROCEDURE `pr_set_recontable`
   out out_msg text,
   out out_result int
 )
-begin
-
+me:begin
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
@@ -24,6 +23,16 @@ begin
   declare v_table_prefix text default '';
 
   declare v_condition text default '';
+  declare v_concurrent_ko_flag text default '';
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag <> 'Y' then
+    set out_msg = 'Failed ! Concurrent flag not set !';
+    set out_result = 0;
+    leave me;
+  end if;
 
   -- recon tran table
 	set v_tran_table = 'recon_trn_ttran';

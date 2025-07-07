@@ -14,9 +14,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 29-04-2025
+    updated Date : 30-06-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_recon_code text default '';
@@ -124,6 +124,7 @@ me:BEGIN
   -- from unit update
   set v_sql = concat("update recon_trn_tiutentry as a
     inner join ",v_ds_unit_table," as b on a.from_loc_code = b.col1
+      and b.col7 = 'New'
       and b.delete_flag = 'N'
     set a.from_recon_code = b.col4,
         a.from_unit_name = b.col6
@@ -137,6 +138,7 @@ me:BEGIN
   -- to unit update
   set v_sql = concat("update recon_trn_tiutentry as a
     inner join ",v_ds_unit_table," as b on a.to_loc_code = b.col1
+      and b.col7 = 'New'
       and b.delete_flag = 'N'
     set a.to_recon_code = b.col4,
         a.to_unit_name = b.col6

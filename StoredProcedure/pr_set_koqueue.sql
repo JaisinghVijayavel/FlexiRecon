@@ -73,9 +73,9 @@ me:BEGIN
 	if v_koqueue_gid > 0 then
 		call pr_upd_koqueue(v_koqueue_gid,'P',"",@msg,@result);
 
-		PREPARE stmt FROM @vquery;
-		EXECUTE stmt;
-		DEALLOCATE PREPARE stmt;
+		PREPARE stmt100 FROM @vquery;
+		EXECUTE stmt100;
+		DEALLOCATE PREPARE stmt100;
 	end if;
 END $$
 
