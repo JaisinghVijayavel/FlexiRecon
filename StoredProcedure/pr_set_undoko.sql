@@ -213,7 +213,7 @@ me:begin
 			and b.delete_flag = 'N'
 			set
 				b.excp_value = b.excp_value + a.ko_value*b.tran_mult,
-				b.roundoff_value = b.roundoff_value - a.roundoff_value *b.tran_mult,
+				b.roundoff_value = b.roundoff_value - a.roundoff_value,
 				b.ko_gid = 0,
 				b.ko_date = null");
 				

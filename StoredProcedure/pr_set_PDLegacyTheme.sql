@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_set_PDLegacyTheme` $$
 CREATE PROCEDURE `pr_set_PDLegacyTheme`
 (
+  in in_recon_code text,
   out out_msg text,
   out out_result int
 )
@@ -27,6 +28,12 @@ me:BEGIN
   -- concurrent ko flag
   set v_concurrent_flag = fn_get_configvalue('concurrent_ko_flag');
 
+  set in_recon_code = trim(in_recon_code);
+
+  if in_recon_code = '' then
+    set in_recon_code = null;
+  end if;
+
 
   -- col32 - Line Ref No
   -- col33 - Theme Ref No
@@ -42,7 +49,9 @@ me:BEGIN
 		declare pdrecon_done int default 0;
 		declare pdrecon_cursor cursor for
 		select pdrecon_code from recon_mst_tpdrecon
-			where active_status = 'Y'
+			where true
+      and pdrecon_code = ifnull(in_recon_code,pdrecon_code)
+      and active_status = 'Y'
 			and delete_flag = 'N';
 		declare continue handler for not found set pdrecon_done=1;
 
