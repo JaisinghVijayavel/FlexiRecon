@@ -54,29 +54,31 @@ me:BEGIN
 	LIMIT 1;
   */
 
-	SELECT
-		a.ko_query, a.koqueue_gid
-	INTO
-		@vquery, v_koqueue_gid
-	FROM recon_trn_tkoqueue as a
-	left JOIN recon_trn_tkoqueue AS b ON a.recon_code = b.recon_code
-    and b.koqueue_status = 'P'
-		AND b.delete_flag = 'N'
-	WHERE a.koqueue_status = 'I'
-  and b.recon_code is null
-	AND a.delete_flag = 'N'
-	ORDER BY a.koqueue_gid
-	LIMIT 1;
+  if exists(select * from recon_trn_tkoqueue where koqueue_status = 'I' and delete_flag = 'N') then
+	  SELECT
+		  a.ko_query, a.koqueue_gid
+	  INTO
+		  @vquery, v_koqueue_gid
+	  FROM recon_trn_tkoqueue as a
+	  left JOIN recon_trn_tkoqueue AS b ON a.recon_code = b.recon_code
+      and b.koqueue_status = 'P'
+		  AND b.delete_flag = 'N'
+	  WHERE a.koqueue_status = 'I'
+    and b.recon_code is null
+	  AND a.delete_flag = 'N'
+	  ORDER BY a.koqueue_gid
+	  LIMIT 1;
 
-	set v_koqueue_gid = ifnull(v_koqueue_gid,0);
+	  set v_koqueue_gid = ifnull(v_koqueue_gid,0);
 
-	if v_koqueue_gid > 0 then
-		call pr_upd_koqueue(v_koqueue_gid,'P',"",@msg,@result);
+	  if v_koqueue_gid > 0 then
+		  call pr_upd_koqueue(v_koqueue_gid,'P',"",@msg,@result);
 
-		PREPARE stmt100 FROM @vquery;
-		EXECUTE stmt100;
-		DEALLOCATE PREPARE stmt100;
-	end if;
+		  PREPARE stmt100 FROM @vquery;
+		  EXECUTE stmt100;
+		  DEALLOCATE PREPARE stmt100;
+	  end if;
+  end if;
 END $$
 
 DELIMITER ;

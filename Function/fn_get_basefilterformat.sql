@@ -120,7 +120,7 @@ begin
 			set v_txt = concat(v_filter_field,' <> ',in_ident_value,' ');
 		end if;
   elseif in_ident_value = '$ADHOC$' then
-			set v_txt = concat(v_filter_field,' ',in_comparison_criteria,' ');
+    set v_txt = concat(v_filter_field,' ',in_comparison_criteria,' ');
   else
 		if in_ident_value_flag = 'Y' then
 			set v_txt = concat(v_filter_field,' ',in_comparison_criteria,' ',char(39),in_ident_value,char(39),' ');

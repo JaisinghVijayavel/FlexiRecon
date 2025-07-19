@@ -15,9 +15,9 @@ me:BEGIN
     Created Date : 27-02-2025
 
     Updated By : Vijayavel
-    updated Date : 05-04-2025
+    updated Date : 19-07-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_report_code_ko text;
@@ -35,6 +35,33 @@ me:BEGIN
   declare v_recon_lock_date text;
   declare v_recon_cycle_date text;
 
+  declare v_concurrent_ko_flag text default '';
+  declare v_tran_table text default '';
+  declare v_tranbrkp_table text default '';
+
+  declare v_sql text default '';
+  declare v_excel_max_rows int default 0;
+  declare v_excp_count int default 0;
+  declare v_rr_count int default 0;
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
+
+  -- excel_max_rows
+  set v_excel_max_rows = cast(fn_get_configvalue('excel_max_rows') as unsigned);
+
+  if v_excel_max_rows = 0 then
+    set v_excel_max_rows = 1048576;
+  end if;
+
   -- get recon details
   select
     date_format(ifnull(recon_lock_date,'2000-01-01'),'%Y-%m-%d') as lock_date,
@@ -47,6 +74,15 @@ me:BEGIN
   and active_status = 'Y'
   and delete_flag = 'N';
 
+  -- get exception count
+  set v_sql = concat("select count(*) into @pd_excp_count from ",v_tran_table,"
+                      where recon_code = '",in_recon_code,"'
+                      and excp_value <> 0
+                      and delete_flag = 'N'");
+  call pr_run_sql1(v_sql,@msg1,@result1);
+
+  set v_excp_count = ifnull(@pd_excp_count,0);
+
   -- fetching reportcode and report template code for Custom report Exception Summary
 	select
 		report_code,reporttemplate_code
@@ -58,9 +94,15 @@ me:BEGIN
   and active_status = 'Y'
 	and delete_flag = 'N';
 
-  call pr_run_dynamicreport(in_archival_code,v_reporttemplate_code_es, in_recon_code,v_report_code_es,
-    'Transaction Exception With Breakp','and a.scheduler_gid > 0 ', false, '', '', in_user_code, @out_msg, @out_result);
-
+  if v_excp_count <= v_excel_max_rows then
+    call pr_run_dynamicreport(in_archival_code,v_reporttemplate_code_es, in_recon_code,v_report_code_es,
+      'Transaction Exception With Breakp','and a.scheduler_gid > 0 ', false, '', '', in_user_code, @out_msg, @out_result);
+  else
+    select concat("Exception count ",
+                  cast(v_excp_count as nchar),
+                  " exceeds excel max row limit ",
+                  cast(v_excel_max_rows as nchar)) as 'Output Failed';
+  end if;
 
 	-- RE168_RPT_EXCP_WITHBRKP
 	/* set @query1 =concat('select * from ',in_recon_code,'_RPT_EXCP_WITHBRKP');
@@ -68,6 +110,7 @@ me:BEGIN
 	execute stmt;
     deallocate prepare stmt; */
 
+  /*
     -- fetching reportcode and report template code for Custom report KO
 	select
 		report_code,reporttemplate_code
@@ -84,6 +127,7 @@ me:BEGIN
         in_recon_code,
         concat("AND  a.ko_gid > '0' and a.ko_date > '",v_recon_lock_date,"' "),
         false, '', '', in_user_code, @out_msg, @out_result);
+  */
 
 	-- pd closing balance v_closing_balance_conditon by filtering based on PD location
   select fn_get_configvalue('dataset_db_name')into v_dataset_db_name;
@@ -185,13 +229,31 @@ me:BEGIN
       set v_rr_table_name =concat(v_dataset_db_name,'.',v_rr_table_name);
 	  end if;
 
-    -- receipt report
-    -- col11 - TRA Status
-    -- col35 - PD Tran Id
 
-	  call pr_run_dynamicreport(in_archival_code,'', in_recon_code,v_rr_ds_code, 'RR Not Mapped',
-		  concat(" and col35 is null and col11 = 'ACTIVE' "),
-      false, '', '', in_user_code, @out_msg, @out_result);
+    -- get exception count
+    set v_sql = concat("select count(*) into @rr_count from ",v_rr_table_name,"
+                      where true
+                      and col35 is null and col11 = 'ACTIVE'
+                      and delete_flag = 'N'");
+    call pr_run_sql1(v_sql,@msg1,@result1);
+
+    set v_rr_count = ifnull(@rr_count,0);
+
+
+    if v_rr_count <= v_excel_max_rows then
+      -- receipt report
+      -- col11 - TRA Status
+      -- col35 - PD Tran Id
+
+	    call pr_run_dynamicreport(in_archival_code,'', in_recon_code,v_rr_ds_code, 'RR Not Mapped',
+		    concat(" and col35 is null and col11 = 'ACTIVE' "),
+        false, '', '', in_user_code, @out_msg, @out_result);
+    else
+      select concat("RR Not Mapped count ",
+                  cast(v_rr_count as nchar),
+                  " exceeds excel max row limit ",
+                  cast(v_excel_max_rows as nchar)) as 'Output Failed';
+    end if;
   else
     select 'No Records Found !' as 'Result';
   end if;

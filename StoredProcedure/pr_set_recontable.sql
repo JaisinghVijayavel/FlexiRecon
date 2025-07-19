@@ -8,6 +8,16 @@ CREATE PROCEDURE `pr_set_recontable`
   out out_result int
 )
 me:begin
+  /*
+    Created By : Vijayavel
+    Created Date : 18-07-2025
+
+    Updated By : Vijayavel
+    updated Date : 18-07-2025
+
+    Version : 1
+  */
+
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
@@ -24,6 +34,11 @@ me:begin
 
   declare v_condition text default '';
   declare v_concurrent_ko_flag text default '';
+
+  declare v_max_tran_gid int default 0;
+  declare v_max_tranbrkp_gid int default 0;
+  declare v_max_ko_gid int default 0;
+  declare v_db_name text default '';
 
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
@@ -47,6 +62,82 @@ me:begin
 
   set v_table_prefix = in_recon_code;
 
+  -- get db name
+  select database() into v_db_name;
+
+  -- get auto increment value
+  -- tran table
+  select
+    AUTO_INCREMENT into v_max_tran_gid
+  from information_schema.TABLES
+  where TABLE_SCHEMA = v_db_name
+  and TABLE_NAME = 'recon_trn_ttran';
+
+  -- tranbrkp table
+  select
+    AUTO_INCREMENT into v_max_tranbrkp_gid
+  from information_schema.TABLES
+  where TABLE_SCHEMA = v_db_name
+  and TABLE_NAME = 'recon_trn_ttranbrkp';
+
+  -- ko table
+  select
+    AUTO_INCREMENT into v_max_ko_gid
+  from information_schema.TABLES
+  where TABLE_SCHEMA = v_db_name
+  and TABLE_NAME = 'recon_trn_tko';
+
+  set v_max_tran_gid = ifnull(v_max_tran_gid,0) + 1;
+  set v_max_tranbrkp_gid = ifnull(v_max_tranbrkp_gid,0) + 1;
+  set v_max_ko_gid = ifnull(v_max_ko_gid,0) + 1;
+
+  -- create tran table
+  set v_table = concat(v_table_prefix,'_tran');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttran');
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- set auto increment
+  set v_sql = concat('alter table ',v_table,' AUTO_INCREMENT = ',cast(v_max_tran_gid as nchar));
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- create tranko table
+  set v_table = concat(v_table_prefix,'_tranko');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttranko');
+
+  -- create tranbrkp table
+  set v_table = concat(v_table_prefix,'_tranbrkp');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttranbrkp');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- set auto increment
+  set v_sql = concat('alter table ',v_table,' AUTO_INCREMENT = ',cast(v_max_tranbrkp_gid as nchar));
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- create tranbrkpko table
+  set v_table = concat(v_table_prefix,'_tranbrkpko');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttranbrkpko');
+
+  -- create ko table
+  set v_table = concat(v_table_prefix,'_ko');
+  set v_sql = concat('create table ',v_table,' like recon_trn_tko');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- set auto increment
+  set v_sql = concat('alter table ',v_table,' AUTO_INCREMENT = ',cast(v_max_ko_gid as nchar));
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- create kodtl table
+  set v_table = concat(v_table_prefix,'_kodtl');
+  set v_sql = concat('create table ',v_table,' like recon_trn_tkodtl');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  -- create koroundoff table
+  set v_table = concat(v_table_prefix,'_koroundoff');
+  set v_sql = concat('create table ',v_table,' like recon_trn_tkoroundoff');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  /*
   -- create tran table
   set v_table = concat(v_table_prefix,'_tran');
   set v_sql = concat('create table ',v_table,' select * from recon_trn_ttran where 1 = 2');
@@ -252,6 +343,7 @@ me:begin
   -- add tranbrkp_gid
   set v_sql = concat('create index idx_tranbrkp_gid on ',v_table,'(tranbrkp_gid)');
   call pr_run_sql2(v_sql,@msg,@result);
+  */
 
   set out_msg = 'Success';
   set out_result = 1;
