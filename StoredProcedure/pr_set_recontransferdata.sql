@@ -39,7 +39,7 @@ begin
   -- transfer tran table
   set v_sql = concat("
     insert into ",v_tran_table,"
-    select * from recon_trn_ttran
+    select * from recon_trn_ttran1
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'
     ");
@@ -49,7 +49,7 @@ begin
   -- transfer tranko table
   set v_sql = concat("
     insert into ",v_tranko_table,"
-    select * from recon_trn_ttranko
+    select * from recon_trn_ttranko1
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'
     ");
@@ -59,7 +59,7 @@ begin
   -- transfer tranbrkp table
   set v_sql = concat("
     insert into ",v_tranbrkp_table,"
-    select * from recon_trn_ttranbrkp
+    select * from recon_trn_ttranbrkp1
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'
     ");
@@ -69,7 +69,7 @@ begin
   -- transfer tranko table
   set v_sql = concat("
     insert into ",v_tranbrkpko_table,"
-    select * from recon_trn_ttranbrkpko
+    select * from recon_trn_ttranbrkpko1
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'
     ");
@@ -79,7 +79,7 @@ begin
   -- transfer ko table
   set v_sql = concat("
     insert into ",v_ko_table,"
-    select * from recon_trn_tko
+    select * from recon_trn_tko1
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N'
     ");
@@ -89,8 +89,8 @@ begin
   -- transfer kodtl table
   set v_sql = concat("
     insert into ",v_kodtl_table,"
-    select a.* from recon_trn_tkodtl as a
-    inner join recon_trn_tko as b on a.ko_gid = b.ko_gid
+    select a.* from recon_trn_tkodtl1 as a
+    inner join recon_trn_tko1 as b on a.ko_gid = b.ko_gid
       and b.delete_flag = 'N'
     where b.recon_code = '",in_recon_code,"'
     and a.delete_flag = 'N'
@@ -101,8 +101,8 @@ begin
   -- transfer koroundoff table
   set v_sql = concat("
     insert into ",v_koroundoff_table,"
-    select a.* from recon_trn_tkoroundoff as a
-    inner join recon_trn_tko as b on a.ko_gid = b.ko_gid
+    select a.* from recon_trn_tkoroundoff1 as a
+    inner join recon_trn_tko1 as b on a.ko_gid = b.ko_gid
       and b.delete_flag = 'N'
     where b.recon_code = '",in_recon_code,"'
     and a.delete_flag = 'N'

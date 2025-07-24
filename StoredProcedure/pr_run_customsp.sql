@@ -51,7 +51,7 @@ begin
 		select
       reportparam_type,
       reportparam_code,
-      fn_get_reportfiltervalue1(in_arcival_code,in_recon_code,in_condition,
+      fn_get_reportfiltervalue1(in_archival_code,in_recon_code,in_condition,
                                 reportparam_value,in_user_code) as reportparam_value
     from recon_mst_treportparam
     where report_code = in_report_code

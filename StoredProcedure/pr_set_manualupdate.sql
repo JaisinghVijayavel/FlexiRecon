@@ -23,7 +23,8 @@ me:BEGIN
   from recon_trn_tmanualtran
   where scheduler_gid = in_scheduler_gid
   and recon_code <> ''
-  and delete_flag = 'N';
+  and delete_flag = 'N'
+  limit 0,1;
 
   set v_recon_code = ifnull(v_recon_code,'');
 

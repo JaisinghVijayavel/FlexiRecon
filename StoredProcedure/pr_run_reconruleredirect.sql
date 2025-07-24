@@ -38,6 +38,7 @@ me:BEGIN
   declare v_txt_recon_code text default '';
   declare v_recon_code text default '';
   declare v_recontype_code text default '';
+  declare v_recon_processing_method text default '';
   declare v_recon_rule_version text default '';
   declare v_recon_date_field text default '';
   declare v_recon_gid int default 0;
@@ -123,11 +124,13 @@ me:BEGIN
   select
     recon_name,
     recontype_code,
+    processing_method,
     recon_date_field,
     recon_date_flag
   into
     v_recon_name,
     v_recontype_code,
+    v_recon_processing_method,
     v_recon_date_field,
     v_recon_date_flag
   from recon_mst_trecon
@@ -141,6 +144,11 @@ me:BEGIN
   set v_recontype_code = ifnull(v_recontype_code,'');
   set v_recon_date_field = ifnull(v_recon_date_field,'');
   set v_recon_date_flag = ifnull(v_recon_date_flag,'N');
+  set v_recon_processing_method = ifnull(v_recon_processing_method,'S');
+
+  if v_recon_processing_method = 'S' then
+    set v_koseq_flag = 'N';
+  end if;
 
   if v_recon_date_flag = 'Y' then
     set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
@@ -374,8 +382,9 @@ me:BEGIN
 					group_flag,
 					system_match_flag,
 					probable_match_flag
-				from recon_mst_trule
+				from recon_mst_trulehistory
 				where recon_code = in_recon_code
+        and recon_version = v_recon_rule_version
 				and hold_flag = 'N'
 				and active_status = 'Y'
 				and period_from <= curdate()
@@ -467,12 +476,12 @@ me:BEGIN
 				fetch koseq_cursor into v_koseq_type,v_koseq_ref_code;
 				if koseq_done = 1 then leave koseq_loop; end if;
 
-				if v_koseq_type = 'P' then
+				if v_koseq_type = 'Preprocess' or koseq_type = 'Postprocess' or koseq_type = 'Process' then
 					call pr_run_preprocess(in_recon_code,v_koseq_ref_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-				elseif v_koseq_type = 'T' then
+				elseif v_koseq_type = 'Theme' then
 					call pr_run_theme(v_recon_code,v_koseq_ref_code,v_job_gid,in_period_from,in_period_to,
 						in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
-				elseif v_koseq_type = 'R' then
+				elseif v_koseq_type = 'Rule' then
 					select
 						rule_code,
 						rule_apply_on,
@@ -485,9 +494,10 @@ me:BEGIN
 						v_group_flag,
 						v_system_match_flag,
 						v_probable_match_flag
-					from recon_mst_trule
+					from recon_mst_trulehistory
 					where recon_code = in_recon_code
 					and rule_code = v_koseq_ref_code
+          and recon_version = v_recon_rule_version
 					and hold_flag = 'N'
 					and active_status = 'Y'
 					and period_from <= curdate()
@@ -648,7 +658,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_ttranbrkp;
 
   if in_automatch_flag = 'Y' then
-    if v_koseq_flag = 'N' then
+    if v_koseq_flag = 'N' or v_recon_processing_method = 'S' then
       call pr_run_theme(v_recon_code,'',v_job_gid,in_period_from,in_period_to,
         in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
     end if;

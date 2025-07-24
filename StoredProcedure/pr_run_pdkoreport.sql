@@ -62,7 +62,7 @@ me:BEGIN
         set v_ko_table = concat(v_pdrecon_code,'_ko');
         set v_kodtl_table = concat(v_pdrecon_code,'_kodtl');
 
-				set v_sql = concat(v_sql,"insert into recon_rpt_tko
+				set v_sql = concat("insert into recon_rpt_tko
 					select z.* from (
 					select
 						",cast(in_rptsession_gid as nchar)," as rptsession_gid,
@@ -242,8 +242,8 @@ me:BEGIN
 					inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 					left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
 					left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
-					left join ",v_tranko_table," as g on b.tran_gid = g.tran_gid and 1 = 2
-					left join ",v_tran_table," as h on b.tran_gid = h.tran_gid and 1 = 2
+					left join recon_trn_ttrantmp as g on b.tran_gid = g.tran_gid and 1 = 2
+					left join recon_trn_ttrantmp as h on b.tran_gid = h.tran_gid and 1 = 2
 					where a.recon_code =  '",v_pdrecon_code,"' ", in_condition,"
 
 					union
@@ -426,8 +426,8 @@ me:BEGIN
 					inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 					left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
 					left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
-					left join ",v_tranko_table," as g on b.tran_gid = g.tran_gid and 1 = 2
-					left join ",v_tran_table," as h on b.tran_gid = h.tran_gid and 1 = 2
+					left join recon_trn_ttrantmp as g on b.tran_gid = g.tran_gid and 1 = 2
+					left join recon_trn_ttrantmp as h on b.tran_gid = h.tran_gid and 1 = 2
 					where a.recon_code = '",v_pdrecon_code,"' ", in_condition,"
 
 					union
@@ -806,7 +806,16 @@ me:BEGIN
 			close pdrecon_cursor;
 		end pdrecon_block;
   else
-		set v_sql = concat(v_sql,"insert into recon_rpt_tko
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranko_table = 'recon_trn_ttranko';
+
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+    set v_tranbrkpko_table = 'recon_trn_ttranbrkpko';
+
+    set v_ko_table = 'recon_trn_tko';
+    set v_kodtl_table = 'recon_trn_tkodtl';
+
+		set v_sql = concat("insert into recon_rpt_tko
 			select z.* from (
 			select
 				",cast(in_rptsession_gid as nchar)," as rptsession_gid,
@@ -980,15 +989,15 @@ me:BEGIN
 				c.bal_value_debit,
 				c.bal_value_credit,
 				a.job_gid as job_ref_gid
-			from recon_trn_tko as a
+			from ",v_ko_table," as a
       inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code and p.active_status = 'Y' and p.delete_flag = 'N'
-			inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
-			inner join recon_trn_ttranko as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+			inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
+			inner join ",v_tranko_table," as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
 			inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 			left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
 			left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
-			left join recon_trn_ttranko as g on b.tran_gid = g.tran_gid and 1 = 2
-			left join recon_trn_ttran as h on b.tran_gid = h.tran_gid and 1 = 2
+			left join recon_trn_ttrantmp as g on b.tran_gid = g.tran_gid and 1 = 2
+			left join recon_trn_ttrantmp as h on b.tran_gid = h.tran_gid and 1 = 2
 			where true ", in_condition,"
 
 			union
@@ -1165,15 +1174,15 @@ me:BEGIN
 				c.bal_value_debit,
 				c.bal_value_credit,
 				a.job_gid as job_ref_gid
-			from recon_trn_tko as a
+			from ",v_ko_table," as a
       inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code and p.active_status = 'Y' and p.delete_flag = 'N'
-			inner join recon_trn_tkodtl as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
-			inner join recon_trn_ttran as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
+			inner join ",v_kodtl_table," as b on a.ko_gid = b.ko_gid and b.tranbrkp_gid = 0 and b.delete_flag = 'N'
+			inner join ",v_tran_table," as c on b.tran_gid = c.tran_gid and c.delete_flag = 'N'
 			inner join recon_mst_trecon as d on a.recon_code = d.recon_code and d.delete_flag = 'N'
 			left join recon_mst_trule as e on a.rule_code = e.rule_code and e.delete_flag = 'N'
 			left join recon_mst_tdataset as f on c.dataset_code = f.dataset_code and f.delete_flag = 'N'
-			left join recon_trn_ttranko as g on b.tran_gid = g.tran_gid and 1 = 2
-			left join recon_trn_ttran as h on b.tran_gid = h.tran_gid and 1 = 2
+			left join recon_trn_ttrantmp as g on b.tran_gid = g.tran_gid and 1 = 2
+			left join recon_trn_ttrantmp as h on b.tran_gid = h.tran_gid and 1 = 2
 			where true ", in_condition,"
 
 			union

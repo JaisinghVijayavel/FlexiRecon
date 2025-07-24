@@ -7,7 +7,7 @@ CREATE PROCEDURE `pr_run_dynamicreport`(
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
   in in_report_param text,
-  in in_report_condition text,
+  in in_report_condition longtext,
   in in_outputfile_flag boolean,
   in in_outputfile_type varchar(32),
   in in_ip_addr varchar(255),
@@ -21,9 +21,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 24-04-2025
+    updated Date : 24-07-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_code varchar(32);
@@ -45,6 +45,7 @@ me:BEGIN
   declare v_dataset_db_name text default '';
 
   declare v_table_prefix text default '';
+  declare v_tmp_report_table text default '';
 
   declare v_sql text default '';
   declare v_txt text default '';
@@ -55,6 +56,12 @@ me:BEGIN
   set in_archival_code = ifnull(in_archival_code,'');
   set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
   set in_outputfile_type = ifnull(in_outputfile_type,'');
+
+  -- procedure to handle IN/NOT IN in report condition
+  call pr_parse_store_and_rebuild1( in_report_condition, @out_reference_id, @out_rebuilt_condition,@out_table_name);
+  set v_tmp_report_table = ifnull(@out_table_name,'');
+
+  set in_report_condition = @out_rebuilt_condition;
 
   -- get transaction table
   set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
@@ -317,6 +324,13 @@ me:BEGIN
                            in_outputfile_type,
                            in_user_code,@msg,@result);
   end if;
+
+  -- drop report temporary tables
+  if v_tmp_report_table <> '' then
+		set v_sql = concat('drop table if exists ',v_tmp_report_table);
+    call pr_run_sql(v_sql,@msg,@result);
+  end if;
+
 
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
   set out_result = v_job_gid;

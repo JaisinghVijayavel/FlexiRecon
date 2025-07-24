@@ -166,7 +166,7 @@ me:BEGIN
       call pr_run_sql(v_sql,@msg,@result);
     end if;
 
-    call pr_run_sp(in_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sort_order,in_user_code,@msg,@result);
+    call pr_run_sp('',in_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sort_order,in_user_code,@msg,@result);
 
     call pr_get_tablequery(in_recon_code,'',v_table_name,concat(' and job_gid = ', cast(v_job_gid as nchar) ,' '),v_job_gid,in_user_code,@msg,@result);
 
