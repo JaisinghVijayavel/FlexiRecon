@@ -8,6 +8,16 @@ CREATE PROCEDURE `pr_get_datasettomanual`
   in in_lang_code varchar(32)
 )
 BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 25-07-2025
+
+    Version : 1
+  */
+
   declare v_app_datetime_format text default '';
 
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');

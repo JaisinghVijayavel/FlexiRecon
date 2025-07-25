@@ -26,6 +26,8 @@ me:BEGIN
   declare v_sort_order text default '';
   declare v_sql text default '';
 
+  declare v_rptsession_gid int default 0;
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
@@ -164,12 +166,18 @@ me:BEGIN
       set v_sql = concat("delete from ",v_table_name," where job_gid = 0 and rptsession_gid = 0 ");
 
       call pr_run_sql(v_sql,@msg,@result);
+
+      -- create new report session
+      insert into recon_trn_treportsession (report_code,ip_addr,insert_date,insert_by)
+        select in_report_code,in_ip_addr,sysdate(),in_user_code;
+
+      select last_insert_id() into v_rptsession_gid;
     end if;
 
-    call pr_run_sp('',in_recon_code,v_sp_name,v_job_gid,0,in_report_condition,v_sort_order,in_user_code,@msg,@result);
-
-    call pr_get_tablequery(in_recon_code,'',v_table_name,concat(' and job_gid = ', cast(v_job_gid as nchar) ,' '),v_job_gid,in_user_code,@msg,@result);
-
+    call pr_run_sp('',in_recon_code,v_sp_name,v_job_gid,v_rptsession_gid,in_report_condition,v_sort_order,in_user_code,@msg,@result);
+    call pr_get_tablequery(in_recon_code,'',v_table_name,
+      concat(' and job_gid = ', cast(v_job_gid as nchar) ,' and rptsession_gid = ',cast(v_rptsession_gid as nchar),' '),
+      v_job_gid,in_user_code,@msg,@result);
 
     /*
     if v_job_gid = 0 then

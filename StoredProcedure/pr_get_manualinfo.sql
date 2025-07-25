@@ -70,57 +70,33 @@ me:BEGIN
     and a.delete_flag = 'N'
     limit 0,1;
   elseif v_dataset_code = 'THEMEMANUAL' then
-    set v_sql = concat("
     select
-      b.recon_code,
+      a.recon_code,
       b.recon_name,
       b.recontype_code
     into
-      @v_recon_code,
-      @v_recon_name,
-      @v_recontype_code
+      v_recon_code,
+      v_recon_name,
+      v_recontype_code
     from recon_trn_tthemeupdate as a
-    inner join ",v_tran_table," as t on a.tran_gid = t.tran_gid and t.delete_flag = 'N'
-    inner join recon_mst_trecon as b on t.recon_code = b.recon_code and b.delete_flag = 'N'
-    where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+    inner join recon_mst_trecon as b on a.recon_code = b.recon_code and b.delete_flag = 'N'
+    where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N'
-    limit 0,1");
-
-    call pr_run_sql1(v_sql,@msg1,@result1);
-
-    set v_recon_code = ifnull(@v_recon_code,'');
-    set v_recon_name= ifnull(@v_recon_name,'');
-    set v_recontype_code = ifnull(@v_recontype_code,'');
+    limit 0,1;
   elseif v_dataset_code = 'FIELDUPDATE' then
-    set v_sql = concat("
     select
-      b.recon_code,
+      a.recon_code,
       b.recon_name,
       b.recontype_code
     into
-      @v_recon_code,
-      @v_recon_name,
-      @v_recontype_code
+      v_recon_code,
+      v_recon_name,
+      v_recontype_code
     from recon_trn_tfieldupdate as a
-    inner join ",v_tran_table," as t on a.tran_gid = t.tran_gid and t.delete_flag = 'N'
-    inner join recon_mst_trecon as b on t.recon_code = b.recon_code and b.delete_flag = 'N'
-    where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+    inner join recon_mst_trecon as b on a.recon_code = b.recon_code and b.delete_flag = 'N'
+    where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N'
-    limit 0,1");
-
-    call pr_run_sql1(v_sql,@msg1,@result1);
-
-    set v_recon_code = ifnull(@v_recon_code,'');
-    set v_recon_name= ifnull(@v_recon_name,'');
-    set v_recontype_code = ifnull(@v_recontype_code,'');
-
-    if v_concurrent_ko_flag = 'Y' then
-	    set v_tran_table = concat(v_recon_code,'_tran');
-	    set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
-    else
-	    set v_tran_table = 'recon_trn_ttran';
-	    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-    end if;
+    limit 0,1;
   elseif v_dataset_code = 'IUTFIELDUPDATE' then
     select
       b.recon_code,

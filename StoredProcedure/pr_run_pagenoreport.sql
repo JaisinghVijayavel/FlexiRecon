@@ -26,6 +26,8 @@ me:BEGIN
   declare v_sortby_code varchar(32);
   declare v_sorting_field text default '';
 
+  declare v_rptsession_gid int default 0;
+
   declare v_report_exec_type text default '';
   declare v_dataset_db_name text default '';
 

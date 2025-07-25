@@ -11,12 +11,26 @@ CREATE PROCEDURE `pr_ins_ko`
   in in_ko_value double(15,2),
   in in_ko_reason varchar(255),
   in in_ko_remark varchar(255),
-  in in_action_by varchar(16),
+  in in_action_by varchar(32),
   out out_ko_gid int,
   out out_msg text,
   out out_result int(10)
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 25-07-2025
+
+    Version : 1
+  */
+
+  declare v_concurrent_ko_flag text default '';
+	declare v_ko_table text default '';
+
+  declare v_sql text default '';
   declare v_ko_gid int default 0;
   declare err_msg text default '';
   declare err_flag boolean default false;
@@ -29,6 +43,19 @@ me:BEGIN
     set out_result = 0;
   END;
   */
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_ko_table = concat(in_recon_code,'_ko');
+  else
+	  set v_ko_table = 'recon_trn_tko';
+  end if;
+
+  set in_rule_code = ifnull(in_rule_code,'');
+  set in_ko_reason = ifnull(in_ko_reason,'');
+  set in_ko_remark = ifnull(in_ko_remark,'');
 
   if not exists(select recon_code from recon_mst_trecon
     where recon_code = in_recon_code
@@ -63,7 +90,8 @@ me:BEGIN
     leave me;
   end if;
 
-  insert into recon_trn_tko
+  set v_sql = concat("
+  insert into ",v_ko_table,"
   (
     job_gid,
     ko_date,
@@ -79,22 +107,26 @@ me:BEGIN
   )
   values
   (
-    in_job_gid,
+    ",cast(in_job_gid as nchar),",
     curdate(),
-    in_ko_value,
-    in_recon_code,
-    rule_code,
-    in_manual_matchoff,
-    in_reversal_flag,
-    in_ko_reason,
-    in_ko_remark,
+    ",cast(in_ko_value as nchar),",
+    '",in_recon_code,"',
+    '",in_rule_code,"',
+    '",in_manual_matchoff,"',
+    '",in_reversal_flag,"',
+    '",in_ko_reason,"',
+    '",in_ko_remark,"',
     sysdate(),
-    in_action_by
-  );
+    '",in_action_by,"'
+  )");
 
-  select max(ko_gid) into v_ko_gid from recon_trn_tko;
+  call pr_run_sql1(v_sql,@msg101,@result101);
 
-  set out_ko_gid = ifnull(v_ko_gid,0);
+  set v_sql = concat("select max(ko_gid) into @v_ko_gid from ",v_ko_table);
+
+  call pr_run_sql1(v_sql,@msg101,@result101);
+
+  set out_ko_gid = ifnull(@v_ko_gid,0);
 
   set out_result = 1;
   set out_msg = 'Record saved successfully !';
