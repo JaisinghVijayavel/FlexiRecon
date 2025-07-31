@@ -14,9 +14,9 @@ me:begin
     Created Date : 06-10-2023
 
     Updated By : Vijayavel
-    Updated Date : 19-03-2025
+    Updated Date : 31-07-2025
 
-    Version : 7
+    Version : 8
   */
 
   declare v_pipeline_code text default '';
@@ -91,7 +91,7 @@ me:begin
   -- get file details
   select
     a.pipeline_code,
-    b.target_dataset_code,
+    a.dataset_code,
     c.source_db_type,
     d.dataset_table_name,
     a.scheduler_initiated_by
@@ -106,7 +106,7 @@ me:begin
     and b.delete_flag = 'N'
   inner join con_mst_tconnection as c on b.connection_code = c.connection_code
     and c.delete_flag = 'N'
-  inner join recon_mst_tdataset as d on b.target_dataset_code = d.dataset_code
+  inner join recon_mst_tdataset as d on a.dataset_code = d.dataset_code
     and d.active_status = 'Y'
     and d.delete_flag = 'N'
   where a.scheduler_gid = in_scheduler_gid

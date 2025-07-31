@@ -14,9 +14,9 @@ me:begin
     Created Date - 14-03-2025
 
     Updated By - Vijayavel
-    Updated Date - 25-07-2025
+    Updated Date - 31-07-2025
 
-	  Version - 002
+	  Version - 003
 	*/
 
 	declare v_tran_table text default '';
@@ -50,7 +50,7 @@ me:begin
   insert into recon_tmp_trecon
 		select d.recon_code from con_trn_tscheduler as a
 		inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code and b.delete_flag = 'N'
-		inner join recon_mst_trecondataset as c on b.target_dataset_code = c.dataset_code
+		inner join recon_mst_trecondataset as c on a.dataset_code = c.dataset_code
 			and c.active_status = 'Y'
 			and c.delete_flag = 'N'
 		inner join recon_mst_trecon as d on c.recon_code = d.recon_code
@@ -65,7 +65,7 @@ me:begin
     and scheduler_status in ('C','F')
     and delete_flag = 'N') then
     select
-      b.target_dataset_code into v_dataset_code
+      a.dataset_code into v_dataset_code
     from con_trn_tscheduler as a
     inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code
     where a.scheduler_gid = in_scheduler_gid
