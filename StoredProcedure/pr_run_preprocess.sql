@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 23-05-2025
+    Updated Date : 02-08-2025
 
-    Version : 6
+    Version : 7
   */
 
   declare v_recon_version text default '';
@@ -113,6 +113,8 @@ me:BEGIN
   declare v_tran_sql text default '';
   declare v_tranbrkp_sql text default '';
 
+  declare v_sysdatetime text default '';
+
   declare v_count_sql text default '';
 
   declare i int default 0;
@@ -170,7 +172,8 @@ me:BEGIN
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
   -- set cumulative variable
-  set v_cumulative_variable = concat('@cumulative_value_',in_recon_code);
+  set v_sysdatetime = cast(cast(sysdate() as unsigned) as nchar);
+  set v_cumulative_variable = concat('@cumvalue_',v_sysdatetime);
 
   if in_automatch_flag = 'Y' then
     /*
@@ -402,7 +405,8 @@ me:BEGIN
               end if;
             elseif v_process_method = 'A' then
               set v_filter_field = concat('a.',v_filter_field);
-              set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
+              set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
+              -- set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
             end if;
 
             if v_filter_applied_on = 'LOOKUP' then
@@ -956,10 +960,10 @@ me:BEGIN
 
         if v_cumulative_flag = 'Y' and v_group_flag = 'N' then
           -- col128 - Agg Value
-          set v_cumulative_expression = fn_get_expressionformat(in_recon_code,
+          set v_cumulative_expression = fn_get_expressionformat_recon(in_recon_code,
                                                                 v_set_recon_field,
                                                                 'col128',
-                                                                true);
+                                                                true,v_cumulative_variable);
 
 					set v_sql = 'update recon_tmp_ttranagg set ';
 					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_cumulative_expression,' ');
@@ -1068,8 +1072,8 @@ me:BEGIN
 
           set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
 
-          set v_value_variable = concat("@value_",in_recon_code);
-          set v_col128_variable = concat("@col128_",in_recon_code);
+          set v_value_variable = concat("@value_",v_sysdatetime);
+          set v_col128_variable = concat("@col128_",v_sysdatetime);
 
           call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
           call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
@@ -1175,14 +1179,14 @@ me:BEGIN
             tranbrkp_gid int unsigned NOT NULL default 0,
             cumulative_value decimal(15,2) not null default 0,
             opening_value  decimal(15,2) not null default 0,
-            agg_gid varchar(255),
+            agg_gid int unsigned NOT NULL default 0,
             PRIMARY KEY (agg_gid)
           ) ENGINE = MyISAM;
 
           set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_set_recon_field,false);
 
-          set v_value_variable = concat("@value_",in_recon_code);
-          set v_col128_variable = concat("@col128_",in_recon_code);
+          set v_value_variable = concat("@value_",v_sysdatetime);
+          set v_col128_variable = concat("@col128_",v_sysdatetime);
 
           -- update agg_gid in col128 column
           update recon_tmp_ttranagg set col128 = cast(agg_gid as nchar);
@@ -1376,6 +1380,16 @@ me:BEGIN
                                           in_automatch_flag,
                                           @msg1,
                                           @result1);
+      elseif v_process_method = 'QCD_LOOKUP_AGGEXP' then
+        call pr_run_preprocess_agglookup(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          @msg_1,
+                                          @result_1);
       end if;
     end loop process_loop;
 

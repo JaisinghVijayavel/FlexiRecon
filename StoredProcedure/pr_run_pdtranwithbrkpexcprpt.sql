@@ -17,9 +17,9 @@ me:BEGIN
     Created Date : 29-11-2024
 
     Updated By : Vijayavel
-    updated Date : 20-03-2025
+    updated Date : 02-08-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_tran_field text default '';
@@ -87,8 +87,8 @@ me:BEGIN
 				fetch pdrecon_cursor into v_pdrecon_code;
 				if pdrecon_done = 1 then leave pdrecon_loop; end if;
 
-        set v_tran_table = 'recon_trn_ttran';
-        set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+        set v_tran_table = concat(v_pdrecon_code,'_tran');
+        set v_tranbrkp_table = concat(v_pdrecon_code,'_tranbrkp');
 
 				-- transfer tran records to report table
 				set v_sql = concat('insert into recon_rpt_ttranwithbrkp(rptsession_gid,job_gid,user_code,dataset_name,dataset_type,',v_tran_field,') ');
@@ -100,9 +100,11 @@ me:BEGIN
 				set v_sql = concat(v_sql,'b.dataset_name as ds_name,rd.dataset_type,');
 				set v_sql = concat(v_sql,concat('a.',replace(v_tran_field,',',',a.')),' from ',v_tran_table,' as a ');
 
+        /*
 				set v_sql = concat(v_sql,"inner join recon_mst_tpdrecon as p on a.recon_code = p.pdrecon_code
 						and p.active_status = 'Y'
 						and p.delete_flag = 'N'");
+        */
 
 				set v_sql = concat(v_sql,'left join recon_mst_tdataset as b on a.dataset_code = b.dataset_code ');
 				set v_sql = concat(v_sql,'left join recon_mst_trecondataset as rd on a.recon_code = rd.recon_code and a.dataset_code = rd.dataset_code ');
