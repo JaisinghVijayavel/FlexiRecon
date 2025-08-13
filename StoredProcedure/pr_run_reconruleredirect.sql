@@ -109,17 +109,6 @@ me:BEGIN
     set v_recon_rule_version = ifnull(v_recon_rule_version,'');
   end if;
 
-  -- check ko sequence
-  if exists(select * from recon_mst_tkoseq
-    where recon_code = in_recon_code
-    and active_status = 'Y'
-    and hold_flag = 'N'
-    and delete_flag = 'N') then
-    set v_koseq_flag = 'Y';
-  else
-    set v_koseq_flag = 'N';
-  end if;
-
   -- get recon details
   select
     recon_name,
@@ -148,6 +137,8 @@ me:BEGIN
 
   if v_recon_processing_method = 'S' then
     set v_koseq_flag = 'N';
+  else
+    set v_koseq_flag = 'Y';
   end if;
 
   if v_recon_date_flag = 'Y' then

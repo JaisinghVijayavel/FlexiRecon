@@ -43,11 +43,11 @@ me:BEGIN
   and delete_flag = 'N';
 
   -- IUT Summary
-  call pr_run_dynamicreport(v_reporttemplate_code_summary, in_recon_code,v_report_code_summary,
+  call pr_run_dynamicreport('',v_reporttemplate_code_summary, in_recon_code,v_report_code_summary,
     'IUT Summary','and a.scheduler_gid > 0 ', false, '', '', in_user_code, @out_msg, @out_result);
 
 	-- Closing Balance
-	call pr_run_dynamicreport(v_reporttemplate_code_cb, in_recon_code,v_report_code_cb,
+	call pr_run_dynamicreport('',v_reporttemplate_code_cb, in_recon_code,v_report_code_cb,
         'CB',
         concat("and col12 = '",v_recon_cycle_date,"' and col45 <> '' "),
         false, '', '', in_user_code, @out_msg, @out_result);

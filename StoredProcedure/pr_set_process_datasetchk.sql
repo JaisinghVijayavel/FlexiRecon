@@ -95,7 +95,7 @@ me:begin
     a.pipeline_code,
     a.scheduled_date,
     a.file_name,
-    b.target_dataset_code,
+    a.dataset_code,
     c.dataset_name,
     a.scheduler_parameters,
     c.dataset_table_name
@@ -108,9 +108,11 @@ me:begin
     v_scheduler_param,
     v_dataset_table_name
   from con_trn_tscheduler as a
+  /*
   inner join con_mst_tpipeline as b on a.pipeline_code = b.pipeline_code
     and b.delete_flag = 'N'
-  inner join recon_mst_tdataset as c on b.target_dataset_code = c.dataset_code
+  */
+  inner join recon_mst_tdataset as c on a.dataset_code = c.dataset_code
     and c.active_status = 'Y'
     and c.delete_flag = 'N'
   where a.scheduler_gid = in_scheduler_gid

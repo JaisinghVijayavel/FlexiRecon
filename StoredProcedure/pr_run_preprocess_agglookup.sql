@@ -262,7 +262,7 @@ me:BEGIN
 
       set v_lookup_table = v_lookup_dataset_code;
 
-      if v_process_method = 'QCD_LOOKUPAGGEXP' then
+      if v_process_method = 'QCD_LOOKUP_EXP_AGG' then
         set v_process_method = 'LA';
       end if;
 
@@ -367,48 +367,6 @@ me:BEGIN
         set v_lookup_filter = concat(v_lookup_filter,' 1 = 1) ');
         set v_dataset_condition = v_lookup_filter;
 
-				-- order by field block
-        set v_orderby_field = '';
-
-				orderbyfield_block:begin
-					declare orderbyfield_done int default 0;
-
-					declare orderbyfield_cursor cursor for
-						select
-							distinct recorder_field
-						from recon_mst_tpreprocessrecorderhistory
-						where preprocess_code = v_preprocess_code
-            and recon_version = v_recon_version
-            and recorder_on = 'LOOKUP' 
-						and active_status = 'Y'
-						and delete_flag = 'N'
-						order by recorder_seqno;
-
-					declare continue handler for not found set orderbyfield_done=1;
-
-					open orderbyfield_cursor;
-
-					orderbyfield_loop: loop
-						fetch orderbyfield_cursor into v_field;
-
-						if orderbyfield_done = 1 then leave orderbyfield_loop; end if;
-
-						if v_orderby_field = '' then
-							set v_orderby_field = v_field;
-						else
-							set v_orderby_field = concat(v_orderby_field,',',v_field);
-						end if;
-					end loop orderbyfield_loop;
-
-					close orderbyfield_cursor;
-				end orderbyfield_block;
-
-        if v_orderby_field <> '' then
-          set v_orderby_field = concat('order by ',v_orderby_field,',');
-        else
-          set v_orderby_field = 'order by ';
-        end if;
-
         -- aggregation validation starts
         set v_aggjoin_condition = ' 1 = 1 ';
         set v_grp_field = '';
@@ -461,6 +419,61 @@ me:BEGIN
 					close grpfield_cursor;
 				end grpfield_block;
 
+        -- agg group not applied
+        if v_grp_field = '' then
+          set v_aggjoin_condition = concat(v_aggjoin_condition,' and a.dataset_gid = b.dataset_gid ');
+        end if;
+
+				-- order by field block
+        set v_orderby_field = '';
+
+				orderbyfield_block:begin
+					declare orderbyfield_done int default 0;
+
+					declare orderbyfield_cursor cursor for
+						select
+							distinct recorder_field
+						from recon_mst_tpreprocessrecorderhistory
+						where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
+            and recorder_on = 'LOOKUP'
+						and active_status = 'Y'
+						and delete_flag = 'N'
+						order by recorder_seqno;
+
+					declare continue handler for not found set orderbyfield_done=1;
+
+					open orderbyfield_cursor;
+
+					orderbyfield_loop: loop
+						fetch orderbyfield_cursor into v_field;
+
+						if orderbyfield_done = 1 then leave orderbyfield_loop; end if;
+
+						if v_orderby_field = '' then
+							set v_orderby_field = v_field;
+						else
+							set v_orderby_field = concat(v_orderby_field,',',v_field);
+						end if;
+					end loop orderbyfield_loop;
+
+					close orderbyfield_cursor;
+				end orderbyfield_block;
+
+        if v_grp_field <> '' then
+          if v_orderby_field <> '' then
+            set v_orderby_field = concat(v_grp_field,',',v_orderby_field);
+          else
+            set v_orderby_field = v_grp_field;
+          end if;
+        end if;
+
+        if v_orderby_field <> '' then
+          set v_orderby_field = concat('order by ',v_orderby_field,',');
+        else
+          set v_orderby_field = 'order by ';
+        end if;
+
         -- agg temporary tables
         drop temporary table if exists recon_tmp_ttranagg;
 
@@ -502,6 +515,8 @@ me:BEGIN
           call pr_run_sql2(v_sql,@msg,@result);
         end if;
 
+        select * from recon_tmp_ttranagg;
+
         if v_cumulative_flag = 'Y' and v_group_flag = 'N' then
           -- col128 - Agg Value
           set v_cumulative_expression = fn_get_expressionformat_ds(v_dataset_code,
@@ -519,10 +534,10 @@ me:BEGIN
         end if;
 
         if v_opening_flag = 'Y' and v_group_flag = 'N' then
-          set v_field_expression = concat('cast(',v_set_dataset_field,' as declmal(15,2)',
+          set v_field_expression = concat('cast(',v_set_dataset_field,' as decimal(15,2))',
                                ' - cast(col128 as decimal(15,2))');
 
-          set v_field_expression = fn_get_expressionformat(v_dataset_code,v_set_dataset_field,v_field_expression,false);
+          set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_field_expression,false,'');
 
 					set v_sql = 'update recon_tmp_ttranagg set ';
 					set v_sql = concat(v_sql,v_set_dataset_field,' = ',v_field_expression,' ');
@@ -555,10 +570,6 @@ me:BEGIN
         set v_sql = concat(v_sql,'where 1 = 1 ');
         set v_sql = concat(v_sql,v_dataset_condition);
 
-        if v_grp_field = '' then
-          set v_sql = concat(v_sql,'and a.dataset_gid = b.dataset_gid ');
-        end if;
-
         call pr_run_sql2(v_sql,@msg,@result);
 
         -- update group_flag and opening_flag set cases and agg_flag = 'N' cases
@@ -575,7 +586,7 @@ me:BEGIN
             PRIMARY KEY (dataset_gid)
           ) ENGINE = MyISAM;
 
-          set v_field_expression = fn_get_expressionformat(v_dataset_code,v_set_dataset_field,v_process_expression,false);
+          set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_process_expression,false,'');
 
           set v_value_variable = concat("@value_",v_sysdatetime);
           set v_col128_variable = concat("@col128_",v_sysdatetime);
@@ -613,7 +624,6 @@ me:BEGIN
             -- update in tran table
             set v_sql = concat("update ",v_dataset_table ," as a
               inner join recon_tmp_tgid as b on a.dataset_gid = b.dataset_gid
-                and b.tranbrkp_gid = 0
               set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
               ");
 
@@ -645,7 +655,7 @@ me:BEGIN
             PRIMARY KEY (agg_gid)
           ) ENGINE = MyISAM;
 
-          set v_field_expression = fn_get_expressionformat(v_dataset_code,v_set_dataset_field,v_set_dataset_field,false);
+          set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_set_dataset_field,false,'');
 
           set v_value_variable = concat("@value_",v_sysdatetime);
           set v_col128_variable = concat("@col128_",v_sysdatetime);

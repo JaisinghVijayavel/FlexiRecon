@@ -28,7 +28,7 @@ me:begin
 
       if n > 0 then
         set v_split_col = substr(v_split_col,n+1);
-        set v_field_name = fn_get_dsfldtypefromdesc(in_dataset_code,v_split_col);
+        set v_field_name = fn_get_dsfldnamefromdesc(in_dataset_code,v_split_col);
 
         -- replace in expression
         set v_split_col = concat("[",v_split_col,"]");
@@ -50,7 +50,11 @@ me:begin
     set v_field_type = fn_get_dsfieldtype(in_dataset_code,in_set_dataset_field);
 
     if v_field_type = 'NUMERIC' or v_field_type = 'INTEGER' or in_cumulative_flag = true then
-      set v_expression = concat("cast(",v_expression," as decimal(15,2))");
+      if v_field_type = 'INTEGER' then
+        set v_expression = concat("cast(",v_expression," as signed)");
+      else
+        set v_expression = concat("cast(",v_expression," as decimal(15,2))");
+      end if;
     end if;
   end if;
 

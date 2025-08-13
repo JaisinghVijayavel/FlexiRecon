@@ -6,8 +6,11 @@ BEGIN
   DECLARE done INT DEFAULT FALSE;
   DECLARE v_sql TEXT DEFAULT '';
   DECLARE v_view_name VARCHAR(128);
-  DECLARE v_tran_table VARCHAR(128) DEFAULT 'recon_trn_ttran';
-  DECLARE v_tranbrkp_table VARCHAR(128) DEFAULT 'recon_trn_ttranbrkp';
+
+  declare v_concurrent_ko_flag text default '';
+  declare v_tran_table text default '';
+  declare v_tranbrkp_table text default '';
+
   DECLARE v_select_line TEXT;
 
   -- Cursor variables
@@ -44,7 +47,7 @@ BEGIN
 		  FROM recon_mst_tsystemfield AS a
 		  INNER JOIN recon_mst_tfieldstru AS b ON a.field_name = b.field_name AND b.delete_flag = 'N'
 		  WHERE a.active_status = 'Y'
-      AND a.table_name = v_tran_table
+      AND a.table_name = 'recon_trn_ttran'
       AND a.delete_flag = 'N'
     ) AS c ORDER BY c.display_order;
 
@@ -88,6 +91,17 @@ BEGIN
 
 	-- Trim the last comma and space
   SET v_sql = LEFT(v_sql, LENGTH(v_sql) - 2);
+
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+    set v_tran_table = concat(in_recon_code,'_tran');
+    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+    set v_tran_table = 'recon_trn_ttran';
+    set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   -- Final CREATE VIEW SQL
   SET @full_sql = CONCAT("CREATE VIEW ", v_view_name, " AS

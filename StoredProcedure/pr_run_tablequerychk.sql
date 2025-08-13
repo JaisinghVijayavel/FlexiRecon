@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_tablequery` $$
-CREATE PROCEDURE `pr_run_tablequery`(
+DROP PROCEDURE IF EXISTS `pr_run_tablequerychk` $$
+CREATE PROCEDURE `pr_run_tablequerychk`(
   in_reporttemplate_code varchar(32),
   in_recon_code varchar(32),
   in_report_code varchar(32),
@@ -44,7 +44,7 @@ me:BEGIN
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;
 
-  
+
 
   create temporary table recon_tmp_tfield
   (
@@ -66,7 +66,7 @@ me:BEGIN
     key idx_display_order(display_order)
   ) ENGINE = MyISAM;
 
-  
+
   select
     report_code,
     reporttemplate_name
@@ -107,8 +107,14 @@ me:BEGIN
 
   set v_report_name = GET_ALPHANUM(v_report_name);
 
+  select v_report_name,
+		  v_report_exec_type,
+		  v_table_name,
+      v_rpt_table_name;
+
   if exists(select * from recon_mst_treporttemplatefield
     where reporttemplate_code = in_reporttemplate_code
+    and reporttemplate_code <> '' 
     and delete_flag = 'N') then
     set @sno := 0;
 
@@ -117,7 +123,7 @@ me:BEGIN
       a.report_field,
       a.display_desc,
       fn_get_fieldtype(b.recon_code,a.report_field) as field_type,
-      
+
       ifnull(b.recon_field_length,'') as field_length,
       a.display_order
     from recon_mst_treporttemplatefield as a
@@ -148,7 +154,7 @@ me:BEGIN
     and delete_flag = 'N'
     order by dataset_field_sno;
 
-    
+
     insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
     select
       'dataset_gid',
@@ -337,6 +343,8 @@ me:BEGIN
     )
     select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
   end if;
+
+  select * from recon_tmp_tfield;
 
   field_block:begin
     declare field_done int default 0;

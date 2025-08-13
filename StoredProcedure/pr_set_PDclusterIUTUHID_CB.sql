@@ -35,6 +35,12 @@ me:BEGIN
   declare v_iut_status text default '';
   declare v_adjentry_flag text default '';
 
+  declare v_tran_table text default '';
+  declare v_tranbrkp_table text default '';
+
+  set v_tran_table = concat(in_recon_code,'_tran');
+  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+
   drop temporary table if exists recon_tmp_tcb;
   drop temporary table if exists recon_tmp_tuhidadjentry;
 
@@ -89,14 +95,17 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- adj entry uhid
+  set v_sql = concat("
   insert into recon_tmp_tuhidadjentry(uhid_no)
   select
     distinct col20
-  from recon_trn_ttranbrkp
-  where recon_code = in_recon_code
+  from ",v_tranbrkp_table,"
+  where recon_code = '",in_recon_code,"'
   and col16 = 'Adj Entry'
   and delete_flag = 'N'
-  LOCK IN SHARE MODE;
+  LOCK IN SHARE MODE");
+
+  call pr_run_sql2(v_sql,@msg,@result);
 
   -- Cluster Recon Field Columns
   -- col6 - Dataset Code
@@ -137,18 +146,21 @@ me:BEGIN
       set v_cb_amount = ifnull(v_cb_amount,0);
 
       -- get closing balance sum
+      set v_sql = concat("
       select
         sum(cast(col53 as decimal(15,2))),count(*)
       into
         @closing_balance,@cb_rec_count
-      from recon_trn_ttran
-      where recon_code = in_recon_code
-      and col38 = in_pdrecon_code
-      and col20 = v_uhid_no
+      from ",v_tran_table,"
+      where recon_code = '",in_recon_code,"'
+      and col38 = '",in_pdrecon_code,"'
+      and col20 = '",v_uhid_no,"'
       and cast(col53 as decimal(15,2)) <> 0
       and col74 is null
       and delete_flag = 'N'
-      LOCK IN SHARE MODE;
+      LOCK IN SHARE MODE");
+
+      call pr_run_sql2(v_sql,@msg,@result);
 
       set v_iut_cb_amount = ifnull(@closing_balance,0);
       set v_count = ifnull(@cb_rec_count,0);
@@ -160,18 +172,21 @@ me:BEGIN
         where uhid_no = v_uhid_no) then
 
         -- Adj Entry
+        set v_sql = concat("
         select
           sum(cast(col53 as decimal(15,2))),count(*)
         into
           @closing_balance,@cb_rec_count
-        from recon_trn_ttranbrkp
-        where recon_code = in_recon_code
-        and col38 = in_pdrecon_code
-        and col20 = v_uhid_no
+        from ",v_tranbrkp_table,"
+        where recon_code = '",in_recon_code,"'
+        and col38 = '",in_pdrecon_code,"'
+        and col20 = '",v_uhid_no,"'
         and cast(col53 as decimal(15,2)) <> 0
         and col16 = 'Adj Entry'
         and delete_flag = 'N'
-        LOCK IN SHARE MODE;
+        LOCK IN SHARE MODE");
+
+        call pr_run_sql2(v_sql,@msg,@result);
 
         set v_iut_cb_amount = v_iut_cb_amount + ifnull(@closing_balance,0);
         set v_count = v_count + ifnull(@cb_rec_count,0);
@@ -203,27 +218,33 @@ me:BEGIN
       call pr_run_sql2(v_sql,@msg,@result);
 
       if v_iut_status <> 'NOT AVAILABLE' then
-        update recon_trn_ttran set
+        set v_sql = concat("
+        update ",v_tran_table," set
           col74 = 'Y',
           col75 = 'UHID - Deposit CB'
-        where recon_code = in_recon_code
-        and col38 = in_pdrecon_code
-        and col20 = v_uhid_no
+        where recon_code = '",in_recon_code,"'
+        and col38 = '",in_pdrecon_code,"'
+        and col20 = '",v_uhid_no,"'
         and cast(col53 as decimal(15,2)) <> 0
         and col74 is null
-        and delete_flag = 'N';
+        and delete_flag = 'N'");
+
+        call pr_run_sql2(v_sql,@msg,@result);
 
         if v_adjentry_flag = 'Y' then
-          update recon_trn_ttranbrkp set
+          set v_sql = concat("
+          update ",v_tranbrkp_table," set
             col74 = 'Y',
             col75 = 'UHID - Deposit CB'
-          where recon_code = in_recon_code
-          and col38 = in_pdrecon_code
-          and col20 = v_uhid_no
+          where recon_code = '",in_recon_code,"'
+          and col38 = '",in_pdrecon_code,"'
+          and col20 = '",v_uhid_no,"'
           and col16 = 'Adj Entry'
           and cast(col53 as decimal(15,2)) <> 0
           and col74 is null
-          and delete_flag = 'N';
+          and delete_flag = 'N'");
+
+          call pr_run_sql2(v_sql,@msg,@result);
         end if;
       end if;
 	  end loop cb_loop;

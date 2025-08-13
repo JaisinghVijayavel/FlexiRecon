@@ -32,6 +32,12 @@ me:BEGIN
   declare v_unit_name_revised text default '';
   declare v_cycle_date date default null;
 
+  declare v_tran_table text default '';
+  declare v_tranbrkp_table text default '';
+
+  set v_tran_table = concat(in_recon_code,'_tran');
+  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+
   -- chk pdreconcode
   if in_pdrecon_code = '' then
     set in_pdrecon_code = null;
@@ -102,12 +108,15 @@ me:BEGIN
       -- col75 - IUT DB Type
 
       -- update IUT CB Flag
-      update recon_trn_ttran set
-        col74 = null,
-        col75 = null
-      where recon_code = in_recon_code
-      and col38 = v_pdrecon_code
-      and delete_flag = 'N';
+      set v_sql = concat("
+        update ",v_tran_table," set
+          col74 = null,
+          col75 = null
+        where recon_code = '",in_recon_code,"'
+        and col38 = '",v_pdrecon_code,"'
+        and delete_flag = 'N'");
+
+      call pr_run_sql2(v_sql,@msg,@result);
 
       -- update the IUT Status
       set v_sql = concat("update ",v_cbds_code," set
@@ -155,13 +164,16 @@ me:BEGIN
   -- update adj entry IUT CB Type
   -- col22 - Event
   -- col75 - IUT CB Type
-  update recon_trn_ttranbrkp as a
-  inner join recon_trn_ttran as b on a.tran_gid = b.tran_gid
-    and b.delete_flag = 'N'
-  set a.col75 = b.col75
-  where a.recon_code = in_recon_code
-  and a.col22 = 'Adj Entry'
-  and a.delete_flag = 'N';
+  set v_sql = concat("
+    update ",v_tranbrkp_table," as a
+    inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
+      and b.delete_flag = 'N'
+    set a.col75 = b.col75
+    where a.recon_code = '",in_recon_code,"'
+    and a.col22 = 'Adj Entry'
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@msg,@result);
 
   set out_msg = 'Success';
   set out_result = 1;

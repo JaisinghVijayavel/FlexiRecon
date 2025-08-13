@@ -120,6 +120,7 @@ me:BEGIN
 
   if exists(select * from recon_mst_treporttemplatefield
     where reporttemplate_code = in_reporttemplate_code
+    and reporttemplate_code <> '' 
     and delete_flag = 'N') then
     set @sno := 0;
 
@@ -340,6 +341,7 @@ me:BEGIN
   -- display table
   if exists(select * from recon_mst_treporttemplatefield
     where reporttemplate_code = in_reporttemplate_code
+    and reporttemplate_code <> ''
     and delete_flag = 'N') then
     -- get report table name
     select

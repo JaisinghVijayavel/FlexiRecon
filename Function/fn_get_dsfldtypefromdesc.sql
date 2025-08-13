@@ -13,9 +13,9 @@ begin
     field_type
   into
     v_field_type
-  from recon_mst_tdataset
+  from recon_mst_tdatasetfield
   where dataset_code = in_ds_code
-  and dataset_name = in_ds_flddesc
+  and field_name = in_ds_flddesc
   and delete_flag = 'N';
 
   set v_field_type = ifnull(v_field_type,'');

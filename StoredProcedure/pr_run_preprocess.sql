@@ -859,6 +859,14 @@ me:BEGIN
 					close grpfield_cursor;
 				end grpfield_block;
 
+        -- set group_flag, agg_flag
+        if v_grp_field <> '' then
+          set v_group_flag = 'Y';
+        else
+          set v_group_flag = 'N';
+          set v_agg_flag = 'N';
+        end if;
+
         if v_recon_date_flag = 'Y' then
           if v_recon_date_field <> 'tran_date' then
             set v_recon_date_field = concat('cast(a.',v_recon_date_field,' as date)');
@@ -1380,7 +1388,7 @@ me:BEGIN
                                           in_automatch_flag,
                                           @msg1,
                                           @result1);
-      elseif v_process_method = 'QCD_LOOKUP_AGGEXP' then
+      elseif v_process_method = 'QCD_LOOKUP_EXP_AGG' then
         call pr_run_preprocess_agglookup(in_recon_code,
                                           v_preprocess_code,
                                           in_job_gid,
