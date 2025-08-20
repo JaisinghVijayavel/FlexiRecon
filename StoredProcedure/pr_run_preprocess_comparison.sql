@@ -14,6 +14,16 @@ CREATE PROCEDURE `pr_run_preprocess_comparison`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 20-08-2025
+
+    Version : 1
+  */
+
   declare v_recon_version text default '';
   declare v_recontype_code varchar(32) default '';
 
@@ -626,13 +636,8 @@ me:BEGIN
               end if;
 
               if v_filter_field = '' then
-                set v_join_condition = '';
                 set v_filter_value_flag = '';
                 set v_filter_value = '';
-              else
-                if v_join_condition = '' then
-                  set v_join_condition = 'and';
-                end if;
               end if;
 
               set v_preprocessfilter_condition = concat(v_open_parentheses_flag,

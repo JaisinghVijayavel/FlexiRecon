@@ -167,6 +167,8 @@ me:begin
 
 				call pr_run_sql2(v_sql,@msg2,@result2);
 
+				set v_count = v_count + ifnull(@v_count,0);
+
 				-- tranbrkp tables
 				set v_sql = concat("select count(*) into @v_count from ",v_tranbrkp_table," as a
 						where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"

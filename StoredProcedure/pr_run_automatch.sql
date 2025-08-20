@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 05-03-2025
+    updated Date : 20-08-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -821,14 +821,13 @@ me:BEGIN
               set v_ident_value_flag = ifnull(v_ident_value_flag,'Y');
               set v_ident_value = ifnull(v_ident_value,'');
 
+              if v_join_condition = '' then
+                set v_join_condition = 'and';
+              end if;
+
               if v_filter_field = '' then
-                set v_join_condition = '';
                 set v_ident_value_flag = '';
                 set v_ident_value = '';
-              else
-                if v_join_condition = '' then
-                  set v_join_condition = 'and';
-                end if;
               end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');

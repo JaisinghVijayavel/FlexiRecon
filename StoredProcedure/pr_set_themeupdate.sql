@@ -15,12 +15,13 @@ me:begin
     Created Date : 26-03-2024
 
     Updated By : Vijayavel
-    Updated Date : 29-04-2025
+    Updated Date : 20-08-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_recon_code text default '';
+  declare v_recon_theme_flag text default '';
 
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
@@ -29,16 +30,6 @@ me:begin
 
   declare v_sql text default '';
   declare v_txt text default '';
-
-  -- get recon code
-  select
-    recon_code into v_recon_code
-  from recon_trn_tthemeupdate
-  where scheduler_gid = in_scheduler_gid
-  and recon_code <> ''
-  and delete_flag = 'N';
-
-  set v_recon_code = ifnull(v_recon_code,'');
 
 	-- check if any job is running
 	if exists(select job_gid from recon_trn_tjob
@@ -58,51 +49,129 @@ me:begin
 		leave me;
 	end if;
 
+  drop temporary table if exists recon_tmp_t1recon;
+  drop temporary table if exists recon_tmp_t1theme;
+
+  CREATE TEMPORARY TABLE recon_tmp_t1recon(
+    recon_code varchar(32) not null,
+    PRIMARY KEY (recon_code)
+  ) ENGINE = MyISAM;
+
+  CREATE TEMPORARY TABLE recon_tmp_t1theme(
+    recon_code varchar(32) not null,
+    theme_desc text not null,
+    PRIMARY KEY (recon_code,theme_desc(255))
+  ) ENGINE = MyISAM;
+
+  -- get recon code
+  insert into recon_tmp_t1recon (recon_code)
+  select
+    distinct recon_code
+  from recon_trn_tthemeupdate
+  where scheduler_gid = in_scheduler_gid
+  and recon_code <> ''
+  and delete_flag = 'N';
+
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
-  if v_concurrent_ko_flag = 'Y' then
-	  set v_tran_table = concat(v_recon_code,'_tran');
-	  set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
-  else
-	  set v_tran_table = 'recon_trn_ttran';
-	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
-  end if;
+	-- recon block
+	recon_block:begin
+		declare recon_done int default 0;
+		declare recon_cursor cursor for
+		  select a.recon_code,b.recon_theme_flag from recon_tmp_t1recon as a
+      inner join recon_mst_trecon as b on a.recon_code = b.recon_code
+        and b.active_status = 'Y' and b.delete_flag = 'N';
+		declare continue handler for not found set recon_done=1;
 
-  -- update the recon_trn_ttran
-  set v_sql = concat("
-    update recon_trn_tthemeupdate as a
-    inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid and b.delete_flag = 'N'
-    set b.theme_code = a.theme_desc,
-      a.theme_status = 'C'
-    where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
-    and a.theme_status = 'P'
-    and a.tranbrkp_gid = 0
-    and a.delete_flag = 'N'");
+		open recon_cursor;
 
-  call pr_run_sql2(v_sql,@msg2,@result2);
+		recon_loop: loop
+			fetch recon_cursor into v_recon_code,v_recon_theme_flag;
+			if recon_done = 1 then leave recon_loop; end if;
 
-  -- update the recon_trn_ttranbrkp
-  set v_sql = concat("
-    update recon_trn_tthemeupdate as a
-    inner join ",v_tranbrkp_table," as b on a.tranbrkp_gid = b.tranbrkp_gid and b.delete_flag = 'N'
-    set b.theme_code = a.theme_desc,
-      a.theme_status = 'C'
-    where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
-    and a.theme_status = 'P'
-    and a.delete_flag = 'N'");
+			if v_concurrent_ko_flag = 'Y' then
+				set v_tran_table = concat(v_recon_code,'_tran');
+				set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
+			else
+				set v_tran_table = 'recon_trn_ttran';
+				set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+			end if;
 
-  call pr_run_sql2(v_sql,@msg2,@result2);
+      if v_recon_theme_flag = 'Y' then
+        truncate recon_tmp_t1theme;
+
+        -- insert recon theme
+        insert into recon_tmp_t1theme(recon_code,theme_desc)
+        select
+          v_recon_code,master_name
+        from recon_mst_tmaster
+        where parent_master_syscode = 'QCD_THEME'
+        and depend_parent_master_syscode = v_recon_code
+        and active_status = 'Y'
+        and delete_flag = 'N';
+
+        -- set failure for all lines
+        update recon_trn_tthemeupdate
+          set theme_status = 'F'
+        where scheduler_gid = in_scheduler_gid
+        and recon_code = v_recon_code
+        and theme_status = 'P'
+        and delete_flag = 'N';
+
+        -- set theme valudation for valid theme desc
+        update recon_trn_tthemeupdate as a
+        inner join recon_tmp_t1theme as b on a.recon_code = b.recon_code
+          and a.theme_desc = b.theme_desc
+          set a.theme_status = 'P'
+        where a.scheduler_gid = in_scheduler_gid
+        and a.recon_code = v_recon_code
+        and a.theme_status = 'F'
+        and a.delete_flag = 'N';
+      end if;
+
+			-- update the recon_trn_ttran
+			set v_sql = concat("
+				update recon_trn_tthemeupdate as a
+				inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid and b.delete_flag = 'N'
+				set b.theme_code = a.theme_desc,
+					a.theme_status = 'C'
+				where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+        and a.recon_code = '",v_recon_code,"'
+				and a.theme_status = 'P'
+				and a.tranbrkp_gid = 0
+				and a.delete_flag = 'N'");
+
+			call pr_run_sql2(v_sql,@msg2,@result2);
+
+			-- update the recon_trn_ttranbrkp
+			set v_sql = concat("
+				update recon_trn_tthemeupdate as a
+				inner join ",v_tranbrkp_table," as b on a.tranbrkp_gid = b.tranbrkp_gid and b.delete_flag = 'N'
+				set b.theme_code = a.theme_desc,
+					a.theme_status = 'C'
+				where a.scheduler_gid = ",cast(in_scheduler_gid as nchar),"
+        and a.recon_code = '",v_recon_code,"'
+				and a.theme_status = 'P'
+				and a.delete_flag = 'N'");
+
+			call pr_run_sql2(v_sql,@msg2,@result2);
+		end loop recon_loop;
+		close recon_cursor;
+	end recon_block;
 
   -- update failed cases
   update recon_trn_tthemeupdate
-  set theme_status = 'F'
+    set theme_status = 'F'
   where scheduler_gid = in_scheduler_gid
   and theme_status = 'P'
   and delete_flag = 'N';
 
+  drop temporary table if exists recon_tmp_t1recon;
+  drop temporary table if exists recon_tmp_t1theme;
+
   set out_msg = 'Success';
-  set out_result = 0;
+  set out_result = 1;
 end $$
 
 DELIMITER ;

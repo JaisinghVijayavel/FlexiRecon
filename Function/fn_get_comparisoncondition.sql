@@ -125,6 +125,10 @@ begin
     set v_txt = concat(' ',in_comparison_field,' ',in_comparison_criteria,' ',in_source_field,' ');
   end if;
 
+  if trim(v_txt) = '' then
+    set v_txt = ' 1 = 1 ';
+  end if;
+
   return v_txt;
 end $$
 

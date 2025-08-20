@@ -15,6 +15,16 @@ CREATE PROCEDURE `pr_run_automatch_partial_new`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 20-08-2025
+
+    Version : 1
+  */
+
   declare v_acc_mode varchar(32) default '';
   declare v_source_acc_mode varchar(32) default '';
   declare v_comparison_acc_mode varchar(32) default '';
@@ -905,13 +915,17 @@ me:BEGIN
               set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
               set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
               set v_join_condition = ifnull(v_join_condition,'');
+              set v_ident_value_flag = ifnull(v_ident_value_flag,'Y');
+              set v_ident_value = ifnull(v_ident_value,'');
 
               if v_join_condition = '' then
                 set v_join_condition = 'and';
               end if;
 
-              set v_ident_value_flag = ifnull(v_ident_value_flag,'Y');
-              set v_ident_value = ifnull(v_ident_value,'');
+              if v_filter_field = '' then
+                set v_ident_value_flag = '';
+                set v_ident_value = '';
+              end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');

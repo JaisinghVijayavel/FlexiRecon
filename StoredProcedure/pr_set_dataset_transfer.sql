@@ -279,10 +279,10 @@ me:begin
     and (v_dataset_type = 'B' or v_dataset_type = 'T' or v_dataset_type = 'S') then
     -- update tran value
     set v_sql = concat('update ', v_target_table ,' set ');
-    set v_sql = concat(v_sql,' tran_value = value_debit + value_credit,');
-    set v_sql = concat(v_sql,' excp_value = value_debit + value_credit,');
-    set v_sql = concat(v_sql,' tran_mult= if(value_debit > 0,-1,1),');
-    set v_sql = concat(v_sql,' tran_acc_mode = if(value_debit > 0,''D'',''C'')');
+    set v_sql = concat(v_sql,' tran_value = abs(value_debit + value_credit),');
+    set v_sql = concat(v_sql,' excp_value = abs(value_debit + value_credit),');
+    set v_sql = concat(v_sql,' tran_mult= if(value_debit <> 0,if(value_debit > 0,-1,1),if(value_credit >= 0,1,-1)),');
+    set v_sql = concat(v_sql,' tran_acc_mode = if(value_debit <> 0,if(value_debit > 0,''D'',''C''),if(value_credit >= 0,''C'',''D''))');
     set v_sql = concat(v_sql,' where scheduler_gid = ',cast(in_scheduler_gid as nchar));
     set v_sql = concat(v_sql,' and recon_code = ',char(34),in_recon_code,char(34),' ');
     set v_sql = concat(v_sql,' and delete_flag = ''N''');

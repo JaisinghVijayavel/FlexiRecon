@@ -27,8 +27,13 @@ BEGIN
     concat(d.dataset_code,'-',d.dataset_name) as dataset_name
 	from recon_trn_tscheduler as a
 	inner join con_trn_tscheduler as b on a.scheduler_gid = b.scheduler_gid
+    and b.delete_flag = 'N'
 	inner join con_mst_tpipeline as c on b.pipeline_code = c.pipeline_code
-	inner join recon_mst_tdataset as d on c.target_dataset_code = d.dataset_code
+    and c.delete_flag = 'N'
+	inner join con_trn_tpipelinedetails as pd on c.pipeline_code = pd.pipeline_code
+    and b.dataset_code = pd.target_dataset_code
+    and pd.delete_flag = 'N'
+	inner join recon_mst_tdataset as d on pd.target_dataset_code = d.dataset_code
     and d.delete_flag = 'N'
 	where b.scheduled_date >= in_processed_date
 	and b.scheduled_date < date_add(in_processed_date,interval 1 day)

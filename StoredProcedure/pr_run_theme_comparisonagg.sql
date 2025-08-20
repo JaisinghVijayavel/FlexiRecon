@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 25-04-2025
+    Updated Date : 20-08-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_version text default '';
@@ -474,13 +474,8 @@ me:BEGIN
               end if;
 
               if v_filter_field = '' then
-                set v_join_condition = '';
                 set v_filter_value_flag = '';
                 set v_filter_value = '';
-              else
-                if v_join_condition = '' then
-                  set v_join_condition = 'and';
-                end if;
               end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');

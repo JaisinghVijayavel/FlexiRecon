@@ -357,19 +357,14 @@ me:BEGIN
             end if;
 
             if v_filter_field = '' then
-              set v_join_condition = '';
               set v_filter_value_flag = '';
               set v_filter_value = '';
-            else
-              if v_join_condition = '' then
-                set v_join_condition = 'and';
-              end if;
             end if;
 
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-            if v_process_method = 'L' then
+            if v_process_method = 'L' and v_filter_field <> '' then
               if v_filter_applied_on = 'LOOKUP' then
                 set v_filter_field = concat('b.',v_filter_field);
                 set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
@@ -387,7 +382,7 @@ me:BEGIN
                   set v_filter_value = fn_get_reconfieldnamecast(in_recon_code,v_filter_value);
                 end if;
               end if;
-            elseif v_process_method = 'A' then
+            elseif v_process_method = 'A' and v_filter_field <> '' then
               set v_filter_field = concat('a.',v_filter_field);
               set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
             end if;

@@ -13,6 +13,16 @@ CREATE PROCEDURE `pr_run_themedirect`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 20-08-2025
+
+    Version : 1
+  */
+
   declare v_theme_code text default '';
   declare v_theme_desc text default '';
 
@@ -192,13 +202,8 @@ me:BEGIN
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
             if v_filter_field = '' then
-              set v_join_condition = '';
               set v_filter_value_flag = '';
               set v_filter_value = '';
-            else
-              if v_join_condition = '' then
-                set v_join_condition = 'and';
-              end if;
             end if;
 
             set v_theme_filter = concat(v_theme_filter,

@@ -77,6 +77,7 @@ me:begin
   end if;
 
   -- scheduler_gid validation in recon_trn_tscheduler
+  /*
   if not exists(select scheduler_gid from recon_trn_tscheduler
      where scheduler_gid = in_scheduler_gid
      and scheduler_status = 'F'
@@ -86,6 +87,7 @@ me:begin
 
     leave me;
   end if;
+  */
 
   -- get dataset table name
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
@@ -226,10 +228,7 @@ me:begin
   end if;
 
   if v_sql <> '' then
-    set @v_sql = v_sql;
-    prepare _sql from @v_sql;
-    execute _sql;
-    deallocate prepare _sql;
+    call pr_run_sql2(v_sql,@msg2,@result2);
 
     if v_dataset_code = 'THEMEMANUAL' then
       call pr_set_themeupdate(in_scheduler_gid,in_user_code,in_role_code,in_lang_code,@msg,@result);
@@ -246,10 +245,7 @@ me:begin
   set v_sql = concat("select count(*) into @v_result from ",v_dataset_table_name,
          " where scheduler_gid = ",cast(in_scheduler_gid as nchar));
 
-  set @v_sql = v_sql;
-  prepare _sql from @v_sql;
-  execute _sql;
-  deallocate prepare _sql;
+  call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_result = ifnull(@v_result,0);
 

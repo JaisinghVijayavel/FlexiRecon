@@ -87,6 +87,10 @@ begin
     end if;
   end if;
 
+  if trim(v_txt) = '' then
+    set v_txt = ' 1 = 1 ';
+  end if;
+
   return v_txt;
 end $$
 

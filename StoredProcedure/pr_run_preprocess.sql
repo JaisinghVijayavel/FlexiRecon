@@ -18,7 +18,7 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 02-08-2025
+    Updated Date : 20-08-2025
 
     Version : 7
   */
@@ -64,6 +64,7 @@ me:BEGIN
   declare v_recon_field text default '';
   declare v_source_field_type text default '';
   declare v_lookup_field text default '';
+  declare v_set_lookup_field text default '';
   declare v_lookup_grp_field text default '';
   declare v_lookup_multi_return_flag text default '';
   declare v_lookup_agg_return_function text default '';
@@ -167,6 +168,19 @@ me:BEGIN
     set v_recon_date_field = ifnull(v_recon_date_field,'');
     set v_recon_version = ifnull(v_recon_version,'');
   end if;
+
+  -- recon date flag
+	if v_recon_date_flag = 'Y' then
+		if v_recon_date_field <> 'tran_date' then
+			set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
+		end if;
+
+		set v_recon_date_condition = '';
+		set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
+		set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
+		set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
+		set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
+	end if;
 
   -- get dataset db name
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
@@ -373,13 +387,8 @@ me:BEGIN
             end if;
 
             if v_filter_field = '' then
-              set v_join_condition = '';
               set v_filter_value_flag = '';
               set v_filter_value = '';
-            else
-              if v_join_condition = '' then
-                set v_join_condition = 'and';
-              end if;
             end if;
 
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
@@ -727,19 +736,7 @@ me:BEGIN
         end if;
       end if;
 
-      if v_process_method = 'F' or v_process_method = 'E' then
-        if v_recon_date_flag = 'Y' then
-          if v_recon_date_field <> 'tran_date' then
-            set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
-          end if;
-
-          set v_recon_date_condition = '';
-          set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
-          set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
-        end if;
-
+      if v_process_method = 'F' then
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -753,28 +750,87 @@ me:BEGIN
 
         call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+      elseif v_process_method = 'E' then
+				-- reconexp block
+				reconexp_block:begin
+					declare reconexp_done int default 0;
+					declare reconexp_cursor cursor for
+					  select
+              preprocessexp_update_field,
+              preprocess_expression
+            from recon_mst_tpreprocessexphistory
+            where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
+            and preprocessexp_on = 'RECON'
+            and active_status = 'Y'
+            and delete_flag = 'N'
+            order by preprocessexp_sno;
+					declare continue handler for not found set reconexp_done=1;
+
+					open reconexp_cursor;
+
+					reconexp_loop: loop
+						fetch reconexp_cursor into v_set_recon_field,v_process_expression;
+						if reconexp_done = 1 then leave reconexp_loop; end if;
+
+            set v_process_function = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
+
+						set v_sql = 'update $TABLENAME$ set ';
+						set v_sql = concat(v_sql,v_set_recon_field,' = ',v_process_function,' ');
+						set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+						set v_sql = concat(v_sql,v_recon_date_condition);
+						set v_sql = concat(v_sql,v_preprocess_filter);
+						set v_sql = concat(v_sql,'and tran_gid > 0 ');
+						set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+						set v_sql = concat(v_sql,v_orderby_field);
+
+						call pr_run_sql('set @sno := 0',@msg,@result);
+
+						call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
+						call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+					end loop reconexp_loop;
+
+					close reconexp_cursor;
+				end reconexp_block;
       elseif v_process_method = 'LE' then
         -- Lookup Expression
-        set v_sql = concat('update ',v_lookup_dataset_code,' set ');
-        set v_sql = concat(v_sql,v_lookup_return_field,' = ',v_process_function,' ');
-        set v_sql = concat(v_sql,'where true ');
-        set v_sql = concat(v_sql,v_lookup_filter);
-        set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+				-- lookupexp block
+				lookupexp_block:begin
+					declare lookupexp_done int default 0;
+					declare lookupexp_cursor cursor for
+					  select
+              preprocessexp_update_field,
+              preprocess_expression
+            from recon_mst_tpreprocessexphistory
+            where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
+            and preprocessexp_on = 'LOOKUP'
+            and active_status = 'Y'
+            and delete_flag = 'N'
+            order by preprocessexp_sno;
+					declare continue handler for not found set lookupexp_done=1;
 
-        call pr_run_sql(v_sql,@msg,@result);
+					open lookupexp_cursor;
+
+					lookupexp_loop: loop
+						fetch lookupexp_cursor into v_set_lookup_field,v_process_expression;
+						if lookupexp_done = 1 then leave lookupexp_loop; end if;
+
+            set v_process_function = fn_get_expressionformat_ds(v_lookup_dataset_code,v_set_lookup_field,
+                                                                v_process_expression,false,'');
+
+						set v_sql = concat('update ',v_lookup_dataset_code,' set ');
+						set v_sql = concat(v_sql,v_set_lookup_field,' = ',v_process_function,' ');
+						set v_sql = concat(v_sql,'where true ');
+						set v_sql = concat(v_sql,v_lookup_filter);
+						set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+						call pr_run_sql(v_sql,@msg,@result);
+					end loop lookupexp_loop;
+
+					close lookupexp_cursor;
+				end lookupexp_block;
       elseif v_process_method = 'C' then
-        if v_recon_date_flag = 'Y' then
-          if v_recon_date_field <> 'tran_date' then
-            set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
-          end if;
-
-          set v_recon_date_condition = '';
-          set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' >= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
-          set v_recon_date_condition = concat(v_recon_date_condition,' and ',v_recon_date_field,' <= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
-        end if;
-
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -865,18 +921,6 @@ me:BEGIN
         else
           set v_group_flag = 'N';
           set v_agg_flag = 'N';
-        end if;
-
-        if v_recon_date_flag = 'Y' then
-          if v_recon_date_field <> 'tran_date' then
-            set v_recon_date_field = concat('cast(a.',v_recon_date_field,' as date)');
-          end if;
-
-          set v_recon_date_condition = '';
-          set v_recon_date_condition = concat(v_recon_date_condition,' and a.',v_recon_date_field,' >= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
-          set v_recon_date_condition = concat(v_recon_date_condition,' and a.',v_recon_date_field,' <= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
         end if;
 
         -- recon condition
@@ -1331,14 +1375,6 @@ me:BEGIN
 
         call pr_run_sql1(v_sql,@msg,@result);
       elseif v_process_method = 'L' then
-        if v_recon_date_flag = 'Y' then
-          set v_recon_date_condition = '';
-          set v_recon_date_condition = concat(v_recon_date_condition,' and a.',v_recon_date_field,' >= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_from,'%Y-%m-%d'),char(39),' ');
-          set v_recon_date_condition = concat(v_recon_date_condition,' and a.',v_recon_date_field,' <= ');
-          set v_recon_date_condition = concat(v_recon_date_condition,char(39),date_format(in_period_to,'%Y-%m-%d'),char(39),' ');
-        end if;
-
         set v_sql = 'update $TABLENAME$ as a ';
         set v_sql = concat(v_sql,'inner join ',v_lookup_table,' as b ');
         set v_sql = concat(v_sql,'on 1 = 1 ');
