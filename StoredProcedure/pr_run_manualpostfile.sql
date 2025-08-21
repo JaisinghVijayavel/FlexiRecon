@@ -4,7 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_manualpostfile` $$
 CREATE PROCEDURE `pr_run_manualpostfile`
 (
   in in_scheduler_gid int,
-	in in_recon_code varchar(32),
+	in in_job_gid int,
   in in_ip_addr varchar(255),
   in in_user_code varchar(16),
   out out_msg text,
@@ -16,9 +16,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 05-04-2025
+    updated Date : 21-08-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_code text default '';
@@ -148,26 +148,23 @@ me:BEGIN
 		where recon_code = v_recon_code
 		and jobtype_code in ('A','M','U','T','UJ')
 	  and job_status in ('I','P')
+    and job_gid <> in_job_gid
 	  and delete_flag = 'N') then
 
 	  select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
 		where recon_code = v_recon_code
 		and jobtype_code in ('A','M','U','T','UJ')
 	  and job_status in ('I','P')
+    and job_gid <> in_job_gid
 	  and delete_flag = 'N';
 
 		set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
 	  set out_result = 0;
 
-	  set v_job_gid = 0;
-
 	  leave me;
-	else
-	  call pr_ins_job(v_recon_code,'M',in_scheduler_gid,concat('Manual posting - ',v_file_name),v_file_name,
-      in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 	end if;
 
-  set v_job_gid = @out_job_gid;
+  set v_job_gid = in_job_gid;
 
   -- Wiith in A/C, Between A/C Validation
   if v_recontype_code = 'W' or v_recontype_code = 'B' then

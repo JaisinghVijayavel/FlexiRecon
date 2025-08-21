@@ -10,10 +10,23 @@ CREATE PROCEDURE `pr_run_manualfile`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 21-08-2025
+
+    Version : 1
+  */
+
   declare v_dataset_code text default '';
   declare v_file_name text default '';
   declare v_job_gid int default 0;
   declare v_txt text default '';
+  declare v_result int default 0;
+  declare v_job_status text default '';
+  declare v_msg text default '';
 
   select
     a.dataset_code,a.file_name into v_dataset_code,v_file_name
@@ -23,10 +36,23 @@ me:BEGIN
 
   set v_dataset_code = ifnull(v_dataset_code,'');
 
+  set @out_msg = 'Failed';
+  set @out_result = 0;
+
   if v_dataset_code = 'KOMANUAL' then
-    call pr_run_manualmatchfile(in_scheduler_gid,in_ip_addr,in_user_code,@out_msg,@out_result);
+	  call pr_ins_job('','M',in_scheduler_gid,concat('Manual match - ',v_file_name),v_file_name,
+      in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+
+    set v_job_gid = @out_job_gid;
+
+    call pr_run_manualmatchfile(in_scheduler_gid,v_job_gid,in_ip_addr,in_user_code,@out_msg,@out_result);
   elseif v_dataset_code = 'POSTMANUAL' then
-    call pr_run_manualpostfile(in_scheduler_gid,'',in_ip_addr,in_user_code,@out_msg,@out_result);
+	  call pr_ins_job('','M',in_scheduler_gid,concat('Manual posting - ',v_file_name),v_file_name,
+      in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+
+    set v_job_gid = @out_job_gid;
+
+    call pr_run_manualpostfile(in_scheduler_gid,v_job_gid,in_ip_addr,in_user_code,@out_msg,@out_result);
   elseif v_dataset_code = 'THEMEMANUAL'
     or v_dataset_code = 'FIELDUPDATE'
     or v_dataset_code = 'IUTFIELDUPDATE'
@@ -37,14 +63,14 @@ me:BEGIN
 
       set v_job_gid = @out_job_gid;
 
-      call pr_set_themeupdate(in_scheduler_gid,in_user_code,'','',@out_msg,@out_result);
+      call pr_set_themeupdate(in_scheduler_gid,v_job_gid,in_user_code,'','',@out_msg,@out_result);
     elseif v_dataset_code = 'FIELDUPDATE' then
 	    call pr_ins_job('','M',in_scheduler_gid,concat('Field update - ',v_file_name),v_file_name,
         in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 
       set v_job_gid = @out_job_gid;
 
-      call pr_set_fieldupdate(in_scheduler_gid,in_user_code,'','',@out_msg,@out_result);
+      call pr_set_fieldupdate(in_scheduler_gid,v_job_gid,in_user_code,'','',@out_msg,@out_result);
     elseif v_dataset_code = 'IUTENTRY' then
 	    call pr_ins_job('','M',in_scheduler_gid,concat('IUT entry - ',v_file_name),v_file_name,
         in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
@@ -58,10 +84,19 @@ me:BEGIN
 
       set v_job_gid = @out_job_gid;
 
-      call pr_set_iutfieldupdate(in_scheduler_gid,in_user_code,'','',@out_msg,@out_result);
+      call pr_set_iutfieldupdate(in_scheduler_gid,v_job_gid,in_user_code,'','',@out_msg,@out_result);
     end if;
 
-    call pr_upd_job(v_job_gid,'C','Completed',@msg,@result);
+    set v_result= @out_result;
+    set v_msg = @out_msg;
+
+    if v_result <> 0 then
+      set v_job_status = 'C';
+    else
+      set v_job_status = 'F';
+    end if;
+
+    call pr_upd_job(v_job_gid,v_job_status,v_msg,@out_msg,@out_result);
   else
     set @out_msg = 'Invalid scheduler !';
     set @out_result = 0;

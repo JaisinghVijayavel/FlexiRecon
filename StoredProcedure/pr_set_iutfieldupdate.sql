@@ -3,6 +3,7 @@ DROP PROCEDURE IF EXISTS `pr_set_iutfieldupdate` $$
 CREATE procedure `pr_set_iutfieldupdate`
 (
   in in_scheduler_gid int,
+  in in_job_gid int,
   in in_user_code varchar(32),
   in in_role_code varchar(32),
   in in_lang_code varchar(32),
@@ -15,9 +16,9 @@ me:begin
     Created Date : 19-06-2025
 
     Updated By : Vijayavel
-    Updated Date :
+    Updated Date : 21-08-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_pd_tran_gid int default 0;
@@ -111,12 +112,14 @@ me:begin
 					where recon_code = v_recon_code
 					and jobtype_code in ('A','M','U','T','UJ')
 					and job_status in ('I','P')
+          and job_gid <> in_job_gid
 					and delete_flag = 'N') then
 
 					select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
 					where recon_code = v_recon_code
 					and jobtype_code in ('A','M','U','T','UJ')
 					and job_status in ('I','P')
+          and job_gid <> in_job_gid
 					and delete_flag = 'N';
 
 					set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');

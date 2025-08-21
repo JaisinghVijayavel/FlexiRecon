@@ -3,6 +3,7 @@ DROP PROCEDURE IF EXISTS `pr_set_themeupdate` $$
 CREATE procedure `pr_set_themeupdate`
 (
   in in_scheduler_gid int,
+  in in_job_gid int,
   in in_user_code varchar(32),
   in in_role_code varchar(32),
   in in_lang_code varchar(32),
@@ -15,9 +16,9 @@ me:begin
     Created Date : 26-03-2024
 
     Updated By : Vijayavel
-    Updated Date : 20-08-2025
+    Updated Date : 21-08-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_recon_code text default '';
@@ -36,12 +37,14 @@ me:begin
 		where recon_code = v_recon_code
 		and jobtype_code in ('A','M','U','T','UJ')
 		and job_status in ('I','P')
+    and job_gid <> in_job_gid
 		and delete_flag = 'N') then
 
 		select group_concat(cast(job_gid as nchar)) into v_txt from recon_trn_tjob
 		where recon_code = v_recon_code
 		and jobtype_code in ('A','M','U','T','UJ')
 		and job_status in ('I','P')
+    and job_gid <> in_job_gid
 		and delete_flag = 'N';
 
 		set out_msg = concat('KO/Undo KO/Field Update/Theme is already running in the job id ', v_txt ,' ! ');
@@ -112,8 +115,9 @@ me:begin
         and delete_flag = 'N';
 
         -- set failure for all lines
-        update recon_trn_tthemeupdate
-          set theme_status = 'F'
+        update recon_trn_tthemeupdate set
+          theme_status = 'F',
+          theme_remark = 'Theme not maintained in the master'
         where scheduler_gid = in_scheduler_gid
         and recon_code = v_recon_code
         and theme_status = 'P'
@@ -123,7 +127,9 @@ me:begin
         update recon_trn_tthemeupdate as a
         inner join recon_tmp_t1theme as b on a.recon_code = b.recon_code
           and a.theme_desc = b.theme_desc
-          set a.theme_status = 'P'
+        set
+          a.theme_status = 'P',
+          a.theme_remark = ''
         where a.scheduler_gid = in_scheduler_gid
         and a.recon_code = v_recon_code
         and a.theme_status = 'F'
