@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-08-2025
+    Updated Date : 21-08-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_version text default '';
@@ -117,7 +117,7 @@ me:BEGIN
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
-  drop temporary table if exists recon_tmp_tlookup;
+  drop temporary table if exists recon_tmp_t3lookup;
 
   set in_job_gid = ifnull(in_job_gid,0);
 
@@ -466,16 +466,16 @@ me:BEGIN
         end if;
 
         -- agg temporary tables
-        drop temporary table if exists recon_tmp_ttranagg;
+        drop temporary table if exists recon_tmp_t3tranagg;
 
-				create temporary table recon_tmp_ttranagg select * from recon_tmp_tdatasetstru where 1 = 2;
-				alter table recon_tmp_ttranagg ENGINE = MyISAM;
-				alter table recon_tmp_ttranagg add agg_gid int not null primary key AUTO_INCREMENT FIRST;
-				create index idx_dataset_gid on recon_tmp_ttranagg(dataset_gid);
+				create temporary table recon_tmp_t3tranagg select * from recon_tmp_t3datasetstru where 1 = 2;
+				alter table recon_tmp_t3tranagg ENGINE = MyISAM;
+				alter table recon_tmp_t3tranagg add agg_gid int not null primary key AUTO_INCREMENT FIRST;
+				create index idx_dataset_gid on recon_tmp_t3tranagg(dataset_gid);
 
         if v_group_flag = 'Y' then
           -- idx agg_gid
-				  create index idx_col128 on recon_tmp_ttranagg(col128(255));
+				  create index idx_col128 on recon_tmp_t3tranagg(col128(255));
         end if;
 
         set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,
@@ -483,11 +483,11 @@ me:BEGIN
 
         -- create index
         if v_grp_field <> '' then
-          set v_sql = concat("create index idx_grp_field on recon_tmp_ttranagg(",v_idx_grp_field,")");
+          set v_sql = concat("create index idx_grp_field on recon_tmp_t3tranagg(",v_idx_grp_field,")");
           call pr_run_sql2(v_sql,@msg,@result);
 
           -- insert records in agg table
-          set v_sql = concat("insert into recon_tmp_ttranagg(",v_grp_field,",",v_set_dataset_field,",col128)
+          set v_sql = concat("insert into recon_tmp_t3tranagg(",v_grp_field,",",v_set_dataset_field,",col128)
             select ",v_grp_field,",",v_field_expression,",",v_field_expression," from ",v_dataset_table,"
             where 1 = 1
             ",replace(v_dataset_condition,'a.',''),"
@@ -497,7 +497,7 @@ me:BEGIN
           call pr_run_sql2(v_sql,@msg,@result);
         else
           -- insert records in agg table
-          set v_sql = concat("insert into recon_tmp_ttranagg(dataset_gid,",v_set_dataset_field,",col128)
+          set v_sql = concat("insert into recon_tmp_t3tranagg(dataset_gid,",v_set_dataset_field,",col128)
             select dataset_gid,",v_field_expression,",",v_field_expression," from ",v_dataset_table,"
             where 1 = 1
             ",replace(v_dataset_condition,'a.',''),"
@@ -506,7 +506,7 @@ me:BEGIN
           call pr_run_sql2(v_sql,@msg,@result);
         end if;
 
-        select * from recon_tmp_ttranagg;
+        -- select * from recon_tmp_t3tranagg;
 
         if v_cumulative_flag = 'Y' and v_group_flag = 'N' then
           -- col128 - Agg Value
@@ -516,7 +516,7 @@ me:BEGIN
                                                                 true,
                                                                 v_cumulative_variable);
 
-					set v_sql = 'update recon_tmp_ttranagg set ';
+					set v_sql = 'update recon_tmp_t3tranagg set ';
 					set v_sql = concat(v_sql,v_set_dataset_field,' = ',v_cumulative_expression,' ');
 					set v_sql = concat(v_sql,'order by agg_gid ');
 
@@ -530,7 +530,7 @@ me:BEGIN
 
           set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_field_expression,false,'');
 
-					set v_sql = 'update recon_tmp_ttranagg set ';
+					set v_sql = 'update recon_tmp_t3tranagg set ';
 					set v_sql = concat(v_sql,v_set_dataset_field,' = ',v_field_expression,' ');
 					set v_sql = concat(v_sql,'order by agg_gid ');
 
@@ -550,7 +550,7 @@ me:BEGIN
 
         -- update in dataset table
         set v_sql = concat('update ',v_dataset_table,' as a ');
-        set v_sql = concat(v_sql,'inner join recon_tmp_ttranagg as b on ',v_aggjoin_condition,' ');
+        set v_sql = concat(v_sql,'inner join recon_tmp_t3tranagg as b on ',v_aggjoin_condition,' ');
         set v_sql = concat(v_sql,'set a.',v_set_dataset_field,' = b.',v_set_dataset_field,' ');
 
         if v_group_flag = 'Y' then
@@ -566,9 +566,9 @@ me:BEGIN
         -- update group_flag and opening_flag set cases and agg_flag = 'N' cases
         if v_group_flag = 'Y' and v_agg_flag = 'N' and
           (v_opening_flag = 'Y' or v_cumulative_flag = 'Y') then
-          drop temporary table if exists recon_tmp_tgid;
+          drop temporary table if exists recon_tmp_t3gid;
 
-          create temporary table recon_tmp_tgid
+          create temporary table recon_tmp_t3gid
           (
             dataset_gid int unsigned NOT NULL default 0,
             cumulative_value decimal(15,2) not null default 0,
@@ -586,7 +586,7 @@ me:BEGIN
           call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
 
           -- calculate tran table
-          set v_sql = concat("insert into recon_tmp_tgid(dataset_gid,cumulative_value,opening_value,agg_gid)
+          set v_sql = concat("insert into recon_tmp_t3gid(dataset_gid,cumulative_value,opening_value,agg_gid)
             select dataset_gid,
               ",v_value_variable," := if(",v_col128_variable,"=col128,",v_value_variable,"+",v_field_expression,",",v_field_expression,"),
               ",v_value_variable,"-",v_field_expression,",
@@ -606,7 +606,7 @@ me:BEGIN
           if v_opening_flag = 'Y' then
             -- update in tran table
             set v_sql = concat("update ",v_dataset_table ," as a
-              inner join recon_tmp_tgid as b on a.dataset_gid = b.dataset_gid
+              inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
               set a.",v_set_dataset_field," = cast(b.opening_value as nchar)
               ");
 
@@ -614,14 +614,14 @@ me:BEGIN
           elseif v_cumulative_flag = 'Y' then
             -- update in tran table
             set v_sql = concat("update ",v_dataset_table ," as a
-              inner join recon_tmp_tgid as b on a.dataset_gid = b.dataset_gid
+              inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
               set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
               ");
 
             call pr_run_sql2(v_sql,@msg,@result);
           end if;
 
-          drop temporary table if exists recon_tmp_tgid;
+          drop temporary table if exists recon_tmp_t3gid;
 
           -- clear col128
           -- update in tran table
@@ -635,9 +635,9 @@ me:BEGIN
         -- update group_flag and opening_flag and agg_flag set cases
         if v_group_flag = 'Y' and v_agg_flag = 'Y' and
           (v_opening_flag = 'Y' or v_cumulative_flag = 'Y') then
-          drop temporary table if exists recon_tmp_tgid;
+          drop temporary table if exists recon_tmp_t3gid;
 
-          create temporary table recon_tmp_tgid
+          create temporary table recon_tmp_t3gid
           (
             dataset_gid int unsigned NOT NULL default 0,
             cumulative_value decimal(15,2) not null default 0,
@@ -652,18 +652,18 @@ me:BEGIN
           set v_col128_variable = concat("@col128_",v_sysdatetime);
 
           -- update agg_gid in col128 column
-          update recon_tmp_ttranagg set col128 = cast(agg_gid as nchar);
+          update recon_tmp_t3tranagg set col128 = cast(agg_gid as nchar);
 
           call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
           call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
 
           -- calculate tran table
-          set v_sql = concat("insert into recon_tmp_tgid(cumulative_value,opening_value,agg_gid)
+          set v_sql = concat("insert into recon_tmp_t3gid(cumulative_value,opening_value,agg_gid)
             select
               ",v_value_variable," := ",v_value_variable,"+",v_field_expression,",
               ",v_value_variable,"-",v_field_expression,",
               agg_gid
-            from recon_tmp_ttranagg
+            from recon_tmp_t3tranagg
             where 1 = 1
             order by agg_gid
             ");
@@ -673,8 +673,8 @@ me:BEGIN
           -- update value
           if v_opening_flag = 'Y' then
             -- update in tran table
-            set v_sql = concat("update recon_tmp_ttranagg as a
-              inner join recon_tmp_tgid as b on a.agg_gid = b.agg_gid
+            set v_sql = concat("update recon_tmp_t3tranagg as a
+              inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
               set a.",v_set_dataset_field," = cast(b.opening_value as nchar)
               ");
 
@@ -682,14 +682,14 @@ me:BEGIN
 
 						-- update in tran table
 						set v_sql = concat('update ',v_dataset_table,' as a ');
-						set v_sql = concat(v_sql,'inner join recon_tmp_ttranagg as b on a.col128 = b.col128 ');
+						set v_sql = concat(v_sql,'inner join recon_tmp_t3tranagg as b on a.col128 = b.col128 ');
 						set v_sql = concat(v_sql,'set a.',v_set_dataset_field,' = b.',v_set_dataset_field,' ');
 
 						call pr_run_sql2(v_sql,@msg,@result);
           elseif v_cumulative_flag = 'Y' then
             -- update in tran table
-            set v_sql = concat("update recon_tmp_ttranagg as a
-              inner join recon_tmp_tgid as b on a.agg_gid = b.agg_gid
+            set v_sql = concat("update recon_tmp_t3tranagg as a
+              inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
               set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
               ");
 
@@ -697,13 +697,13 @@ me:BEGIN
 
 						-- update in tran table
 						set v_sql = concat('update ',v_dataset_table,' as a ');
-						set v_sql = concat(v_sql,'inner join recon_tmp_ttranagg as b on a.col128 = b.col128 ');
+						set v_sql = concat(v_sql,'inner join recon_tmp_t3tranagg as b on a.col128 = b.col128 ');
 						set v_sql = concat(v_sql,'set a.',v_set_dataset_field,' = b.',v_set_dataset_field,' ');
 
 						call pr_run_sql2(v_sql,@msg,@result);
           end if;
 
-          truncate recon_tmp_tgid;
+          truncate recon_tmp_t3gid;
 
           -- clear col128
           -- update in tran table
@@ -713,14 +713,14 @@ me:BEGIN
           call pr_run_sql2(v_sql,@msg,@result);
         end if;
 
-        drop temporary table if exists recon_tmp_ttranagg;
+        drop temporary table if exists recon_tmp_t3tranagg;
       end if;
     end loop process_loop;
 
     close process_cursor;
   end process_block;
 
-  drop temporary table if exists recon_tmp_tlookup;
+  drop temporary table if exists recon_tmp_t3lookup;
 
   set out_result = 1;
   set out_msg = 'Success';

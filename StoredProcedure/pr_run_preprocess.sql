@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-08-2025
+    Updated Date : 21-08-2025
 
-    Version : 7
+    Version : 8
   */
 
   declare v_recon_version text default '';
@@ -190,10 +190,6 @@ me:BEGIN
   set v_cumulative_variable = concat('@cumvalue_',v_sysdatetime);
 
   if in_automatch_flag = 'Y' then
-    /*
-    set v_tran_table = concat(in_recon_code,'_tran');
-    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
-    */
     set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
     if v_concurrent_ko_flag = 'Y' then
@@ -297,22 +293,6 @@ me:BEGIN
 
       set v_lookup_table = v_lookup_dataset_code;
 
-      if v_process_method = 'QCD_QUERY' then
-        set v_process_method = 'Q';
-      elseif v_process_method = 'QCD_LOOKUP' then
-        set v_process_method = 'L';
-      elseif v_process_method = 'QCD_FUNCTION' then
-        set v_process_method = 'F';
-      elseif v_process_method = 'QCD_EXPRESSION' then
-        set v_process_method = 'E';
-      elseif v_process_method = 'QCD_CUMULATIVEXP' then
-        set v_process_method = 'C';
-      elseif v_process_method = 'QCD_AGGEXP' then
-        set v_process_method = 'A';
-      elseif v_process_method = 'QCD_LOOKUP_EXPRESSION' then
-        set v_process_method = 'LE';
-      end if;
-
       if in_postprocess_flag = 'Y' then
         call pr_upd_job(in_job_gid,'P',concat('Applying Postprocess - ',v_preprocess_desc),@msg,@result);
       else
@@ -320,7 +300,7 @@ me:BEGIN
       end if;
 
       -- filter condition
-      if v_process_method <> 'Q' then
+      if v_process_method <> 'QCD_QUERY' then
         set v_preprocess_filter = ' and (';
         set v_lookup_filter = ' and (';
 
@@ -394,7 +374,7 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-            if v_process_method = 'L' then
+            if v_process_method = 'QCD_LOOKUP' then
               if v_filter_applied_on = 'LOOKUP' then
                 set v_filter_field = concat('b.',v_filter_field);
                 set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
@@ -412,10 +392,8 @@ me:BEGIN
                   set v_filter_value = fn_get_reconfieldnamecast(in_recon_code,v_filter_value);
                 end if;
               end if;
-            elseif v_process_method = 'A' then
-              set v_filter_field = concat('a.',v_filter_field);
+            else
               set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
-              -- set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
             end if;
 
             if v_filter_applied_on = 'LOOKUP' then
@@ -484,7 +462,7 @@ me:BEGIN
       end if;
 
       -- lookup method
-      if v_process_method = 'L' then
+      if v_process_method = 'QCD_LOOKUP' then
         -- lookup update fields
         if v_lookup_multi_return_flag = 'Y' then
           set v_lookup_update_fields = '';
@@ -736,7 +714,7 @@ me:BEGIN
         end if;
       end if;
 
-      if v_process_method = 'F' then
+      if v_process_method = 'QCD_FUNCTION' then
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -750,7 +728,7 @@ me:BEGIN
 
         call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
-      elseif v_process_method = 'E' then
+      elseif v_process_method = 'QCD_EXPRESSION' then
 				-- reconexp block
 				reconexp_block:begin
 					declare reconexp_done int default 0;
@@ -792,7 +770,7 @@ me:BEGIN
 
 					close reconexp_cursor;
 				end reconexp_block;
-      elseif v_process_method = 'LE' then
+      elseif v_process_method = 'QCD_LOOKUP_EXPRESSION' then
         -- Lookup Expression
 				-- lookupexp block
 				lookupexp_block:begin
@@ -830,7 +808,7 @@ me:BEGIN
 
 					close lookupexp_cursor;
 				end lookupexp_block;
-      elseif v_process_method = 'C' then
+      elseif v_process_method = 'QCD_CUMULATIVEXP' then
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -864,517 +842,7 @@ me:BEGIN
           call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
           call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
         end if;
-      elseif v_process_method = 'A' then
-        set v_aggjoin_condition = ' 1 = 1 ';
-        set v_grp_field = '';
-        set v_idx_grp_field = '';
-
-				-- grp by field block
-				grpfield_block:begin
-					declare grpfield_done int default 0;
-
-					declare grpfield_cursor cursor for
-						select
-							distinct grp_field
-						from recon_mst_tpreprocessgrpfieldhistory
-						where preprocess_code = v_preprocess_code
-            and recon_version = v_recon_version
-						and active_status = 'Y'
-						and delete_flag = 'N'
-						order by grpfield_seqno;
-
-					declare continue handler for not found set grpfield_done=1;
-
-					open grpfield_cursor;
-
-					grpfield_loop: loop
-						fetch grpfield_cursor into v_field;
-
-						if grpfield_done = 1 then leave grpfield_loop; end if;
-
-						if v_grp_field = '' then
-							set v_grp_field = v_field;
-						else
-							set v_grp_field = concat(v_grp_field,',',v_field);
-						end if;
-
-            -- agg group condition
-            set v_aggjoin_condition = concat(v_aggjoin_condition,' and a.',v_field,' = b.',v_field,' ');
-
-            if substr(v_field,1,3) = 'col' then
-              set v_field = concat(v_field,'(255)');
-            end if;
-
-            if v_idx_grp_field = '' then
-							set v_idx_grp_field = v_field;
-            else
-							set v_idx_grp_field = concat(v_idx_grp_field,',',v_field);
-            end if;
-					end loop grpfield_loop;
-
-					close grpfield_cursor;
-				end grpfield_block;
-
-        -- set group_flag, agg_flag
-        if v_grp_field <> '' then
-          set v_group_flag = 'Y';
-        else
-          set v_group_flag = 'N';
-          set v_agg_flag = 'N';
-        end if;
-
-        -- recon condition
-        set v_recon_condition = concat("and a.recon_code = '",in_recon_code,"'
-          ",v_recon_date_condition,"
-          ",v_preprocess_filter," and
-          a.delete_flag = 'N'
-          ");
-
-        -- agg temporary tables
-        drop temporary table if exists recon_tmp_ttranagg;
-        drop temporary table if exists recon_tmp_ttranbrkpagg;
-
-				create temporary table recon_tmp_ttranagg select * from recon_trn_ttranwithbrkp where 1 = 2;
-				alter table recon_tmp_ttranagg ENGINE = MyISAM;
-				alter table recon_tmp_ttranagg add agg_gid int not null primary key AUTO_INCREMENT FIRST;
-				create index idx_excp_value on recon_tmp_ttranagg(excp_value);
-				create index idx_tran_date on recon_tmp_ttranagg(tran_date);
-				create index idx_recon_code on recon_tmp_ttranagg(recon_code);
-				create index idx_dataset_code on recon_tmp_ttranagg(recon_code,dataset_code);
-				create index idx_tran_gid on recon_tmp_ttranagg(tran_gid);
-				create index idx_tranbrkp_gid on recon_tmp_ttranagg(tranbrkp_gid);
-
-				create temporary table recon_tmp_ttranbrkpagg select * from recon_trn_ttranwithbrkp where 1 = 2;
-				alter table recon_tmp_ttranbrkpagg ENGINE = MyISAM;
-				alter table recon_tmp_ttranbrkpagg add agg_gid int not null primary key AUTO_INCREMENT FIRST;
-				create index idx_excp_value on recon_tmp_ttranbrkpagg(excp_value);
-				create index idx_tran_date on recon_tmp_ttranbrkpagg(tran_date);
-				create index idx_recon_code on recon_tmp_ttranbrkpagg(recon_code);
-				create index idx_dataset_code on recon_tmp_ttranbrkpagg(recon_code,dataset_code);
-				create index idx_tran_gid on recon_tmp_ttranbrkpagg(tran_gid);
-				create index idx_tranbrkp_gid on recon_tmp_ttranbrkpagg(tranbrkp_gid);
-
-        if v_group_flag = 'Y' then
-          -- idx agg_gid
-				  create index idx_col128 on recon_tmp_ttranagg(col128(255));
-				  create index idx_col128 on recon_tmp_ttranbrkpagg(col128(255));
-        end if;
-
-        set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
-
-        -- create index
-        if v_grp_field <> '' then
-          set v_sql = concat("create index idx_grp_field on recon_tmp_ttranagg(",v_idx_grp_field,")");
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          set v_sql = concat("create index idx_grp_field on recon_tmp_ttranbrkpagg(",v_idx_grp_field,")");
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- insert records in agg table
-          set v_sql = concat("insert into recon_tmp_ttranagg(",v_grp_field,",",v_set_recon_field,",col128)
-            select ",v_grp_field,",",v_field_expression,",",v_field_expression," from ",v_tran_table,"
-            where 1 = 1
-            ",replace(v_recon_condition,'a.',''),"
-            group by ",v_grp_field,"
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          set v_sql = concat("insert into recon_tmp_ttranbrkpagg(",v_grp_field,",",v_set_recon_field,",col128)
-            select ",v_grp_field,",",v_field_expression,",",v_field_expression," from ",v_tranbrkp_table,"
-            where 1 = 1
-            ",replace(v_recon_condition,'a.',''),"
-            and tran_gid > 0
-            group by ",v_grp_field,"
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-        else
-          -- insert records in agg table
-          set v_sql = concat("insert into recon_tmp_ttranagg(tran_gid,",v_set_recon_field,",col128)
-            select tran_gid,",v_field_expression,",",v_field_expression," from ",v_tran_table,"
-            where 1 = 1
-            ",replace(v_recon_condition,'a.',''),"
-            and tran_gid > 0
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          set v_sql = concat("insert into recon_tmp_ttranbrkpagg(tranbrkp_gid,",v_set_recon_field,",col128)
-            select tranbrkp_gid,",v_field_expression,",",v_field_expression," from ",v_tranbrkp_table,"
-            where 1 = 1
-            ",replace(v_recon_condition,'a.',''),"
-            and tran_gid > 0
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-
-        if v_cumulative_flag = 'Y' and v_group_flag = 'N' then
-          -- col128 - Agg Value
-          set v_cumulative_expression = fn_get_expressionformat_recon(in_recon_code,
-                                                                v_set_recon_field,
-                                                                'col128',
-                                                                true,v_cumulative_variable);
-
-					set v_sql = 'update recon_tmp_ttranagg set ';
-					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_cumulative_expression,' ');
-					set v_sql = concat(v_sql,'order by agg_gid ');
-
-          call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
-					call pr_run_sql2(v_sql,@msg,@result);
-
-					set v_sql = 'update recon_tmp_ttranbrkpagg set ';
-					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_cumulative_expression,' ');
-					set v_sql = concat(v_sql,'order by agg_gid ');
-
-          call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
-					call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-
-        if v_opening_flag = 'Y' and v_group_flag = 'N' then
-          set v_field_expression = concat('cast(',v_set_recon_field,' as declmal(15,2)',
-                               ' - cast(col128 as decimal(15,2))');
-
-          set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_field_expression,false);
-
-					set v_sql = 'update recon_tmp_ttranagg set ';
-					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_field_expression,' ');
-					set v_sql = concat(v_sql,'order by agg_gid ');
-
-					call pr_run_sql2(v_sql,@msg,@result);
-
-					set v_sql = 'update recon_tmp_ttranbrkpagg set ';
-					set v_sql = concat(v_sql,v_set_recon_field,' = ',v_field_expression,' ');
-					set v_sql = concat(v_sql,'order by agg_gid ');
-
-					call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-
-        if v_group_flag = 'Y' then
-          -- clear col128
-          -- update in tran table
-          set v_sql = concat('update ',v_tran_table,' ');
-          set v_sql = concat(v_sql,'set col128 = null ');
-          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,'and delete_flag = ''N''');
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- update in tranbrkp table
-          set v_sql = concat('update ',v_tranbrkp_table,' ');
-          set v_sql = concat(v_sql,'set col128 = null ');
-          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,'and delete_flag = ''N''');
-
-          call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-
-        -- update in tran table
-        set v_sql = concat('update ',v_tran_table,' as a ');
-        set v_sql = concat(v_sql,'inner join recon_tmp_ttranagg as b on ',v_aggjoin_condition,' ');
-        set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
-
-        if v_group_flag = 'Y' then
-          set v_sql = concat(v_sql,',a.col128 = cast(b.agg_gid as nchar) ');
-        end if;
-
-        set v_sql = concat(v_sql,'where 1 = 1 ');
-        set v_sql = concat(v_sql,v_recon_condition);
-
-        if v_grp_field = '' then
-          set v_sql = concat(v_sql,'and a.tran_gid = b.tran_gid ');
-        end if;
-
-        call pr_run_sql2(v_sql,@msg,@result);
-
-        -- update in tranbrkp table
-        set v_sql = concat('update ',v_tranbrkp_table,' as a ');
-        set v_sql = concat(v_sql,'inner join recon_tmp_ttranbrkpagg as b on ',v_aggjoin_condition,' ');
-        set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
-
-        if v_group_flag = 'Y' then
-          set v_sql = concat(v_sql,',a.col128 = cast(b.agg_gid as nchar) ');
-        end if;
-
-        set v_sql = concat(v_sql,'where 1 = 1 ');
-        set v_sql = concat(v_sql,v_recon_condition);
-        set v_sql = concat(v_sql,'and a.tran_gid > 0 ');
-
-        if v_grp_field = '' then
-          set v_sql = concat(v_sql,'and a.tranbrkp_gid = b.tranbrkp_gid ');
-        end if;
-
-        call pr_run_sql2(v_sql,@msg,@result);
-
-        -- update group_flag and opening_flag set cases and agg_flag = 'N' cases
-        if v_group_flag = 'Y' and v_agg_flag = 'N' and
-          (v_opening_flag = 'Y' or v_cumulative_flag = 'Y') then
-          drop temporary table if exists recon_tmp_tgid;
-
-          create temporary table recon_tmp_tgid
-          (
-            tran_gid int unsigned NOT NULL default 0,
-            tranbrkp_gid int unsigned NOT NULL default 0,
-            cumulative_value decimal(15,2) not null default 0,
-            opening_value  decimal(15,2) not null default 0,
-            agg_gid text,
-            PRIMARY KEY (tran_gid,tranbrkp_gid)
-          ) ENGINE = MyISAM;
-
-          set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
-
-          set v_value_variable = concat("@value_",v_sysdatetime);
-          set v_col128_variable = concat("@col128_",v_sysdatetime);
-
-          call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
-          call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
-
-          -- calculate tran table
-          set v_sql = concat("insert into recon_tmp_tgid(tran_gid,cumulative_value,opening_value,agg_gid)
-            select tran_gid,
-              ",v_value_variable," := if(",v_col128_variable,"=col128,",v_value_variable,"+",v_field_expression,",",v_field_expression,"),
-              ",v_value_variable,"-",v_field_expression,",
-              ",v_col128_variable," := col128
-            from ",v_tran_table,"
-            where 1 = 1
-            ",replace(v_recon_condition,'a.',''),"
-            ",v_orderby_field,"tran_gid ",v_recorderby_type,"
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
-          call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
-
-          -- calculate tranbrkp table
-          set v_sql = concat("insert into recon_tmp_tgid(tran_gid,tranbrkp_gid,cumulative_value,opening_value,agg_gid)
-            select tran_gid,tranbrkp_gid,
-              ",v_value_variable," := if(",v_col128_variable,"=col128,",v_value_variable,"+",v_field_expression,",",v_field_expression,"),
-              ",v_value_variable,"-",v_field_expression,",
-              ",v_col128_variable," := col128
-            from ",v_tranbrkp_table,"
-            where tran_gid > 0
-            ",replace(v_recon_condition,'a.',''),"
-            ",v_orderby_field,"tran_gid ",v_recorderby_type,"
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- update value
-          if v_opening_flag = 'Y' then
-            -- update in tran table
-            set v_sql = concat("update ",v_tran_table ," as a
-              inner join recon_tmp_tgid as b on a.tran_gid = b.tran_gid
-                and b.tranbrkp_gid = 0
-              set a.",v_set_recon_field," = cast(b.opening_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-
-            -- update in tranbrkp table
-            set v_sql = concat("update ",v_tranbrkp_table ," as a
-              inner join recon_tmp_tgid as b on a.tran_gid = b.tran_gid
-                and a.tranbrkp_gid = b.tranbrkp_gid
-              set a.",v_set_recon_field," = cast(b.opening_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-          elseif v_cumulative_flag = 'Y' then
-            -- update in tran table
-            set v_sql = concat("update ",v_tran_table ," as a
-              inner join recon_tmp_tgid as b on a.tran_gid = b.tran_gid
-                and b.tranbrkp_gid = 0
-              set a.",v_set_recon_field," = cast(b.cumulative_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-
-            -- update in tranbrkp table
-            set v_sql = concat("update ",v_tranbrkp_table ," as a
-              inner join recon_tmp_tgid as b on a.tran_gid = b.tran_gid
-                and a.tranbrkp_gid = b.tranbrkp_gid
-              set a.",v_set_recon_field," = cast(b.cumulative_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-          end if;
-
-          drop temporary table if exists recon_tmp_tgid;
-
-          -- clear col128
-          -- update in tran table
-          set v_sql = concat('update ',v_tran_table,' ');
-          set v_sql = concat(v_sql,'set col128 = null ');
-          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,'and delete_flag = ''N''');
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- update in tranbrkp table
-          set v_sql = concat('update ',v_tranbrkp_table,' ');
-          set v_sql = concat(v_sql,'set col128 = null ');
-          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,'and delete_flag = ''N''');
-
-          call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-
-        -- update group_flag and opening_flag and agg_flag set cases
-        if v_group_flag = 'Y' and v_agg_flag = 'Y' and
-          (v_opening_flag = 'Y' or v_cumulative_flag = 'Y') then
-          drop temporary table if exists recon_tmp_tgid;
-
-          create temporary table recon_tmp_tgid
-          (
-            tran_gid int unsigned NOT NULL default 0,
-            tranbrkp_gid int unsigned NOT NULL default 0,
-            cumulative_value decimal(15,2) not null default 0,
-            opening_value  decimal(15,2) not null default 0,
-            agg_gid int unsigned NOT NULL default 0,
-            PRIMARY KEY (agg_gid)
-          ) ENGINE = MyISAM;
-
-          set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_set_recon_field,false);
-
-          set v_value_variable = concat("@value_",v_sysdatetime);
-          set v_col128_variable = concat("@col128_",v_sysdatetime);
-
-          -- update agg_gid in col128 column
-          update recon_tmp_ttranagg set col128 = cast(agg_gid as nchar);
-
-          call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
-          call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
-
-          -- calculate tran table
-          set v_sql = concat("insert into recon_tmp_tgid(cumulative_value,opening_value,agg_gid)
-            select
-              ",v_value_variable," := ",v_value_variable,"+",v_field_expression,",
-              ",v_value_variable,"-",v_field_expression,",
-              agg_gid
-            from recon_tmp_ttranagg
-            where 1 = 1
-            order by agg_gid
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- update value
-          if v_opening_flag = 'Y' then
-            -- update in tran table
-            set v_sql = concat("update recon_tmp_ttranagg as a
-              inner join recon_tmp_tgid as b on a.agg_gid = b.agg_gid
-              set a.",v_set_recon_field," = cast(b.opening_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-
-						-- update in tran table
-						set v_sql = concat('update ',v_tran_table,' as a ');
-						set v_sql = concat(v_sql,'inner join recon_tmp_ttranagg as b on a.col128 = b.col128 ');
-						set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
-
-						call pr_run_sql2(v_sql,@msg,@result);
-          elseif v_cumulative_flag = 'Y' then
-            -- update in tran table
-            set v_sql = concat("update recon_tmp_ttranagg as a
-              inner join recon_tmp_tgid as b on a.agg_gid = b.agg_gid
-              set a.",v_set_recon_field," = cast(b.cumulative_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-
-						-- update in tran table
-						set v_sql = concat('update ',v_tran_table,' as a ');
-						set v_sql = concat(v_sql,'inner join recon_tmp_ttranagg as b on a.col128 = b.col128 ');
-						set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
-
-						call pr_run_sql2(v_sql,@msg,@result);
-          end if;
-
-          truncate recon_tmp_tgid;
-
-          -- update in tranbrkp table
-          -- update agg_gid in col128 column
-          update recon_tmp_ttranbrkpagg set col128 = cast(agg_gid as nchar);
-
-          call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
-          call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
-
-          -- calculate tran table
-          set v_sql = concat("insert into recon_tmp_tgid(cumulative_value,opening_value,agg_gid)
-            select
-              ",v_value_variable," := ",v_value_variable,"+",v_field_expression,",
-              ",v_value_variable,"-",v_field_expression,",
-              col128
-            from recon_tmp_ttranbrkpagg
-            where 1 = 1
-            order by agg_gid
-            ");
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- update value
-          if v_opening_flag = 'Y' then
-            -- update in tran table
-            set v_sql = concat("update recon_tmp_ttranbrkpagg as a
-              inner join recon_tmp_tgid as b on a.agg_gid = b.agg_gid
-              set a.",v_set_recon_field," = cast(b.opening_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-
-						-- update in tran table
-						set v_sql = concat('update ',v_tranbrkp_table,' as a ');
-						set v_sql = concat(v_sql,'inner join recon_tmp_ttranbrkpagg as b on a.col128 = b.col128 ');
-						set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
-
-						call pr_run_sql2(v_sql,@msg,@result);
-          elseif v_cumulative_flag = 'Y' then
-            -- update in tran table
-            set v_sql = concat("update recon_tmp_ttranagg as a
-              inner join recon_tmp_tgid as b on a.agg_gid = b.agg_gid
-              set a.",v_set_recon_field," = cast(b.cumulative_value as nchar)
-              ");
-
-            call pr_run_sql2(v_sql,@msg,@result);
-
-						-- update in tran table
-						set v_sql = concat('update ',v_tranbrkp_table,' as a ');
-						set v_sql = concat(v_sql,'inner join recon_tmp_ttranbrkpagg as b on a.col128 = b.col128 ');
-						set v_sql = concat(v_sql,'set a.',v_set_recon_field,' = b.',v_set_recon_field,' ');
-
-						call pr_run_sql2(v_sql,@msg,@result);
-          end if;
-
-          drop temporary table if exists recon_tmp_tgid;
-
-          -- clear col128
-          -- update in tran table
-          set v_sql = concat('update ',v_tran_table,' ');
-          set v_sql = concat(v_sql,'set col128 = null ');
-          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,'and delete_flag = ''N''');
-
-          call pr_run_sql2(v_sql,@msg,@result);
-
-          -- update in tranbrkp table
-          set v_sql = concat('update ',v_tranbrkp_table,' ');
-          set v_sql = concat(v_sql,'set col128 = null ');
-          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,'and delete_flag = ''N''');
-
-          call pr_run_sql2(v_sql,@msg,@result);
-        end if;
-
-        drop temporary table if exists recon_tmp_ttranagg;
-        drop temporary table if exists recon_tmp_ttranbrkpagg;
-      elseif v_process_method = 'Q' then
-        set v_sql = v_process_query;
-        -- set v_sql = concat(v_sql,v_recon_date_condition);
-
-        call pr_run_sql1(v_sql,@msg,@result);
-      elseif v_process_method = 'L' then
+      elseif v_process_method = 'QCD_LOOKUP' then
         set v_sql = 'update $TABLENAME$ as a ';
         set v_sql = concat(v_sql,'inner join ',v_lookup_table,' as b ');
         set v_sql = concat(v_sql,'on 1 = 1 ');
@@ -1414,6 +882,20 @@ me:BEGIN
         end if;
 
         set @base_count = 0;
+      elseif v_process_method = 'QCD_QUERY' then
+        set v_sql = v_process_query;
+
+        call pr_run_sql1(v_sql,@msg,@result);
+      elseif v_process_method = 'QCD_AGGEXP' then
+        call pr_run_preprocess_agg(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          @msg_11,
+                                          @result_11);
       elseif v_process_method = 'QCD_COMPARISONEXP' then
         call pr_run_preprocess_comparison(in_recon_code,
                                           v_preprocess_code,

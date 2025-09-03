@@ -16,12 +16,12 @@ CREATE PROCEDURE `pr_run_pagereport`(
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 
+    Created Date :
 
     Updated By : Vijayavel
-    updated Date : 24-04-2025
+    updated Date : 26-08-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_code varchar(32) default '';
@@ -218,7 +218,7 @@ me:BEGIN
     call pr_run_sql(v_sql,@msg,@result);
   end if;
 
-  set out_rec_count = @rec_count;
+  set out_rec_count = ifnull(@rec_count,0);
   set out_msg = concat(v_report_desc,' generation initiated in the report session id ',cast(v_rptsession_gid as nchar));
   set out_result = v_rptsession_gid;
 

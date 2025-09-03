@@ -14,9 +14,9 @@ begin
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 25-04-2025
+    updated Date : 26-08-2025
 
-    Version : 1
+    Version : 2
   */
 
 	declare v_tran_table text default '';
@@ -43,6 +43,9 @@ begin
   declare v_table_prefix_code text default '';
   declare v_archival_code text default '';
 
+  declare v_src_table text default '';
+  declare v_dest_table text default '';
+
   declare v_condition text default '';
   declare v_dataset_db_name text default '';
   declare v_recontype_code text default '';
@@ -51,10 +54,13 @@ begin
   declare v_archival_db_flag text default '';
   declare v_archival_db_prefix text default '';
 
+  declare v_archival_qry text default '';
+
   declare v_concurrent_ko_flag text default '';
 
   declare v_recon_code text default '';
   declare v_recon_name text default '';
+  declare v_recon_version text default '';
 
   declare v_job_gid int default 0;
 
@@ -69,15 +75,17 @@ begin
     set out_result = 0;
   else
     select
-      recon_code,recon_name
+      recon_code,recon_name,recon_rule_version,recontype_code
     into
-      v_recon_code,v_recon_name
+      v_recon_code,v_recon_name,v_recon_version,v_recontype_code
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
 
     set v_recon_code = ifnull(v_recon_code,'');
     set v_recon_name = ifnull(v_recon_name,'');
+    set v_recon_version = ifnull(v_recon_version,'');
+    set v_recontype_code = ifnull(v_recontype_code,'');
   end if;
 
   -- concurrent KO flag
@@ -142,6 +150,7 @@ begin
   insert into recon_trn_treconarchival
   (
     recon_code,
+    recon_version,
     archival_code,
     archival_date,
     archival_by,
@@ -152,6 +161,7 @@ begin
   )
   select
     in_recon_code,
+    v_recon_version,
     v_archival_code,
     sysdate(),
     in_user_code,
@@ -166,233 +176,57 @@ begin
 
   set v_job_gid = @out_job_gid;
 
+  -- recon koseq
+  set v_table = concat(v_table_prefix,'_recon_mst_tkoseq');
+  set v_sql = concat('create table ',v_table,' like recon_mst_tkoseq');
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  set v_sql = concat("insert into ",v_table,"
+    select * from recon_mst_tkoseq
+    where recon_code = '",in_recon_code,"'
+    and recon_version = '",v_recon_version,"'
+    and delete_flag = 'N'");
+
+  call pr_run_sql2(v_sql,@result,@msg);
+
   -- find recon type code and its condition
-  select
-    recontype_code
-  into
-    v_recontype_code
-  from recon_mst_trecon
-  where recon_code = in_recon_code
-  and active_status = 'Y'
-  and delete_flag = 'N';
-
-  set v_recontype_code = ifnull(v_recontype_code,'');
-
   if v_recontype_code <> 'N' then
     set v_condition = ' and excp_value <> 0 ';
   end if;
 
-
   -- create tran table
   set v_table = concat(v_table_prefix,'_tran');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_ttran where 1 = 2');
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tran_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add scheduler_gid
-  set v_sql = concat('create index idx_scheduler_gid on ',v_table,'(scheduler_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code
-  set v_sql = concat('create index idx_recon_code on ',v_table,'(recon_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,dataset_code
-  set v_sql = concat('create index idx_dataset_code on ',v_table,'(recon_code,dataset_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,tran_value
-  set v_sql = concat('create index idx_tran_value on ',v_table,'(recon_code,tran_value)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,excp_value
-  set v_sql = concat('create index idx_excp_value on ',v_table,'(recon_code,excp_value)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttran');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- create tranko table
   set v_table = concat(v_table_prefix,'_tranko');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_ttran where 1 = 2');
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tran_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add scheduler_gid
-  set v_sql = concat('create index idx_scheduler_gid on ',v_table,'(scheduler_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code
-  set v_sql = concat('create index idx_recon_code on ',v_table,'(recon_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,dataset_code
-  set v_sql = concat('create index idx_dataset_code on ',v_table,'(recon_code,dataset_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,tran_value
-  set v_sql = concat('create index idx_tran_value on ',v_table,'(recon_code,tran_value)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,excp_value
-  set v_sql = concat('create index idx_excp_value on ',v_table,'(recon_code,excp_value)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttranko');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- create tranbrkp table
   set v_table = concat(v_table_prefix,'_tranbrkp');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_ttranbrkp where 1 = 2');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tranbrkp_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add scheduler_gid
-  set v_sql = concat('create index idx_scheduler_gid on ',v_table,'(scheduler_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add tran_gid
-  set v_sql = concat('create index idx_tran_gid on ',v_table,'(tran_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code
-  set v_sql = concat('create index idx_recon_code on ',v_table,'(recon_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,dataset_code
-  set v_sql = concat('create index idx_dataset_code on ',v_table,'(recon_code,dataset_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,tran_value
-  set v_sql = concat('create index idx_tran_value on ',v_table,'(recon_code,tran_value)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,excp_value
-  set v_sql = concat('create index idx_excp_value on ',v_table,'(recon_code,excp_value)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttranbrkp');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- create tranbrkpko table
   set v_table = concat(v_table_prefix,'_tranbrkpko');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_ttranbrkp where 1 = 2');
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(tranbrkp_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add scheduler_gid
-  set v_sql = concat('create index idx_scheduler_gid on ',v_table,'(scheduler_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add tran_gid
-  set v_sql = concat('create index idx_tran_gid on ',v_table,'(tran_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code
-  set v_sql = concat('create index idx_recon_code on ',v_table,'(recon_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,dataset_code
-  set v_sql = concat('create index idx_dataset_code on ',v_table,'(recon_code,dataset_code)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,tran_value
-  set v_sql = concat('create index idx_tran_value on ',v_table,'(recon_code,tran_value)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add recon_code,excp_value
-  set v_sql = concat('create index idx_excp_value on ',v_table,'(recon_code,excp_value)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_ttranbrkpko');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- create ko table
   set v_table = concat(v_table_prefix,'_ko');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_tko where 1 = 2');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(ko_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add job_gid
-  set v_sql = concat('create index idx_job_gid on ',v_table,'(job_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add ko_date
-  set v_sql = concat('create index idx_ko_date on ',v_table,'(recon_code,ko_date)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add rule_code
-  set v_sql = concat('create index idx_rule_code on ',v_table,'(recon_code,rule_code)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_tko');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- create kodtl table
   set v_table = concat(v_table_prefix,'_kodtl');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_tkodtl where 1 = 2');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(kodtl_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add ko_gid
-  set v_sql = concat('create index idx_ko_gid on ',v_table,'(ko_gid)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_tkodtl');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- create koroundoff table
   set v_table = concat(v_table_prefix,'_koroundoff');
-  set v_sql = concat('create table ',v_table,' select * from recon_trn_tkoroundoff where 1 = 2');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(koroundoff_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add ko_gid
-  set v_sql = concat('create index idx_ko_gid on ',v_table,'(ko_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add tran_gid
-  set v_sql = concat('create index idx_tran_gid on ',v_table,'(tran_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add tranbrkp_gid
-  set v_sql = concat('create index idx_tranbrkp_gid on ',v_table,'(tranbrkp_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- create rule master
-  set v_table = concat(v_table_prefix,'_rule');
-  set v_sql = concat('create table ',v_table,' select * from recon_mst_trule where 1 = 2');
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(rule_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- create preprocess master
-  set v_table = concat(v_table_prefix,'_preprocess');
-  set v_sql = concat('create table ',v_table,' select * from recon_mst_tpreprocess where 1 = 2');
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(preprocess_gid)');
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- create theme master
-  set v_table = concat(v_table_prefix,'_theme');
-  set v_sql = concat('create table ',v_table,' select * from recon_mst_ttheme where 1 = 2');
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- add primary key
-  set v_sql = concat('alter table ',v_table,' add primary key(theme_gid)');
+  set v_sql = concat('create table ',v_table,' like recon_trn_tkoroundoff');
   call pr_run_sql2(v_sql,@msg,@result);
 
   -- transfer data
@@ -493,45 +327,6 @@ begin
 
   call pr_run_sql2(v_sql,@msg,@result);
 
-  -- rule table
-  call pr_upd_job(v_job_gid,'P','Archiving rule table...',@msg,@result);
-
-  set v_table = concat(v_table_prefix,'_rule');
-
-  set v_sql = concat("insert into ",v_table,"
-    select z.* from (
-    select * from ",v_rule_table,"
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- preprocess table
-  call pr_upd_job(v_job_gid,'P','Archiving process table...',@msg,@result);
-
-  set v_table = concat(v_table_prefix,'_preprocess');
-
-  set v_sql = concat("insert into ",v_table,"
-    select z.* from (
-    select * from ",v_preprocess_table,"
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
-  -- theme table
-  call pr_upd_job(v_job_gid,'P','Archiving theme table...',@msg,@result);
-
-  set v_table = concat(v_table_prefix,'_theme');
-
-  set v_sql = concat("insert into ",v_table,"
-    select z.* from (
-    select * from ",v_theme_table,"
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
   -- get dataset db name
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
@@ -561,19 +356,19 @@ begin
 			if dataset_done = 1 then leave dataset_loop; end if;
 
       set v_dataset_name = ifnull(v_dataset_name,'');
+	    call pr_upd_job(v_job_gid,'P',concat('Archiving ',v_dataset_name,'...'),@msg,@result);
 
       -- create archive dataset table
-      set v_table = concat(v_table_prefix_code,'_',v_dataset_code);
-      call pr_create_datasettable(v_archival_db_name,v_table,@msg3,@result3);
-
-      -- to add archival db name (ex. table = db_name.table_name)
-      set v_table = concat(v_table_prefix,'_',v_dataset_code);
-
-	    call pr_upd_job(v_job_gid,'P',concat('Archiving ',v_dataset_name,'...'),@msg,@result);
+      set v_table = concat(v_archival_db_name,'.',v_table_prefix_code,'_',v_dataset_code);
 
       -- archive dataset table data
       set v_dataset_table = concat(v_dataset_db_name,v_dataset_code);
 
+      -- create dataset table
+      set v_sql = concat("create table ",v_table," like ",v_dataset_table);
+      call pr_run_sql2(v_sql,@msg,@result);
+
+      -- transfer dataset data
       set v_sql = concat("insert into ",v_table,"
         select z.* from (
         select * from ",v_dataset_table,"
@@ -584,6 +379,38 @@ begin
 
 		close dataset_cursor;
 	end dataset_block;
+
+	-- archtable block
+	archtable_block:begin
+		declare archtable_done int default 0;
+		declare archtable_cursor cursor for
+		select archival_table,archival_select_qry from recon_mst_tarchivaltable
+      where active_status = 'Y'
+      and delete_flag = 'N';
+		declare continue handler for not found set archtable_done=1;
+
+		open archtable_cursor;
+
+		archtable_loop: loop
+			fetch archtable_cursor into v_src_table,v_archival_qry;
+			if archtable_done = 1 then leave archtable_loop; end if;
+
+      set v_dest_table = concat(v_table_prefix,'_',v_src_table);
+
+      -- create table
+      set v_sql = concat("create table ",v_dest_table," like ",v_src_table);
+			call pr_run_sql2(v_sql,@result,@msg);
+
+      set v_archival_qry = replace(v_archival_qry,'$RECONCODE$',in_recon_code);
+      set v_archival_qry = replace(v_archival_qry,'$RECONVERSION$',v_recon_version);
+
+      -- transfer data
+      set v_sql = concat("insert into ",v_dest_table," ",v_archival_qry);
+
+			call pr_run_sql2(v_sql,@result,@msg);
+		end loop archtable_loop;
+		close archtable_cursor;
+	end archtable_block;
 
 	call pr_upd_job(v_job_gid,'C','Completed',@msg,@result);
 

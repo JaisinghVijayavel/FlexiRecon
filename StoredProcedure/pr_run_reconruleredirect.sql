@@ -467,7 +467,7 @@ me:BEGIN
 				fetch koseq_cursor into v_koseq_type,v_koseq_ref_code;
 				if koseq_done = 1 then leave koseq_loop; end if;
 
-				if v_koseq_type = 'Preprocess' or koseq_type = 'Postprocess' or koseq_type = 'Process' then
+				if v_koseq_type = 'Preprocess' or v_koseq_type = 'Postprocess' or v_koseq_type = 'Process' then
 					call pr_run_preprocess(in_recon_code,v_koseq_ref_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
 				elseif v_koseq_type = 'Theme' then
 					call pr_run_theme(v_recon_code,v_koseq_ref_code,v_job_gid,in_period_from,in_period_to,
@@ -550,7 +550,7 @@ me:BEGIN
 			close koseq_cursor;
 		end koseq_block;
 	end if;
-	
+
   set v_job_input_param = concat(v_job_input_param,'Period From : ',date_format(in_period_from,v_date_format),char(13),char(10));
   set v_job_input_param = concat(v_job_input_param,'Period To : ',date_format(in_period_to,v_date_format),char(13),char(10));
 

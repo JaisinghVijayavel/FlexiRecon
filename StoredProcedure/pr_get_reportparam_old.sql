@@ -1,7 +1,8 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_get_reportparam` $$
-CREATE PROCEDURE `pr_get_reportparam`(
+CREATE PROCEDURE `pr_get_reportparam`
+(
   in_report_code varchar(32),
   in_recon_code varchar(32)
 )
@@ -22,7 +23,7 @@ BEGIN
       key idx_reportparam_order(reportparam_order)
     ) ENGINE = MyISAM;
 
-    
+    -- get src_table_name
     select
       table_name,
       src_table_name,
@@ -56,10 +57,8 @@ BEGIN
       SELECT
         in_report_code,
         report_field_name,
-		-- report_field_desc,
-        concat( report_field_desc, '-', fn_get_fieldtype(in_recon_code, report_field_name)),
+        report_field_desc,
         @sno := @sno + 1
-
       FROM recon_mst_tsystemfield
       WHERE table_name = v_rpt_table_name
       and active_status = 'Y'
@@ -75,10 +74,8 @@ BEGIN
       )
       select
         in_report_code as report_code,
-        concat(v_recon_field_prefix,recon_field_name) as reportparam_code,       
-        case when recon_field_type is null then fn_get_reconfieldname(recon_code,recon_field_name)
-        else concat(fn_get_reconfieldname(recon_code,recon_field_name), '-', ifnull(recon_field_type,'')) end
-         as reportparam_desc,
+        concat(v_recon_field_prefix,recon_field_name) as reportparam_code,
+        fn_get_reconfieldname(recon_code,recon_field_name),
         @sno := @sno + 1
       from recon_mst_treconfield
       where recon_code = in_recon_code
@@ -89,6 +86,9 @@ BEGIN
       where report_code = in_report_code
       and report_exec_type = 'D'
       and delete_flag = 'N') then
+
+      set @sno := 0;
+
       insert ignore into recon_tmp_treportparam
       (
         report_code,
@@ -99,13 +99,39 @@ BEGIN
       SELECT
         in_report_code,
         dataset_table_field,
-        concat( field_name,'-', ifnull(field_type,'')),
+        field_name,
         @sno := @sno + 1
       FROM recon_mst_tdatasetfield
       WHERE dataset_code = in_report_code
       and active_status = 'Y'
       and delete_flag = 'N'
       order by dataset_seqno;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        'dataset_gid',
+        'Dataset Id',
+        998;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        reportparam_order
+      )
+      SELECT
+        in_report_code,
+        'scheduler_gid',
+        'Scheduler Id',
+        999;
     else
       insert into recon_tmp_treportparam
       (
@@ -119,8 +145,7 @@ BEGIN
         SELECT
 	        in_report_code as report_code,
           report_field_name as reportparam_code,
-          -- report_field_desc as reportparam_desc,
-           concat(report_field_desc, '-', fn_get_fieldtype(in_recon_code, report_field_name)) as reportparam_desc,
+          report_field_desc as reportparam_desc,
           display_order as reportparam_order
         FROM recon_mst_tsystemfield
         WHERE table_name = v_rpt_table_name

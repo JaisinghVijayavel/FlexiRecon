@@ -16,7 +16,7 @@ me:BEGIN
     Updated By : Vijayavel
     updated Date : 30-06-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_recon_code text default '';
@@ -29,6 +29,10 @@ me:BEGIN
 	declare v_tranbrkp_table text default '';
   declare v_ds_db_name text default '';
 	declare v_ds_unit_table text default 'DS276';
+
+  declare v_from_recon_code text default '';
+	declare v_from_tran_table text default '';
+	declare v_from_tranbrkp_table text default '';
 
   declare v_concurrent_ko_flag text default '';
 
@@ -103,6 +107,7 @@ me:BEGIN
     ref_tran_gid int not null,
     ref_tranbrkp_gid int not null,
     recon_code varchar(32),
+    from_recon_code varchar(32),
     entry_ref_no varchar(32),
     entry_value decimal(15,2) not null default 0,
     tran_gid int not null default 0,
@@ -253,11 +258,11 @@ me:BEGIN
   -- tran_gid,tranbrkp_gid validation
   insert into recon_tmp_treftxtgid
     (
-      ref_tran_gid,ref_tranbrkp_gid,recon_code,entry_ref_no,
+      ref_tran_gid,ref_tranbrkp_gid,recon_code,from_recon_code,entry_ref_no,
       entry_value,reftxt_tran_gid,reftxt_tranbrkp_gid
     )
     select
-      distinct ifnull(ref_tran_gid,0),ifnull(ref_tranbrkp_gid,0),recon_code,entry_ref_no,
+      distinct ifnull(ref_tran_gid,0),ifnull(ref_tranbrkp_gid,0),recon_code,from_recon_code,entry_ref_no,
       entry_value,cast(ref_tran_gid as nchar),cast(ref_tranbrkp_gid as nchar)
     from recon_trn_tiutentry
     where scheduler_gid = in_scheduler_gid
@@ -268,6 +273,7 @@ me:BEGIN
     inner join recon_tmp_treftxtgid as b on a.recon_code = b.recon_code
       and a.col1 = b.reftxt_tran_gid
       and a.col2 = b.reftxt_tranbrkp_gid
+			and a.col38 = b.from_recon_code 
       and a.col51 is null
     set b.valid_flag = 'Y',
         b.tran_gid = a.tran_gid,
@@ -280,6 +286,7 @@ me:BEGIN
 
   update recon_trn_tiutentry as a
   inner join recon_tmp_treftxtgid as b on a.ref_tran_gid = b.ref_tran_gid and a.ref_tranbrkp_gid = b.ref_tranbrkp_gid
+		and a.from_recon_code = b.from_recon_code 
     and b.valid_flag = 'N'
   set
     a.iutentry_status = 'F',
@@ -304,6 +311,7 @@ me:BEGIN
 
     update recon_trn_tiutentry as a
     inner join recon_tmp_treftxtgid as b on a.ref_tran_gid = b.ref_tran_gid and a.ref_tranbrkp_gid = b.ref_tranbrkp_gid
+			and a.from_recon_code = b.from_recon_code 
     set
       a.bill_no = b.bill_no,
       a.ipop_no = b.ipop_no,
@@ -408,6 +416,7 @@ me:BEGIN
 		set v_sql = concat("update ",v_tran_table," as a
 			inner join recon_tmp_treftxtgid as b on a.tran_gid = b.tran_gid
         and a.recon_code = b.recon_code
+				and a.col38 = b.from_recon_code 
 				and a.col1 = b.reftxt_tran_gid
 				and a.col2 = b.reftxt_tranbrkp_gid
         and b.valid_flag = 'Y'
@@ -420,45 +429,73 @@ me:BEGIN
 
 		call pr_run_sql2(v_sql,@msg,@result);
 
-    -- recon field
-    -- col22 - IUT Type/Flag
-    -- col23 - IUT Entry Value
-    -- col24 - Closing Balance Value
-    -- col25 - From Unit
-    -- col26 - To Unit
-    -- col27 - Entry Reference No
+		-- recon block
+		recon_block:begin
+			declare recon_done int default 0;
+			declare recon_cursor cursor for
+				select distinct from_recon_code from recon_tmp_treftxtgid
+					where valid_flag = 'Y';
+			declare continue handler for not found set recon_done=1;
 
-    -- update in pd tran table
-		set v_sql = concat("update ",v_tran_table," as a
-			inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
-				and (b.ref_tranbrkp_gid = '0' or b.ref_tranbrkp_gid is null)
-        and b.valid_flag = 'Y'
-			set a.col23 = cast(b.entry_value*-1 as nchar),
-          a.col22 = 'IUT - MANUAL',
-          a.col27 = b.entry_ref_no,
-          a.col24 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar),
-          a.col25 = b.from_unit,
-          a.col26 = b.to_unit
-			");
+			open recon_cursor;
 
-		call pr_run_sql2(v_sql,@msg,@result);
+			recon_loop: loop
+				fetch recon_cursor into v_from_recon_code;
+				if recon_done = 1 then leave recon_loop; end if;
 
-    -- update in pd tranbrkp table
-		set v_sql = concat("update ",v_tranbrkp_table," as a
-			inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
-				and a.tranbrkp_gid = b.ref_tranbrkp_gid
-        and b.valid_flag = 'Y'
-			set a.col23 = cast(b.entry_value*-1 as nchar),
-          a.col22 = 'IUT - MANUAL',
-          a.col27 = b.entry_ref_no,
-          a.col24 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar),
-          a.col25 = b.from_unit,
-          a.col26 = b.to_unit
-			");
+				if v_concurrent_ko_flag = 'Y' then
+					set v_from_tran_table = concat(v_from_recon_code,'_tran');
+					set v_from_tranbrkp_table = concat(v_from_recon_code,'_tranbrkp');
+				else
+					set v_from_tran_table = 'recon_trn_ttran';
+					set v_from_tranbrkp_table = 'recon_trn_ttranbrkp';
+				end if;
+				
+				-- recon field
+				-- col22 - IUT Type/Flag
+				-- col23 - IUT Entry Value
+				-- col24 - Closing Balance Value
+				-- col25 - From Unit
+				-- col26 - To Unit
+				-- col27 - Entry Reference No
 
-		call pr_run_sql2(v_sql,@msg,@result);
+				-- update in pd tran table
+				set v_sql = concat("update ",v_from_tran_table," as a
+					inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
+						and (b.ref_tranbrkp_gid = '0' or b.ref_tranbrkp_gid is null)
+						and b.from_recon_code = '",v_from_recon_code,"'
+						and b.valid_flag = 'Y'
+					set a.col23 = cast(b.entry_value*-1 as nchar),
+							a.col22 = 'IUT - MANUAL',
+							a.col27 = b.entry_ref_no,
+							a.col24 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar),
+							a.col25 = b.from_unit,
+							a.col26 = b.to_unit
+					");
 
-    -- update values
+				call pr_run_sql2(v_sql,@msg,@result);
+
+				-- update in pd tranbrkp table
+				set v_sql = concat("update ",v_from_tranbrkp_table," as a
+					inner join recon_tmp_treftxtgid as b on a.tran_gid = b.ref_tran_gid
+						and a.tranbrkp_gid = b.ref_tranbrkp_gid
+						and b.from_recon_code = '",v_from_recon_code,"'
+						and b.valid_flag = 'Y'
+					set a.col23 = cast(b.entry_value*-1 as nchar),
+							a.col22 = 'IUT - MANUAL',
+							a.col27 = b.entry_ref_no,
+							a.col24 = cast(cast(a.col37 as decimal(15,2))-b.entry_value*-1 as nchar),
+							a.col25 = b.from_unit,
+							a.col26 = b.to_unit
+					");
+
+				call pr_run_sql2(v_sql,@msg,@result);
+
+			end loop recon_loop;
+			close recon_cursor;
+		end recon_block;
+
+	-- update values
     update recon_trn_tiutentry set
       iutentry_status = 'C'
     where scheduler_gid = in_scheduler_gid
