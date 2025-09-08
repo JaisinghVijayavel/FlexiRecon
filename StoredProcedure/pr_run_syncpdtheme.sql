@@ -13,15 +13,20 @@ me:BEGIN
     Created Date : 06-06-2025
 
     Updated By : Vijayavel
-    updated Date :
+    updated Date : 03-09-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_sql text default '';
   declare v_tran_table text default '';
   declare v_tranbrkp_table text default '';
 
+  declare v_pdtran_table text default '';
+  declare v_pdtranbrkp_table text default '';
+  declare v_pdrecon_code text default '';
+
+  declare v_pdreconcode_field text default '';
   declare v_iuttheme_field text default '';
   declare v_noniuttheme_field text default '';
   declare v_iutflag_field text default '';
@@ -35,7 +40,6 @@ me:BEGIN
   declare v_entryflag_field text default '';
   declare v_entryrefno_field text default '';
 
-
   declare v_recon_iutflag_field text default '';
   declare v_recon_iutvalue_field text default '';
   declare v_recon_closingbalance_field text default '';
@@ -47,13 +51,18 @@ me:BEGIN
   declare v_recon_entryflag_field text default '';
   declare v_recon_entryrefno_field text default '';
 
-  /*
-    set v_tran_table = concat(in_recon_code,'_tran');
-    set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
-  */
+  declare v_concurrent_ko_flag text default '';
 
-  set v_tran_table = 'recon_trn_ttran';
-  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   select
     recon_field_name into v_iuttheme_field
@@ -63,6 +72,7 @@ me:BEGIN
   and active_status = 'Y'
   and delete_flag = 'N';
 
+  set v_pdreconcode_field = fn_get_reconfieldfromdesc(in_recon_code,'Recon Code_');
   set v_iuttheme_field = fn_get_reconfieldfromdesc(in_recon_code,'IUT Theme');
   set v_noniuttheme_field = fn_get_reconfieldfromdesc(in_recon_code,'Non IUT Theme');
   set v_iutvalue_field = fn_get_reconfieldfromdesc(in_recon_code,'IUT Value');
@@ -90,6 +100,7 @@ me:BEGIN
   create temporary table recon_tmp_tiuttheme(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
+    pdrecon_code varchar(32),
     iut_theme text,
     iut_flag text,
     noniut_theme text,
@@ -101,7 +112,8 @@ me:BEGIN
     entry_flag text,
     entry_ref_no text,
     action_tobe_taken text,
-    PRIMARY KEY (tran_gid,tranbrkp_gid)
+    PRIMARY KEY (pdrecon_code,tran_gid,tranbrkp_gid),
+    key idx_pdrecon_code(pdrecon_code)
   ) ENGINE = MyISAM;
 
   -- clear theme & iut related fields in recon table
@@ -205,13 +217,14 @@ me:BEGIN
   -- move iut theme in temp table
   set v_sql = concat("insert into recon_tmp_tiuttheme
     (
-      tran_gid,tranbrkp_gid,iut_theme,iut_flag,iut_value,closing_balance,
+      tran_gid,tranbrkp_gid,pdrecon_code,iut_theme,iut_flag,iut_value,closing_balance,
       from_unit,to_unit,iut_ref_no,entry_flag,entry_ref_no,action_tobe_taken
     )
     select z.* from (
     select
       cast(col1 as signed),
       cast(col2 as signed),
+      ",v_pdreconcode_field,",
       ",v_iuttheme_field,",
       ",v_iutflag_field,",
       ",v_iutvalue_field,",
@@ -233,12 +246,13 @@ me:BEGIN
   -- move noniut theme in temp table
   set v_sql = concat("insert ignore into recon_tmp_tiuttheme
     (
-      tran_gid,tranbrkp_gid,noniut_theme,iut_value,closing_balance,
+      tran_gid,tranbrkp_gid,pdrecon_code,noniut_theme,iut_value,closing_balance,
       from_unit,to_unit,iut_ref_no,entry_flag,entry_ref_no,action_tobe_taken
     )
     select
       cast(col1 as signed),
       cast(col2 as signed),
+      ",v_pdreconcode_field,",
       ",v_noniuttheme_field,",
       ",v_iutvalue_field,",
       ",v_closingbalance_field,",
@@ -256,93 +270,121 @@ me:BEGIN
 
   call pr_run_sql2(v_sql,@msg,@result);
 
-  -- sync iut theme in pd recon
-  set v_sql = concat("update ",v_tran_table," as a
-    inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
-      and b.tranbrkp_gid = 0
-      and b.iut_theme <> ''
-    set
-      a.theme_code = b.iut_theme,
-      a.tran_remark2 = b.iut_theme,
-      a.",v_recon_iutflag_field," = b.iut_flag,
-      a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance,
-      a.",v_recon_fromunit_field," = b.from_unit,
-      a.",v_recon_tounit_field," = b.to_unit,
-      /*
-      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
-      a.",v_recon_entryflag_field," = b.entry_flag,
-      a.",v_recon_entryrefno_field," = b.entry_ref_no,
-      */
-      a.",v_recon_iutrefno_field," = b.iut_ref_no
-    ");
+	-- pdrecon block
+	pdrecon_block:begin
+		declare pdrecon_done int default 0;
+		declare pdrecon_cursor cursor for
+			select distinct pdrecon_code from recon_tmp_tiuttheme;
+		declare continue handler for not found set pdrecon_done=1;
 
-  call pr_run_sql2(v_sql,@msg,@result);
+		open pdrecon_cursor;
 
-  -- sync iut theme in pd recon
-  set v_sql = concat("update ",v_tranbrkp_table," as a
-    inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
-      and b.tranbrkp_gid = a.tranbrkp_gid
-      and b.iut_theme <> ''
-    set
-      a.theme_code = b.iut_theme,
-      a.tran_remark2 = b.iut_theme,
-      a.",v_recon_iutflag_field," = b.iut_flag,
-      a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance,
-      a.",v_recon_fromunit_field," = b.from_unit,
-      a.",v_recon_tounit_field," = b.to_unit,
-      /*
-      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
-      a.",v_recon_entryflag_field," = b.entry_flag,
-      a.",v_recon_entryrefno_field," = b.entry_ref_no,
-      */
-      a.",v_recon_iutrefno_field," = b.iut_ref_no
-    ");
+		pdrecon_loop: loop
+			fetch pdrecon_cursor into v_pdrecon_code;
+			if pdrecon_done = 1 then leave pdrecon_loop; end if;
 
-  call pr_run_sql2(v_sql,@msg,@result);
+			if v_concurrent_ko_flag = 'Y' then
+				set v_pdtran_table = concat(v_pdrecon_code,'_tran');
+				set v_pdtranbrkp_table = concat(v_pdrecon_code,'_tranbrkp');
+			else
+				set v_pdtran_table = 'pdrecon_trn_ttran';
+				set v_pdtranbrkp_table = 'pdrecon_trn_ttranbrkp';
+			end if;
 
-  -- sync noniut theme in pd recon
-  set v_sql = concat("update ",v_tran_table," as a
-    inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
-      and b.tranbrkp_gid = 0
-      and b.noniut_theme <> ''
-    set
-      a.",v_recon_iutflag_field," = b.noniut_theme,
-      a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance,
-      a.",v_recon_fromunit_field," = b.from_unit,
-      a.",v_recon_tounit_field," = b.to_unit,
-      /*
-      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
-      a.",v_recon_entryflag_field," = b.entry_flag,
-      a.",v_recon_entryrefno_field," = b.entry_ref_no,
-      */
-      a.",v_recon_iutrefno_field," = b.iut_ref_no
-    ");
+			-- sync iut theme in pd recon
+			set v_sql = concat("update ",v_pdtran_table," as a
+				inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
+					and b.tranbrkp_gid = 0
+					and b.pdrecon_code = '",v_pdrecon_code,"'
+					and b.iut_theme <> ''
+				set
+					a.theme_code = b.iut_theme,
+					a.tran_remark2 = b.iut_theme,
+					a.",v_recon_iutflag_field," = b.iut_flag,
+					a.",v_recon_iutvalue_field," = b.iut_value,
+					a.",v_recon_closingbalance_field," = b.closing_balance,
+					a.",v_recon_fromunit_field," = b.from_unit,
+					a.",v_recon_tounit_field," = b.to_unit,
+					/*
+					a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+					a.",v_recon_entryflag_field," = b.entry_flag,
+					a.",v_recon_entryrefno_field," = b.entry_ref_no,
+					*/
+					a.",v_recon_iutrefno_field," = b.iut_ref_no
+				");
 
-  call pr_run_sql2(v_sql,@msg,@result);
+			call pr_run_sql2(v_sql,@msg,@result);
 
-  -- sync noniut theme in pd recon
-  set v_sql = concat("update ",v_tranbrkp_table," as a
-    inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
-      and b.tranbrkp_gid = a.tranbrkp_gid
-      and b.iut_flag <> ''
-    set
-      a.",v_recon_iutflag_field," = b.iut_flag,
-      a.",v_recon_iutvalue_field," = b.iut_value,
-      a.",v_recon_closingbalance_field," = b.closing_balance,
-      a.",v_recon_fromunit_field," = b.from_unit,
-      a.",v_recon_tounit_field," = b.to_unit,
-      /*
-      a.",v_recon_actiontaken_field," = b.action_tobe_taken,
-      a.",v_recon_entryflag_field," = b.entry_flag,
-      a.",v_recon_entryrefno_field," = b.entry_ref_no,
-      */
-      a.",v_recon_iutrefno_field," = b.iut_ref_no
-    ");
+			-- sync iut theme in pd recon
+			set v_sql = concat("update ",v_pdtranbrkp_table," as a
+				inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
+					and b.tranbrkp_gid = a.tranbrkp_gid
+					and b.pdrecon_code = '",v_pdrecon_code,"'
+					and b.iut_theme <> ''
+				set
+					a.theme_code = b.iut_theme,
+					a.tran_remark2 = b.iut_theme,
+					a.",v_recon_iutflag_field," = b.iut_flag,
+					a.",v_recon_iutvalue_field," = b.iut_value,
+					a.",v_recon_closingbalance_field," = b.closing_balance,
+					a.",v_recon_fromunit_field," = b.from_unit,
+					a.",v_recon_tounit_field," = b.to_unit,
+					/*
+					a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+					a.",v_recon_entryflag_field," = b.entry_flag,
+					a.",v_recon_entryrefno_field," = b.entry_ref_no,
+					*/
+					a.",v_recon_iutrefno_field," = b.iut_ref_no
+				");
 
-  call pr_run_sql2(v_sql,@msg,@result);
+			call pr_run_sql2(v_sql,@msg,@result);
+
+			-- sync noniut theme in pd recon
+			set v_sql = concat("update ",v_pdtran_table," as a
+				inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
+					and b.tranbrkp_gid = 0
+					and b.pdrecon_code = '",v_pdrecon_code,"'
+					and b.noniut_theme <> ''
+				set
+					a.",v_recon_iutflag_field," = b.noniut_theme,
+					a.",v_recon_iutvalue_field," = b.iut_value,
+					a.",v_recon_closingbalance_field," = b.closing_balance,
+					a.",v_recon_fromunit_field," = b.from_unit,
+					a.",v_recon_tounit_field," = b.to_unit,
+					/*
+					a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+					a.",v_recon_entryflag_field," = b.entry_flag,
+					a.",v_recon_entryrefno_field," = b.entry_ref_no,
+					*/
+					a.",v_recon_iutrefno_field," = b.iut_ref_no
+				");
+
+			call pr_run_sql2(v_sql,@msg,@result);
+
+			-- sync noniut theme in pd recon
+			set v_sql = concat("update ",v_pdtranbrkp_table," as a
+				inner join recon_tmp_tiuttheme as b on a.tran_gid = b.tran_gid
+					and b.tranbrkp_gid = a.tranbrkp_gid
+					and b.pdrecon_code = '",v_pdrecon_code,"'
+					and b.noniut_theme <> ''
+				set
+					a.",v_recon_iutflag_field," = b.iut_flag,
+					a.",v_recon_iutvalue_field," = b.iut_value,
+					a.",v_recon_closingbalance_field," = b.closing_balance,
+					a.",v_recon_fromunit_field," = b.from_unit,
+					a.",v_recon_tounit_field," = b.to_unit,
+					/*
+					a.",v_recon_actiontaken_field," = b.action_tobe_taken,
+					a.",v_recon_entryflag_field," = b.entry_flag,
+					a.",v_recon_entryrefno_field," = b.entry_ref_no,
+					*/
+					a.",v_recon_iutrefno_field," = b.iut_ref_no
+				");
+
+			call pr_run_sql2(v_sql,@msg,@result);
+		end loop pdrecon_loop;
+		close pdrecon_cursor;
+	end pdrecon_block;
 
   drop temporary table if exists recon_tmp_tiuttheme;
 
