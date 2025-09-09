@@ -4,7 +4,17 @@ drop trigger if exists trg_con_trn_tscheduler_after_update $$
 create trigger trg_con_trn_tscheduler_after_update after update on con_trn_tscheduler
 for each row
 begin
-	if New.scheduler_status = 'Completed' then
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 09-09-2025
+
+    Version : 1
+  */
+
+	if New.scheduler_status = 'Completed' or New.scheduler_status = 'Ratified' then
 		insert ignore into recon_trn_tscheduler
 		(
 			scheduler_gid,scheduler_status,insert_by,insert_date
