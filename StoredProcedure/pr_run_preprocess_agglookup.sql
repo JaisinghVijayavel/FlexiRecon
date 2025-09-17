@@ -468,7 +468,7 @@ me:BEGIN
         -- agg temporary tables
         drop temporary table if exists recon_tmp_t3tranagg;
 
-				create temporary table recon_tmp_t3tranagg select * from recon_tmp_t3datasetstru where 1 = 2;
+				create temporary table recon_tmp_t3tranagg select * from recon_tmp_tdatasetstru where 1 = 2;
 				alter table recon_tmp_t3tranagg ENGINE = MyISAM;
 				alter table recon_tmp_t3tranagg add agg_gid int not null primary key AUTO_INCREMENT FIRST;
 				create index idx_dataset_gid on recon_tmp_t3tranagg(dataset_gid);
@@ -543,7 +543,7 @@ me:BEGIN
           set v_sql = concat('update ',v_dataset_table,' ');
           set v_sql = concat(v_sql,'set col128 = null ');
           set v_sql = concat(v_sql,'where 1 = 1 ');
-          set v_sql = concat(v_sql,v_dataset_condition);
+          set v_sql = concat(v_sql,replace(v_dataset_condition,'a.',''));
 
           call pr_run_sql2(v_sql,@msg,@result);
         end if;

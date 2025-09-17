@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 21-08-2025
+    Updated Date : 17-09-2025
 
-    Version : 8
+    Version : 9
   */
 
   declare v_recon_version text default '';
@@ -287,11 +287,11 @@ me:BEGIN
       set v_lookup_agg_return_function = ifnull(v_lookup_agg_return_function,'');
       set v_recorderby_type = ifnull(v_recorderby_type,'asc');
 
-      if v_dataset_db_name <> '' then
-        set v_lookup_dataset_code = concat(v_dataset_db_name,'.',v_lookup_dataset_code);
-      end if;
-
       set v_lookup_table = v_lookup_dataset_code;
+
+      if v_dataset_db_name <> '' then
+        set v_lookup_table = concat(v_dataset_db_name,'.',v_lookup_dataset_code);
+      end if;
 
       if in_postprocess_flag = 'Y' then
         call pr_upd_job(in_job_gid,'P',concat('Applying Postprocess - ',v_preprocess_desc),@msg,@result);
@@ -623,10 +623,10 @@ me:BEGIN
 
               if substr(v_index_field,1,3) = 'col' then
                 set v_sql = concat('create index idx_',v_index_field,' on ',
-                                 v_lookup_dataset_code,'(',v_index_field,'(255))');
+                                 v_lookup_table,'(',v_index_field,'(255))');
               else
                 set v_sql = concat('create index idx_',v_index_field,' on ',
-                                 v_lookup_dataset_code,'(',v_index_field,')');
+                                 v_lookup_table,'(',v_index_field,')');
               end if;
 
               call pr_run_sql(v_sql,@msg,@result);
@@ -702,7 +702,7 @@ me:BEGIN
 					set v_sql = concat(v_sql,v_lookup_grp_field,',',v_lookup_return_field,') ');
 					set v_sql = concat(v_sql,'select ',v_lookup_grp_field,',');
 					set v_sql = concat(v_sql,'replace(group_concat(distinct cast(',v_lookup_return_field,' as nchar)),'','','';'')     ');
-					set v_sql = concat(v_sql,'from ',v_lookup_dataset_code,' ');
+					set v_sql = concat(v_sql,'from ',v_lookup_table,' ');
 					set v_sql = concat(v_sql,'where ',v_lookup_return_field,' <> '''' ');
           set v_sql = concat(v_sql,replace(v_lookup_filter,'b.',''));
 					set v_sql = concat(v_sql,'and delete_flag = ''N'' ');
@@ -797,7 +797,7 @@ me:BEGIN
             set v_process_function = fn_get_expressionformat_ds(v_lookup_dataset_code,v_set_lookup_field,
                                                                 v_process_expression,false,'');
 
-						set v_sql = concat('update ',v_lookup_dataset_code,' set ');
+						set v_sql = concat('update ',v_lookup_table,' set ');
 						set v_sql = concat(v_sql,v_set_lookup_field,' = ',v_process_function,' ');
 						set v_sql = concat(v_sql,'where true ');
 						set v_sql = concat(v_sql,v_lookup_filter);

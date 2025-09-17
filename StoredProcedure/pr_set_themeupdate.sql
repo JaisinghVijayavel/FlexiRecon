@@ -16,9 +16,9 @@ me:begin
     Created Date : 26-03-2024
 
     Updated By : Vijayavel
-    Updated Date : 21-08-2025
+    Updated Date : 11-09-2025
 
-    Version : 6
+    Version : 7
   */
 
   declare v_recon_code text default '';
@@ -107,10 +107,9 @@ me:begin
         -- insert recon theme
         insert into recon_tmp_t1theme(recon_code,theme_desc)
         select
-          v_recon_code,master_name
-        from recon_mst_tmaster
-        where parent_master_syscode = 'QCD_THEME'
-        and depend_parent_master_syscode = v_recon_code
+          v_recon_code,manualtheme_desc
+        from recon_mst_tmanualtheme
+        where recon_code = v_recon_code
         and active_status = 'Y'
         and delete_flag = 'N';
 
