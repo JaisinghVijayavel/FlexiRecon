@@ -717,7 +717,7 @@ me:BEGIN
             truncate recon_tmp_t3value;
 
 
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,tranbrkp_gid,matched_count,matched_value,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,tranbrkp_gid,matched_count,matched_value,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.tranbrkp_gid,m.matched_count,m.matched_value,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,b.tranbrkp_gid,a.excp_value,a.tran_mult,b.scheduler_gid,1 as matched_count,a.excp_value as matched_value ');
             set v_match_sql = concat(v_match_sql,'from recon_tmp_t3source as a ');
@@ -754,7 +754,7 @@ me:BEGIN
             -- get target addtional group field
             select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfieldhistory
             where rule_code = v_rule_code
-            and recon_version = v_recon_version 
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N';
 
@@ -765,7 +765,7 @@ me:BEGIN
             end if;
 
             -- match the record(s) added scheduler_gid
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,a.excp_value,a.excp_mult_value,a.tran_mult,b.scheduler_gid,count(*) as matched_count,a.excp_value as matched_value,');
 
@@ -836,7 +836,7 @@ me:BEGIN
             where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t3tranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
 
             -- match the record(s) removed scheduler_gid
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,a.excp_value,a.excp_mult_value,a.tran_mult,0 as scheduler_gid,count(*) as matched_count,a.excp_value as matched_value,');
 
@@ -907,7 +907,7 @@ me:BEGIN
             truncate recon_tmp_t3tranbrkpgid;
 
             -- one to one match
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,a.excp_value,a.excp_mult_value,a.tran_mult,b.scheduler_gid,count(*) as matched_count,a.excp_value as matched_value,');
 

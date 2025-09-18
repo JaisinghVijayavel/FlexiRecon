@@ -15,12 +15,12 @@ CREATE PROCEDURE `pr_run_preprocess_agg`(
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 22-08-2025
+    Created Date : 18-09-2025
 
     Updated By : Vijayavel
     Updated Date :
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_version text default '';
@@ -280,6 +280,22 @@ me:BEGIN
       set v_agg_flag = ifnull(v_agg_flag,'N');
       set v_group_flag = ifnull(v_group_flag,'N');
 
+      if v_cumulative_flag = '' then
+        set v_cumulative_flag = 'N';
+      end if;
+
+      if v_opening_flag = '' then
+        set v_opening_flag = 'N';
+      end if;
+
+      if v_agg_flag = '' then
+        set v_agg_flag = 'N';
+      end if;
+
+      if v_group_flag = '' then
+        set v_group_flag = 'N';
+      end if;
+
       set v_lookup_dataset_code = ifnull(v_lookup_dataset_code,'');
       set v_lookup_return_field = ifnull(v_lookup_return_field,'');
       set v_lookup_group_flag = ifnull(v_lookup_group_flag,'N');
@@ -368,7 +384,6 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-            if v_process_method = 'L' then
               if v_filter_applied_on = 'LOOKUP' then
                 set v_filter_field = concat('b.',v_filter_field);
                 set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
@@ -386,11 +401,6 @@ me:BEGIN
                   set v_filter_value = fn_get_reconfieldnamecast(in_recon_code,v_filter_value);
                 end if;
               end if;
-            elseif v_process_method = 'A' then
-              set v_filter_field = concat('a.',v_filter_field);
-              set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
-              -- set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
-            end if;
 
             if v_filter_applied_on = 'LOOKUP' then
               set v_lookup_filter = concat(v_lookup_filter,
@@ -405,7 +415,6 @@ me:BEGIN
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
             end if;
-
 					end loop filter_loop;
 
 					close filter_cursor;

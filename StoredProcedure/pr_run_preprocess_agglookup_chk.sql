@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_preprocess_agglookup` $$
-CREATE PROCEDURE `pr_run_preprocess_agglookup`(
+DROP PROCEDURE IF EXISTS `pr_run_preprocess_agglookup_chk` $$
+CREATE PROCEDURE `pr_run_preprocess_agglookup_chk`(
   in in_recon_code text,
   in in_preprocess_code varchar(32),
   in in_job_gid int,
@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 18-09-2025
+    Updated Date : 21-08-2025
 
-    Version : 4
+    Version : 3
   */
 
   declare v_recon_version text default '';
@@ -350,15 +350,17 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-            if v_filter_applied_on = 'LOOKUP' then
-              set v_filter_field = concat('a.',v_filter_field);
-              set v_filter_field = fn_get_dsfieldnamecast(v_dataset_code,v_filter_field);
+            if v_process_method = 'LA' then
+              if v_filter_applied_on = 'LOOKUP' then
+                set v_filter_field = concat('a.',v_filter_field);
+                set v_filter_field = fn_get_dsfieldnamecast(v_dataset_code,v_filter_field);
 
-              set v_lookup_filter = concat(v_lookup_filter,
+                set v_lookup_filter = concat(v_lookup_filter,
                                              v_open_parentheses_flag,
                                              fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
+              end if;
             end if;
 					end loop filter_loop;
 
@@ -518,6 +520,8 @@ me:BEGIN
 
         -- select * from recon_tmp_t3tranagg;
 
+        select v_cumulative_flag,v_group_flag;
+
         if v_cumulative_flag = 'Y' and v_group_flag = 'N' then
           -- col128 - Agg Value
           set v_cumulative_expression = fn_get_expressionformat_ds(v_dataset_code,
@@ -530,8 +534,12 @@ me:BEGIN
 					set v_sql = concat(v_sql,v_set_dataset_field,' = ',v_cumulative_expression,' ');
 					set v_sql = concat(v_sql,'order by agg_gid ');
 
+          select v_cumulative_expression,v_sql;
+
           call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
 					call pr_run_sql2(v_sql,@msg,@result);
+
+          select * from recon_tmp_t3tranagg limit 100;
         end if;
 
         if v_opening_flag = 'Y' and v_group_flag = 'N' then
@@ -572,6 +580,10 @@ me:BEGIN
         set v_sql = concat(v_sql,v_dataset_condition);
 
         call pr_run_sql2(v_sql,@msg,@result);
+
+
+        select v_sql;
+        select * from recon_tmp_t3tranagg limit 100;
 
         -- update group_flag and opening_flag set cases and agg_flag = 'N' cases
         if v_group_flag = 'Y' and v_agg_flag = 'N' and
