@@ -14,7 +14,18 @@ CREATE PROCEDURE `pr_run_posttranbrkprulechk`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 20-08-2025
+
+    Version : 1
+  */
+
   declare v_recon_name text default '';
+  declare v_recon_version text default '';
   declare v_recontype_code varchar(32);
 
   declare v_source_head_sql text default '';
@@ -120,6 +131,8 @@ me:BEGIN
 	declare v_tran_table text default '';
 	declare v_tranbrkp_table text default '';
 
+  declare v_concurrent_ko_flag text default '';
+
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
 
@@ -129,8 +142,16 @@ me:BEGIN
 	set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
   */
 
-	set v_tran_table = concat('recon_trn_ttran');
-	set v_tranbrkp_table = concat('recon_trn_ttranbrkp');
+  -- concurrent KO flag
+  set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  if v_concurrent_ko_flag = 'Y' then
+	  set v_tran_table = concat(in_recon_code,'_tran');
+	  set v_tranbrkp_table = concat(in_recon_code,'_tranbrkp');
+  else
+	  set v_tran_table = 'recon_trn_ttran';
+	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
+  end if;
 
   if in_automatch_flag = 'Y' then
     set v_system_matchoff = 'Y';
@@ -150,14 +171,15 @@ me:BEGIN
     leave me;
   else
     select
-      recon_name,recontype_code
+      recon_name,recon_rule_version,recontype_code
     into
-      v_recon_name,v_recontype_code
+      v_recon_name,v_recon_version,v_recontype_code
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
 
     set v_recon_name = ifnull(v_recon_name,'');
+    set v_recon_version = ifnull(v_recon_version,'');
     set v_recontype_code = ifnull(v_recontype_code,'');
   end if;
 
@@ -185,10 +207,7 @@ me:BEGIN
   insert into recon_tmp_t3index select 'recon_tmp_t3source','idx_tran_date','Y';
   insert into recon_tmp_t3index select 'recon_tmp_t3comparison','idx_tran_date','Y';
 
-  drop table if exists recon_tmp_t3match;
-  drop table if exists recon_tmp_t3matchdtl;
-
-  CREATE /*temporary*/ TABLE recon_tmp_t3match(
+  CREATE temporary TABLE recon_tmp_t3match(
     tran_gid int(10) unsigned NOT NULL,
     tranbrkp_gid int(10) unsigned not null default 0,
     matched_count int not null default 0,
@@ -199,7 +218,7 @@ me:BEGIN
     key idx_tranbrkp_gid(tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  CREATE /*temporary*/ TABLE recon_tmp_t3matchdtl(
+  CREATE temporary TABLE recon_tmp_t3matchdtl(
     tran_gid int(10) unsigned NOT NULL,
     tranbrkp_gid int(10) unsigned NOT NULL,
     excp_value double(15,2) not null default 0,
@@ -269,9 +288,10 @@ me:BEGIN
         a.comparison_acc_mode,
         a.group_flag,
         a.group_method_flag
-      from recon_mst_trule as a
+      from recon_mst_trulehistory as a
       where a.recon_code = in_recon_code
-      and a.rule_code = in_rule_code 
+      and a.recon_version = v_recon_version
+      and a.rule_code = in_rule_code
       and a.period_from <= curdate()
       and (a.until_active_flag = 'Y'
       or a.period_to >= curdate())
@@ -360,11 +380,12 @@ me:BEGIN
               filter_applied_on,filter_field,filter_criteria,add_filter,ident_criteria,
               ident_value_flag,ident_value,
               open_parentheses_flag,close_parentheses_flag,join_condition
-            from recon_mst_truleselefilter
+            from recon_mst_truleselefilterhistory
             where rule_code = v_rule_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
-            order by filter_applied_on,ruleselefilter_seqno,ruleselefilter_gid;
+            order by filter_applied_on,ruleselefilter_seqno;
 
             declare continue handler for not found set basefilter_done=1;
 
@@ -381,6 +402,7 @@ me:BEGIN
                                     v_join_condition;
               if basefilter_done = 1 then leave basefilter_loop; end if;
 
+              set v_filter_field = ifnull(v_filter_field,'');
               set v_ident_value_flag = ifnull(v_ident_value_flag,'Y');
               set v_ident_value = ifnull(v_ident_value,'');
 
@@ -390,6 +412,11 @@ me:BEGIN
 
               if v_join_condition = '' then
                 set v_join_condition = 'and';
+              end if;
+
+              if v_filter_field = '' then
+                set v_ident_value_flag = '';
+                set v_ident_value = '';
               end if;
 
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
@@ -455,11 +482,12 @@ me:BEGIN
               a.comparison_field,a.comparison_criteria,a.comparison_filter,
               a.open_parentheses_flag,a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_trulecondition as a
+            from recon_mst_truleconditionhistory as a
             where a.rule_code = v_rule_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
-            order by rulecondition_seqno,rulecondition_gid;
+            order by rulecondition_seqno;
 
             declare continue handler for not found set rule_done=1;
 
@@ -557,7 +585,8 @@ me:BEGIN
               if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_source_field <> 'a.tran_date' then
 
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
@@ -575,7 +604,8 @@ me:BEGIN
               if (instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_comparison_field <> 'b.tran_date' then
 
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
@@ -641,6 +671,7 @@ me:BEGIN
           set v_source_sql = concat(v_source_sql,' and delete_flag = ',char(39),'N',char(39));
           set v_source_sql = concat(v_source_sql,' ',v_source_condition,' ',v_sourcebase_filter);
 
+          select v_source_sql;
           call pr_run_sql(v_source_sql,@result,@msg);
 
           set v_comparison_sql = concat(v_comparison_head_sql,' and tran_date >= ',char(39),in_period_from,char(39));
@@ -653,9 +684,8 @@ me:BEGIN
           set v_comparison_sql = concat(v_comparison_sql,' and delete_flag = ',char(39),'N',char(39));
           set v_comparison_sql = concat(v_comparison_sql,' ',v_comparison_condition,' ',v_comparisonbase_filter);
 
-          call pr_run_sql(v_comparison_sql,@result,@msg);
-
           select v_comparison_sql;
+          call pr_run_sql(v_comparison_sql,@result,@msg);
 
           sql_block:begin
             declare sql_done int default 0;
@@ -687,7 +717,7 @@ me:BEGIN
             truncate recon_tmp_t3value;
 
 
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,tranbrkp_gid,matched_count,matched_value,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,tranbrkp_gid,matched_count,matched_value,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.tranbrkp_gid,m.matched_count,m.matched_value,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,b.tranbrkp_gid,a.excp_value,a.tran_mult,b.scheduler_gid,1 as matched_count,a.excp_value as matched_value ');
             set v_match_sql = concat(v_match_sql,'from recon_tmp_t3source as a ');
@@ -722,8 +752,9 @@ me:BEGIN
             call pr_run_sql(v_sql,@msg,@result);
           else
             -- get target addtional group field
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfield
+            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfieldhistory
             where rule_code = v_rule_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N';
 
@@ -734,7 +765,7 @@ me:BEGIN
             end if;
 
             -- match the record(s) added scheduler_gid
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,a.excp_value,a.excp_mult_value,a.tran_mult,b.scheduler_gid,count(*) as matched_count,a.excp_value as matched_value,');
 
@@ -772,6 +803,7 @@ me:BEGIN
             call pr_run_sql(v_match_sql,@msg,@result);
 
             select v_match_sql;
+            leave me;
 
             -- remove the matched tran_gid from the source
             truncate recon_tmp_t3trangid;
@@ -804,7 +836,7 @@ me:BEGIN
             where a.tranbrkp_gid in (select b.tranbrkp_gid from recon_tmp_t3tranbrkpgid as b where a.tranbrkp_gid = b.tranbrkp_gid);
 
             -- match the record(s) removed scheduler_gid
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,a.excp_value,a.excp_mult_value,a.tran_mult,0 as scheduler_gid,count(*) as matched_count,a.excp_value as matched_value,');
 
@@ -839,8 +871,6 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'and a.excp_mult_value = sum(b.excp_mult_value)) as m');
 
             call pr_run_sql(v_match_sql,@msg,@result);
-
-            select v_match_sql;
 
             -- remove the matched tran_gid from the source
             truncate recon_tmp_t3trangid;
@@ -877,7 +907,7 @@ me:BEGIN
             truncate recon_tmp_t3tranbrkpgid;
 
             -- one to one match
-            set v_match_sql = 'insert into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t3match (tran_gid,matched_count,matched_value,matched_json,scheduler_gid) ';
             set v_match_sql = concat(v_match_sql,'select m.tran_gid,m.matched_count,m.matched_value,m.matched_json,m.scheduler_gid from (');
             set v_match_sql = concat(v_match_sql,'select a.tran_gid,a.excp_value,a.excp_mult_value,a.tran_mult,b.scheduler_gid,count(*) as matched_count,a.excp_value as matched_value,');
 
@@ -963,8 +993,6 @@ me:BEGIN
 
           truncate recon_tmp_t3trangid;
           truncate recon_tmp_t3tranbrkpgid;
-
-          leave me;
 
           if in_automatch_flag = 'Y' then
 						set v_sql = concat("

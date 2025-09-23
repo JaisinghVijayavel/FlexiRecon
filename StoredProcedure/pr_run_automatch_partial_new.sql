@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 20-08-2025
+    updated Date : 23-09-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -2092,7 +2092,7 @@ me:BEGIN
 						call pr_run_sql(v_match_sql,@msg,@result);
 
 						-- insert in match table
-						set v_match_sql = 'insert into recon_tmp_t5match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+						set v_match_sql = 'insert ignore into recon_tmp_t5match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'M',char(39),',');
 						set v_match_sql = concat(v_match_sql,'max(tran_gid),max(tranbrkp_gid),sum(matched_count)+count(*) as matched_count,');
 						set v_match_sql = concat(v_match_sql,'comparison_value as matched_value,tran_mult,');
@@ -2185,7 +2185,7 @@ me:BEGIN
 
 					-- one to many match
 					 if v_group_flag = 'Y' and v_manytomany_match_flag = 'N' then
-            set v_match_sql = 'insert into recon_tmp_t5match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
+            set v_match_sql = 'insert ignore into recon_tmp_t5match (group_flag,tran_gid,tranbrkp_gid,matched_count,matched_value,tran_mult,matched_json) ';
             set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
             set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,');
 
@@ -2313,7 +2313,7 @@ me:BEGIN
 
 					-- one to one match
           if v_manytomany_match_flag = 'N' then
-						set v_match_sql = 'insert into recon_tmp_t5match (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,matched_value,matched_json) ';
+						set v_match_sql = 'insert ignore into recon_tmp_t5match (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,matched_value,matched_json) ';
 						set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
 						set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,');
 

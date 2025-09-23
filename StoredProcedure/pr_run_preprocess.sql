@@ -583,18 +583,18 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
+            set v_lookup_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_lookup_field);
+
             if v_source_field_type = 'RECON' then
               set v_recon_field = fn_get_reconfieldnamecast(in_recon_code,v_recon_field);
 
               set v_recon_field_format = fn_get_fieldfilterformat(v_recon_field,v_extraction_criteria,0);
 
               set v_build_condition = concat(v_open_parentheses_flag,
-                                           fn_get_comparisoncondition(in_recon_code,v_recon_field_format,v_lookup_field,v_comparison_criteria,0),
+                                           fn_get_comparisoncondition_ds(in_recon_code,v_recon_field_format,v_lookup_dataset_code,v_lookup_field,v_comparison_criteria,0),
                                            v_close_parentheses_flag,' ',
                                            v_join_condition);
             else
-              set v_lookup_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_lookup_field);
-
               set v_lookup_field_format = fn_get_fieldfilterformat(v_lookup_field,v_extraction_criteria,0);
 
               set v_build_condition = concat(v_open_parentheses_flag,
