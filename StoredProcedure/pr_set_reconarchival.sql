@@ -62,6 +62,17 @@ begin
   declare v_recon_name text default '';
   declare v_recon_version text default '';
 
+  declare v_lookup_filter text default '';
+
+  declare v_filter_field text default '';
+  declare v_filter_criteria text default '';
+  declare v_filter_value_flag text default '';
+  declare v_filter_value text default '';
+
+  declare v_open_parentheses_flag text default '';
+  declare v_close_parentheses_flag text default '';
+  declare v_join_condition text default '';
+
   declare v_job_gid int default 0;
 
   -- recon validation
@@ -244,19 +255,6 @@ begin
 
   call pr_run_sql2(v_sql,@msg,@result);
 
-  -- tranko table
-  call pr_upd_job(v_job_gid,'P','Archiving tranko table...',@msg,@result);
-
-  set v_table = concat(v_table_prefix,'_tranko');
-
-  set v_sql = concat("insert into ",v_table,"
-    select z.* from (
-    select * from ",v_tranko_table,"
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
-
-  call pr_run_sql2(v_sql,@msg,@result);
-
   -- tranbrkp table
   call pr_upd_job(v_job_gid,'P','Archiving tranbrkp table...',@msg,@result);
 
@@ -265,6 +263,20 @@ begin
   set v_sql = concat("insert into ",v_table,"
     select z.* from (
     select * from ",v_tranbrkp_table,"
+    where recon_code = '",in_recon_code,"'
+    and delete_flag = 'N' LOCK IN SHARE MODE) as z");
+
+  call pr_run_sql2(v_sql,@msg,@result);
+
+  /*
+  -- tranko table
+  call pr_upd_job(v_job_gid,'P','Archiving tranko table...',@msg,@result);
+
+  set v_table = concat(v_table_prefix,'_tranko');
+
+  set v_sql = concat("insert into ",v_table,"
+    select z.* from (
+    select * from ",v_tranko_table,"
     where recon_code = '",in_recon_code,"'
     and delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
@@ -326,6 +338,7 @@ begin
     and a.delete_flag = 'N' LOCK IN SHARE MODE) as z");
 
   call pr_run_sql2(v_sql,@msg,@result);
+  */
 
   -- get dataset db name
   set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
@@ -367,6 +380,89 @@ begin
       -- create dataset table
       set v_sql = concat("create table ",v_table," like ",v_dataset_table);
       call pr_run_sql2(v_sql,@msg,@result);
+
+        -- filter condition
+        set v_lookup_filter = ' and (';
+
+				-- filter block
+				filter_block:begin
+					declare filter_done int default 0;
+
+					declare filter_cursor cursor for
+					  select
+              filter_applied_on,
+              filter_field,
+              filter_criteria,
+              filter_value_flag,
+              filter_value,
+              open_parentheses_flag,
+              close_parentheses_flag,
+              join_condition
+            from recon_mst_tarchivaldatasetfilter
+            where dataset_code = v_dataset_code
+            and recon_code = v_recon_code
+            and filter_applied_on = 'LOOKUP'
+            and active_status = 'Y'
+            and delete_flag = 'N'
+            order by filter_seqno;
+
+					declare continue handler for not found set filter_done=1;
+
+					open filter_cursor;
+
+					filter_loop: loop
+						fetch filter_cursor into
+              v_filter_applied_on,
+              v_filter_field,
+              v_filter_criteria,
+              v_filter_value_flag,
+              v_filter_value,
+              v_open_parentheses_flag,
+              v_close_parentheses_flag,
+              v_join_condition;
+
+						if filter_done = 1 then leave filter_loop; end if;
+
+            set v_filter_field = ifnull(v_filter_field,'');
+            set v_filter_criteria = ifnull(v_filter_criteria,'');
+
+            set v_filter_value_flag = ifnull(v_filter_value_flag,'Y');
+            set v_filter_value = ifnull(v_filter_value,'');
+
+            if v_filter_value_flag = 'Y' then
+              set v_filter_value = fn_get_filtervalue(v_dataset_code,v_filter_value,'');
+            end if;
+
+            set v_open_parentheses_flag = ifnull(v_open_parentheses_flag,'');
+            set v_close_parentheses_flag = ifnull(v_close_parentheses_flag,'');
+            set v_join_condition = ifnull(v_join_condition,'');
+
+            if v_join_condition = '' then
+              set v_join_condition = 'and';
+            end if;
+
+            if v_filter_field = '' then
+              set v_filter_value_flag = '';
+              set v_filter_value = '';
+            end if;
+
+            set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
+            set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
+
+            set v_filter_field = concat('a.',v_filter_field);
+            set v_filter_field = fn_get_dsfieldnamecast(v_dataset_code,v_filter_field);
+
+            set v_lookup_filter = concat(v_lookup_filter,
+                                             v_open_parentheses_flag,
+                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                             v_close_parentheses_flag,' ',
+                                             v_join_condition,' ');
+					end loop filter_loop;
+
+					close filter_cursor;
+				end filter_block;
+
+        set v_lookup_filter = concat(v_lookup_filter,' 1 = 1) ');
 
       -- transfer dataset data
       set v_sql = concat("insert into ",v_table,"

@@ -766,6 +766,7 @@ me:BEGIN
 
 						call pr_run_sql('set @sno := 0',@msg,@result);
 
+            select v_sql;
 						call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
 						call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
 					end loop reconexp_loop;

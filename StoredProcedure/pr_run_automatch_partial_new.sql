@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 23-09-2025
+    updated Date : 07-10-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -63,10 +63,12 @@ me:BEGIN
   declare v_comparison_dataset_type varchar(32) default '';
 
   declare v_source_field varchar(128) default '';
+  declare v_source_field_type varchar(128) default '';
   declare v_source_field_format text default '';
   declare v_extraction_criteria varchar(255) default '';
   declare v_extraction_filter int default 0;
   declare v_comparison_field varchar(128) default '';
+  declare v_comparison_field_type varchar(128) default '';
   declare v_comparison_criteria varchar(255) default '';
   declare v_group_field text default '';
   declare v_group_condition text default '';
@@ -743,8 +745,12 @@ me:BEGIN
         if v_comparison_acc_mode = 'B' then
           set v_group_method_flag = 'B';
 
-          if v_source_acc_mode = 'C' then
-            set v_comparison_acc_mode = 'D';
+          if v_source_acc_mode <> 'B' then
+            if v_source_acc_mode = 'C' then
+              set v_comparison_acc_mode = 'D';
+            else
+              set v_comparison_acc_mode = 'C';
+            end if;
           else
             set v_comparison_acc_mode = 'C';
           end if;
@@ -1077,6 +1083,9 @@ me:BEGIN
               set v_source_field_org_type = fn_get_fieldorgtype(in_recon_code,v_source_field);
               set v_comparison_field_org_type = fn_get_fieldorgtype(in_recon_code,v_comparison_field);
 
+              set v_source_field_type = fn_get_reconfieldtype(in_recon_code,v_source_field);
+              set v_comparison_field_type = fn_get_reconfieldtype(in_recon_code,v_comparison_field);
+
               set v_source_field = ifnull(v_source_field,'');
               set v_extraction_criteria = ifnull(v_extraction_criteria,'');
               set v_extraction_filter = ifnull(v_extraction_filter,0);
@@ -1125,7 +1134,8 @@ me:BEGIN
               if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_source_field_type <> 'DATE' and v_source_field_type <> 'DATETIME' then
 
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
@@ -1144,7 +1154,8 @@ me:BEGIN
               if (instr(v_comparison_criteria,'$FIELD$') > 0 or v_comparison_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
-                and v_close_parentheses_flag <> ')' then
+                and v_close_parentheses_flag <> ')'
+                and v_comparison_field_type <> 'DATE' and v_comparison_field_type <> 'DATETIME' then
 
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
@@ -1159,15 +1170,30 @@ me:BEGIN
                 set v_sql = '';
                 set v_sql = concat(v_sql,'update recon_tmp_t5comparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
-                set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_source_acc_mode,char(39),' ');
 
-                insert into recon_tmp_t5sql(table_type,tran_acc_mode,sql_query) values ('C',v_source_acc_mode,v_sql);
+                if v_source_acc_mode <> 'B' then
+                  set v_acc_mode = v_source_acc_mode;
+                else
+                  if v_comparison_acc_mode = 'D' then
+                    set v_acc_mode = 'C';
+                  else
+                    set v_acc_mode = 'D';
+                  end if;
+                end if;
+
+                set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_acc_mode,char(39),' ');
+
+                insert into recon_tmp_t5sql(table_type,tran_acc_mode,sql_query) values ('C',v_acc_mode,v_sql);
 
                 set v_comparison_criteria = 'EXACT';
                 set v_comparison_filter = 0;
               end if;
 
-              set v_source_field_format = fn_get_fieldfilterformat(v_source_field,v_extraction_criteria,v_extraction_filter);
+              set v_source_field_format = fn_get_reconfieldnamecast(in_recon_code,v_source_field);
+              set v_source_field_format = fn_get_fieldfilterformat(v_source_field_format,v_extraction_criteria,v_extraction_filter);
+
+              set v_source_field_format = fn_get_fieldfilterformat(v_source_field_format,v_extraction_criteria,v_extraction_filter);
+
               set v_build_condition = concat(v_open_parentheses_flag,
                                              fn_get_comparisoncondition(in_recon_code,v_source_field_format,v_comparison_field,v_comparison_criteria,v_comparison_filter),
                                              v_close_parentheses_flag,' ',
@@ -1227,7 +1253,9 @@ me:BEGIN
           set v_source_sql = v_source_head_sql;
 
           if v_recontype_code <> 'N' then
-            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            if v_source_acc_mode <> 'B' then
+              set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -1257,7 +1285,9 @@ me:BEGIN
           set v_source_sql = v_source_headbrkp_sql;
 
           if v_recontype_code <> 'N' then
-            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            if v_source_acc_mode <> 'B' then
+              set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -1392,8 +1422,18 @@ me:BEGIN
               -- comparison from tran table
               set v_comparison_sql = v_comparison_head_sql;
 
+              set v_acc_mode = v_source_acc_mode;
+
               if v_recontype_code <> 'N' then
-                set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+                if v_source_acc_mode = 'B' then
+                  if v_comparison_acc_mode = 'D' then
+                    set v_acc_mode = 'C';
+                  else
+                    set v_acc_mode = 'D';
+                  end if;
+                end if;
+
+                set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_acc_mode,char(39));
               end if;
 
               if v_recon_date_flag = 'Y' then
@@ -1415,13 +1455,13 @@ me:BEGIN
               call pr_run_sql(v_comparison_sql,@result,@msg);
 
               update recon_tmp_t5comparison set excp_value = (excp_value - roundoff_value * tran_mult)
-              where tran_acc_mode = v_source_acc_mode;
+              where tran_acc_mode = v_acc_mode;
 
               -- comparison from tranbrkp table
               set v_comparison_sql = v_comparison_headbrkp_sql;
 
               if v_recontype_code <> 'N' then
-                set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+                set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_acc_mode,char(39));
               end if;
 
               if v_recon_date_flag = 'Y' then
@@ -1447,7 +1487,7 @@ me:BEGIN
                 declare sql_done2 int default 0;
                 declare sql_cursor2 cursor for
                 select sql_query from recon_tmp_t5sql
-                   where table_type = 'C' and tran_acc_mode = v_source_acc_mode;
+                   where table_type = 'C' and tran_acc_mode = v_acc_mode;
                 declare continue handler for not found set sql_done2=1;
 
                 open sql_cursor2;
@@ -1489,7 +1529,9 @@ me:BEGIN
           set v_trangid_sql = concat(v_trangid_sql,' where 1 = 1 ');
 
           if v_recontype_code <> 'N' then
-            set v_trangid_sql = concat(v_trangid_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            if v_source_acc_mode <> 'B' then
+              set v_trangid_sql = concat(v_trangid_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -1519,7 +1561,9 @@ me:BEGIN
           set v_trangid_sql = concat(v_trangid_sql,' where 1 = 1 ');
 
           if v_recontype_code <> 'N' then
-            set v_trangid_sql = concat(v_trangid_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            if v_source_acc_mode <> 'B' then
+              set v_trangid_sql = concat(v_trangid_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -1790,6 +1834,24 @@ me:BEGIN
           set a.match_flag = 'Y';
           */
 
+          -- get target addtional group field
+          if v_group_flag = 'Y' then
+            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfield
+            where rule_code = v_rule_code
+            and active_status = 'Y'
+            and delete_flag = 'N';
+
+            set v_grp_field = ifnull(v_grp_field,'');
+
+            if v_grp_field <> '' then
+              if v_rule_groupby <> '' then
+                set v_rule_groupby = concat(v_rule_groupby,',',v_grp_field);
+              else
+                set v_rule_groupby = v_grp_field;
+              end if;
+            end if;
+					end if;
+
 					-- many to many match
 					-- if v_manytomany_match_flag = 'Y' then
 						set v_match_sql = 'insert ignore into recon_tmp_t5manymatch (tran_gid,tranbrkp_gid,matched_count,';
@@ -1818,7 +1880,71 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,"where a.match_flag = 'N'
               and b.match_flag = 'N'");
 
-						set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
+            if in_group_flag <> 'OTO' then
+						  set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
+            else
+						  if v_recontype_code <> 'N' then
+                if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
+                  -- contra
+                  if v_rule_threshold_plus_value <> 0 and v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and abs((a.excp_value*a.tran_mult) - b.excp_value*b.tran_mult*-1) <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_plus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and (a.excp_value*a.tran_mult) - b.excp_value*b.tran_mult*-1 <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and (b.excp_value*b.tran_mult)*-1 - (a.excp_value*a.tran_mult) <= ',
+                                                        cast(v_rule_threshold_minus_value as nchar),' ');
+                  end if;
+                else
+                  -- mirror
+                  if v_rule_threshold_plus_value <> 0 and v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and abs((a.excp_value*a.tran_mult) - (b.excp_value*b.tran_mult)) <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_plus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and (a.excp_value*a.tran_mult) - (b.excp_value*b.tran_mult) <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and (b.excp_value*b.tran_mult) - (a.excp_value*a.tran_mult) <= ',
+                                                        cast(v_rule_threshold_minus_value as nchar),' ');
+                  end if;
+                end if;
+              end if;
+
+						  set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid');
+            end if;
+
+            if in_group_flag <> 'MTM' and in_group_flag <> 'OTO' then
+						  if v_recontype_code <> 'N' then
+							  set v_match_sql = concat(v_match_sql,'having true ');
+
+                if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
+                  -- contra
+                  if v_rule_threshold_plus_value <> 0 and v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and abs((a.excp_value*a.tran_mult) - sum(b.excp_value*b.tran_mult)*-1) <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_plus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and (a.excp_value*a.tran_mult) - sum(b.excp_value*b.tran_mult)*-1 <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and sum(b.excp_value*b.tran_mult)*-1 - (a.excp_value*a.tran_mult) <= ',
+                                                        cast(v_rule_threshold_minus_value as nchar),' ');
+                  end if;
+                else
+                  -- mirror
+                  if v_rule_threshold_plus_value <> 0 and v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and abs((a.excp_value*a.tran_mult) - sum(b.excp_value*b.tran_mult)) <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_plus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and (a.excp_value*a.tran_mult) - sum(b.excp_value*b.tran_mult) <= ',
+                                                        cast(v_rule_threshold_plus_value as nchar),' ');
+                  elseif v_rule_threshold_minus_value <> 0 then
+							      set v_match_sql = concat(v_match_sql,'and sum(b.excp_value*b.tran_mult) - (a.excp_value*a.tran_mult) <= ',
+                                                        cast(v_rule_threshold_minus_value as nchar),' ');
+                  end if;
+                end if;
+              end if;
+            end if;
 
             -- add record order by
             if v_recorder <> '' then
@@ -1990,14 +2116,16 @@ me:BEGIN
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t5comparison set
-											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
+											  excp_value = excp_value + v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
 
-										-- insert roundoff value
-										insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
-											select v_tran_gid,v_tranbrkp_gid,v_diff_value*v_tran_mult*v_base_tran_mult;
+                    set v_diff_value = abs(v_diff_value);
+
+                    -- insert roundoff value
+                    insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
+                      select v_tran_gid,v_tranbrkp_gid,v_diff_value*v_tran_mult*v_base_tran_mult;
 
 										leave thresholddiff_loop;
 									else
@@ -2038,24 +2166,6 @@ me:BEGIN
           truncate recon_tmp_t5pseudorows;
 
           -- vijay start
-
-          -- get target addtional group field
-          if v_group_flag = 'Y' then
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfield
-            where rule_code = v_rule_code
-            and active_status = 'Y'
-            and delete_flag = 'N';
-
-            set v_grp_field = ifnull(v_grp_field,'');
-
-            if v_grp_field <> '' then
-              if v_rule_groupby <> '' then
-                set v_rule_groupby = concat(v_rule_groupby,',',v_grp_field);
-              else
-                set v_rule_groupby = v_grp_field;
-              end if;
-            end if;
-					end if;
 
 					-- many to many match
 					if v_manytomany_match_flag = 'Y' then
@@ -2362,7 +2472,12 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
             if v_recontype_code <> 'N' then
-						  set v_match_sql = concat(v_match_sql,'where a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
+						  set v_match_sql = concat(v_match_sql,'where true ');
+
+              if v_source_acc_mode <> 'B' then
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
+              end if;
+
 						  set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
 						  -- set v_match_sql = concat(v_match_sql,'and 1 = 1 ');
             end if;

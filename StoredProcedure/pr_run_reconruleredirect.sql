@@ -18,9 +18,9 @@ me:BEGIN
     Created Date - 2025-02-19
 
     Updated By : Vijayavel
-    updated Date : 11-04-2025
+    updated Date : 05-10-2025
 
-	  Version - 7
+	  Version - 8
 */
 
   declare i int default 0;
@@ -541,6 +541,15 @@ me:BEGIN
 							-- call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 							call pr_run_automatch_partial_new(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 						end if;
+
+						if v_group_flag = 'OTM' then
+							set v_group_flag = 'OTO';
+
+							call pr_run_automatch(v_recon_code,v_rule_code,v_group_flag,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+							-- call pr_run_automatch_partial(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+							call pr_run_automatch_partial_new(v_recon_code,v_group_flag,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
+						end if;
+
 					elseif v_rule_apply_on = 'S' then
 						call pr_run_posttranbrkprule(v_recon_code,v_rule_code,v_job_gid,in_period_from,in_period_to,v_system_match_flag,in_user_code,@msg,@result);
 					end if;

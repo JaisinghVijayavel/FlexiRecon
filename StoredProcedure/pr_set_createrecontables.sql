@@ -8,6 +8,16 @@ CREATE PROCEDURE `pr_set_createrecontables`
   out out_result int
 )
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 24-09-2025
+
+    Version : 1
+  */
+
   declare v_sql text default '';
   declare v_table text default '';
 

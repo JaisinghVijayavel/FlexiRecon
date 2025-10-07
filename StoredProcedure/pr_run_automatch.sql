@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 23-08-2025
+    updated Date : 07-10-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -65,10 +65,12 @@ me:BEGIN
   declare v_comparison_dataset_type varchar(32) default '';
 
   declare v_source_field text default '';
+  declare v_source_field_type text default '';
   declare v_source_field_format text default '';
   declare v_extraction_criteria text default '';
   declare v_extraction_filter int default 0;
   declare v_comparison_field text default '';
+  declare v_comparison_field_type text default '';
   declare v_comparison_criteria text default '';
   declare v_group_field text default '';
   declare v_group_condition text default '';
@@ -645,15 +647,21 @@ me:BEGIN
         if v_comparison_acc_mode = 'B' then
           set v_group_method_flag = 'B';
 
-          if v_source_acc_mode = 'C' then
-            set v_comparison_acc_mode = 'D';
+          if v_source_acc_mode <> 'B' then
+            if v_source_acc_mode = 'C' then
+              set v_comparison_acc_mode = 'D';
+            else
+              set v_comparison_acc_mode = 'C';
+            end if;
           else
             set v_comparison_acc_mode = 'C';
           end if;
         -- elseif v_source_acc_mode = v_comparison_acc_mode then
         --  set v_group_method_flag = 'M';
         elseif v_source_acc_mode <> v_comparison_acc_mode then
-          set v_group_method_flag = 'C';
+          if v_source_acc_mode <> 'B' then
+            set v_group_method_flag = 'C';
+          end if;
         end if;
       elseif v_recontype_code = 'V' then
         set v_source_acc_mode = 'V';
@@ -702,7 +710,7 @@ me:BEGIN
       end if;
 
       if v_recontype_code <> 'N' then
-        set v_source_head_sql = concat(v_source_head_sql,' and excp_value <> 0 and mapped_value = 0 ');
+        set v_source_head_sql = concat(v_source_head_sql,' and excp_value <> 0 and mapped_value = 0 and roundoff_value = 0 ');
       else
         set v_source_head_sql = concat(v_source_head_sql,' and ko_gid = 0 ');
       end if;
@@ -727,7 +735,7 @@ me:BEGIN
       end if;
 
       if v_recontype_code <> 'N' then
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value <> 0 and mapped_value = 0 ');
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' and excp_value <> 0 and mapped_value = 0 and roundoff_value = 0 ');
       else
         set v_comparison_head_sql = concat(v_comparison_head_sql,' and ko_gid = 0 ');
       end if;
@@ -964,6 +972,9 @@ me:BEGIN
               set v_source_field_org_type = fn_get_fieldorgtype(in_recon_code,v_source_field);
               set v_comparison_field_org_type = fn_get_fieldorgtype(in_recon_code,v_comparison_field);
 
+              set v_source_field_type = fn_get_reconfieldtype(in_recon_code,v_source_field);
+              set v_comparison_field_type = fn_get_reconfieldtype(in_recon_code,v_comparison_field);
+
               set v_extraction_criteria = ifnull(v_extraction_criteria,'');
               set v_extraction_filter = ifnull(v_extraction_filter,0);
               set v_comparison_criteria = ifnull(v_comparison_criteria,'');
@@ -1009,7 +1020,7 @@ me:BEGIN
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
                 and v_close_parentheses_flag <> ')'
-                and v_source_field <> 'a.tran_date' then
+                and v_source_field_type <> 'DATE' and v_source_field_type <> 'DATETIME' then
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
@@ -1028,7 +1039,7 @@ me:BEGIN
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
                 and v_close_parentheses_flag <> ')'
-                and v_comparison_field <> 'b.tran_date' then
+                and v_comparison_field_type <> 'DATE' and v_comparison_field_type <> 'DATETIME' then
 
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
@@ -1047,16 +1058,30 @@ me:BEGIN
 									set v_sql = '';
 									set v_sql = concat(v_sql,'update recon_tmp_t1comparison set ');
 									set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
-                  set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_source_acc_mode,char(39),' ');
 
-									insert into recon_tmp_t1sql(table_type,acc_mode,sql_query) values ('C',v_source_acc_mode,v_sql);
+                  if v_source_acc_mode <> 'B' then
+                    set v_acc_mode = v_source_acc_mode;
+                    set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_acc_mode,char(39),' ');
+                  else
+                    if v_comparison_acc_mode = 'D' then
+                      set v_acc_mode = 'C';
+                    else
+                      set v_acc_mode = 'D';
+                    end if;
+
+                    set v_sql = concat(v_sql,'where tran_acc_mode = ',char(39), v_acc_mode,char(39),' ');
+                  end if;
+
+									insert into recon_tmp_t1sql(table_type,acc_mode,sql_query) values ('C',v_acc_mode,v_sql);
 								end if;
 
                 set v_comparison_criteria = 'EXACT';
                 set v_comparison_filter = 0;
               end if;
 
-              set v_source_field_format = fn_get_fieldfilterformat(v_source_field,v_extraction_criteria,v_extraction_filter);
+              set v_source_field_format = fn_get_reconfieldnamecast(in_recon_code,v_source_field);
+              set v_source_field_format = fn_get_fieldfilterformat(v_source_field_format,v_extraction_criteria,v_extraction_filter);
+
               set v_build_condition = concat(v_open_parentheses_flag,
                                              fn_get_comparisoncondition(in_recon_code,v_source_field_format,v_comparison_field,v_comparison_criteria,v_comparison_filter),
                                              v_close_parentheses_flag,' ',
@@ -1113,7 +1138,9 @@ me:BEGIN
           set v_source_sql = v_source_head_sql;
 
           if v_recontype_code <> 'N' then
-            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            if v_source_acc_mode <> 'B' then
+              set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -1131,7 +1158,9 @@ me:BEGIN
           set v_source_sql = v_source_headbrkp_sql;
 
           if v_recontype_code <> 'N' then
-            set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            if v_source_acc_mode <> 'B' then
+              set v_source_sql = concat(v_source_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+            end if;
           end if;
 
           if v_recon_date_flag = 'Y' then
@@ -1188,7 +1217,17 @@ me:BEGIN
 						set v_comparison_sql = v_comparison_head_sql;
 
             if v_recontype_code <> 'N' then
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+              if v_source_acc_mode <> 'B' then
+                set v_acc_mode = v_source_acc_mode;
+              else
+                if v_comparison_acc_mode = 'D' then
+                  set v_acc_mode = 'C';
+                else
+                  set v_acc_mode = 'D';
+                end if;
+              end if;
+
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_acc_mode,char(39));
             end if;
 
             if v_recon_date_flag = 'Y' then
@@ -1206,7 +1245,17 @@ me:BEGIN
 						set v_comparison_sql = v_comparison_headbrkp_sql;
 
             if v_recontype_code <> 'N' then
-						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
+              if v_source_acc_mode <> 'B' then
+                set v_acc_mode = v_source_acc_mode;
+              else
+                if v_comparison_acc_mode = 'D' then
+                  set v_acc_mode = 'C';
+                else
+                  set v_acc_mode = 'D';
+                end if;
+              end if;
+
+						  set v_comparison_sql = concat(v_comparison_sql,' and tran_acc_mode = ',char(39),v_acc_mode,char(39));
             end if;
 
             if v_recon_date_flag = 'Y' then
@@ -1633,7 +1682,12 @@ me:BEGIN
 						if v_recontype_code <> 'N' then
 							set v_match_sql = concat(v_match_sql,'and a.excp_value = b.excp_value ');
 
-						  set v_match_sql = concat(v_match_sql,'where a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
+						  set v_match_sql = concat(v_match_sql,'where true ');
+
+              if v_source_acc_mode <> 'B' then
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
+              end if;
+
 						  set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
 						end if;
 
