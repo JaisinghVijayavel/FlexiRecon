@@ -2472,14 +2472,21 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
             if v_recontype_code <> 'N' then
-						  set v_match_sql = concat(v_match_sql,'where true ');
+              set v_match_sql = concat(v_match_sql,'where true ');
 
+              /*
               if v_source_acc_mode <> 'B' then
 						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
               end if;
 
 						  set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
-						  -- set v_match_sql = concat(v_match_sql,'and 1 = 1 ');
+              */
+
+              if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> a.tran_acc_mode ');
+              else
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = a.tran_acc_mode ');
+              end if;
             end if;
 
 						set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');

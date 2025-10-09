@@ -128,6 +128,9 @@ me:BEGIN
   declare v_close_parentheses_flag text default '';
   declare v_join_condition text default '';
 
+  declare v_source_join_condition text default '';
+  declare v_comparison_join_condition text default '';
+
   declare v_tran_fields text default '';
   declare v_tranbrkp_fields text default '';
 
@@ -933,7 +936,9 @@ me:BEGIN
 
               if not exists(select index_name from recon_tmp_t1index
                             WHERE table_name = 'recon_tmp_t1source'
-                            and index_name = v_index_name) then
+                            and index_name = v_index_name)
+                            and v_extraction_criteria <> '$ADHOC$'
+                            and v_source_field <> '' then
 
                 if substr(v_source_field,1,3) = 'col' then
                   set v_sql = concat('alter table recon_tmp_t1source modify column ',v_source_field,' varchar(255) default null');
@@ -953,7 +958,9 @@ me:BEGIN
 
               if not exists(select index_name from recon_tmp_t1index
                             WHERE table_name = 'recon_tmp_t1comparison'
-                            and index_name = v_index_name) then
+                            and index_name = v_index_name)
+                            and v_comparison_criteria <> '$ADHOC$'
+                            and v_comparison_field <> '' then
 
                 if substr(v_comparison_field,1,3) = 'col' then
                   set v_sql = concat('alter table recon_tmp_t1comparison modify column ',v_source_field,' varchar(255) default null');
@@ -989,38 +996,74 @@ me:BEGIN
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-              -- source condition
-              set v_source_condition = concat(v_source_condition,' ',v_open_parentheses_flag);
-              if v_source_field_org_type = 'TEXT' then
-                set v_source_condition = concat(v_source_condition,' ',v_source_field ,' <> '''' ');
-              else
-                set v_source_condition = concat(v_source_condition,' ',v_source_field ,' is not null ');
-              end if;
+              set v_source_join_condition = v_join_condition;
 
-              set v_source_condition = concat(v_source_condition,' ',v_close_parentheses_flag);
-              set v_source_condition = concat(v_source_condition,' ',v_join_condition);
+              -- source condition
+              -- if v_extraction_criteria <> '$ADHOC$' then
+                set v_source_condition = concat(v_source_condition,' ',v_open_parentheses_flag);
+
+                if v_extraction_criteria = '$ADHOC$' then
+                  set v_source_condition = concat(v_source_condition,' 1 = 1 ');
+                elseif v_source_field <> '' then
+                  if v_source_field_org_type = 'TEXT' then
+                    set v_source_condition = concat(v_source_condition,' ',v_source_field ,' <> '''' ');
+                  else
+                    set v_source_condition = concat(v_source_condition,' ',v_source_field ,' is not null ');
+                  end if;
+                else
+                  if v_open_parentheses_flag = '(' then
+                    set v_source_join_condition = '';
+                  end if;
+
+                  if v_close_parentheses_flag = ')' then
+                    set v_source_condition = concat(v_source_condition,' 1 = 1 ');
+                  end if;
+                end if;
+
+                set v_source_condition = concat(v_source_condition,' ',v_close_parentheses_flag);
+                set v_source_condition = concat(v_source_condition,' ',v_source_join_condition);
+              -- end if;
 
               -- comparison condition
-              set v_comparison_condition = concat(v_comparison_condition,' ',v_open_parentheses_flag);
+              set v_comparison_join_condition = v_join_condition;
 
-              if v_comparison_field_org_type = 'TEXT' then
-                set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' <> '''' ');
-              else
-                set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' is not null ');
-              end if;
+              -- if v_comparison_criteria <> '$ADHOC$' then
+                set v_comparison_condition = concat(v_comparison_condition,' ',v_open_parentheses_flag);
+
+                if v_comparison_criteria = '$ADHOC$' then
+                  set v_comparison_condition = concat(v_comparison_condition,' 1 = 1 ');
+                elseif v_comparison_field <> '' then
+                  if v_comparison_field_org_type = 'TEXT' then
+                    set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' <> '''' ');
+                  else
+                    set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' is not null ');
+                  end if;
+                else
+                  if v_open_parentheses_flag = '(' then
+                    set v_comparison_join_condition = '';
+                  end if;
+
+                  if v_close_parentheses_flag = ')' then
+                    set v_comparison_condition = concat(v_comparison_condition,' 1 = 1 ');
+                  end if;
+                end if;
+              -- end if;
 
               set v_comparison_condition = concat(v_comparison_condition,' ',v_close_parentheses_flag);
-              set v_comparison_condition = concat(v_comparison_condition,' ',v_join_condition);
+              set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_join_condition);
 
-              set v_source_field = ifnull(concat('a.',v_source_field),'');
-              set v_comparison_field = ifnull(concat('b.',v_comparison_field),'');
+              if v_source_field <> '' and v_comparison_field <> '' then
+                set v_source_field = ifnull(concat('a.',v_source_field),'');
+                set v_comparison_field = ifnull(concat('b.',v_comparison_field),'');
+              end if;
 
               -- source
               if (instr(v_extraction_criteria,'$FIELD$') > 0 or v_extraction_filter > 0)
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
                 and v_close_parentheses_flag <> ')'
-                and v_source_field_type <> 'DATE' and v_source_field_type <> 'DATETIME' then
+                and v_source_field_type <> 'DATE' and v_source_field_type <> 'DATETIME'
+                and v_extraction_criteria <> '$ADHOC$' then
                 set v_field = replace(v_source_field,'a.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_extraction_criteria,v_extraction_filter);
 
@@ -1039,7 +1082,8 @@ me:BEGIN
                 and v_open_parentheses_flag <> '('
                 and v_join_condition <> 'OR'
                 and v_close_parentheses_flag <> ')'
-                and v_comparison_field_type <> 'DATE' and v_comparison_field_type <> 'DATETIME' then
+                and v_comparison_field_type <> 'DATE' and v_comparison_field_type <> 'DATETIME'
+                and v_comparison_criteria <> '$ADHOC$' then
 
                 set v_field = replace(v_comparison_field,'b.','');
                 set v_field_format = fn_get_fieldfilterformat(v_field,v_comparison_criteria,v_comparison_filter);
@@ -1079,41 +1123,66 @@ me:BEGIN
                 set v_comparison_filter = 0;
               end if;
 
-              set v_source_field_format = fn_get_reconfieldnamecast(in_recon_code,v_source_field);
-              set v_source_field_format = fn_get_fieldfilterformat(v_source_field_format,v_extraction_criteria,v_extraction_filter);
+              if v_source_field <> '' and v_comparison_field <> '' then
+                if v_extraction_criteria <> '$ADHOC$' and v_comparison_criteria <> '$ADHOC$' then
+                  set v_source_field_format = fn_get_reconfieldnamecast(in_recon_code,v_source_field);
+                  set v_source_field_format = fn_get_fieldfilterformat(v_source_field_format,v_extraction_criteria,v_extraction_filter);
 
-              set v_build_condition = concat(v_open_parentheses_flag,
+                  set v_build_condition = concat(v_open_parentheses_flag,
                                              fn_get_comparisoncondition(in_recon_code,v_source_field_format,v_comparison_field,v_comparison_criteria,v_comparison_filter),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition);
+                else
+                  if v_extraction_criteria = '$ADHOC$' then
+                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_comparison_field),v_comparison_criteria);
+                  elseif v_comparison_criteria = '$ADHOC$' then
+                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_source_field_format),v_extraction_criteria);
+                  end if;
+
+                  set v_build_condition = concat(v_open_parentheses_flag,
+                                             v_build_condition,
+                                             v_close_parentheses_flag,' ',
+                                             v_join_condition);
+                end if;
+              else
+                if v_open_parentheses_flag = '(' then
+                  set v_join_condition = '';
+                  set v_build_condition = '(';
+                end if;
+
+                if v_close_parentheses_flag = ')' then
+                  set v_build_condition = concat(' 1= 1 ) ',v_join_condition);
+                end if;
+              end if;
 
               set v_rule_condition = concat(v_rule_condition,' ',v_build_condition,' ');
 
-              -- build condition for not null
-              set v_build_condition = concat(' ',v_open_parentheses_flag);
-              set v_build_condition = concat(v_build_condition,' (');
+              if v_source_field <> '' and v_comparison_field <> '' then
+                -- build condition for not null
+                set v_build_condition = concat(' ',v_open_parentheses_flag);
+                set v_build_condition = concat(v_build_condition,' (');
 
-              if v_source_field_org_type = 'TEXT' then
-                set v_build_condition = concat(v_build_condition,v_source_field ,' <> '''' ');
-              else
-                set v_build_condition = concat(v_build_condition,v_source_field ,' is not null ');
+                if v_source_field_org_type = 'TEXT' then
+                  set v_build_condition = concat(v_build_condition,v_source_field ,' <> '''' ');
+                else
+                  set v_build_condition = concat(v_build_condition,v_source_field ,' is not null ');
+                end if;
+
+                set v_build_condition = concat(v_build_condition,' and ');
+
+                if v_comparison_field_org_type = 'TEXT' then
+                  set v_build_condition = concat(v_build_condition,v_comparison_field ,' <> '''' ');
+                else
+                  set v_build_condition = concat(v_build_condition,v_comparison_field ,' is not null ');
+                end if;
+
+                set v_build_condition = concat(v_build_condition,')');
+
+                set v_build_condition = concat(v_build_condition,' ',v_close_parentheses_flag,' ',v_join_condition);
+
+                set v_rule_notnull_condition = concat(v_rule_notnull_condition,v_build_condition);
+                set v_rule_groupby = concat(v_rule_groupby,',',v_source_field);
               end if;
-
-              set v_build_condition = concat(v_build_condition,' and ');
-
-              if v_comparison_field_org_type = 'TEXT' then
-                set v_build_condition = concat(v_build_condition,v_comparison_field ,' <> '''' ');
-              else
-                set v_build_condition = concat(v_build_condition,v_comparison_field ,' is not null ');
-              end if;
-
-              set v_build_condition = concat(v_build_condition,')');
-
-              set v_build_condition = concat(v_build_condition,' ',v_close_parentheses_flag,' ',v_join_condition);
-
-              set v_rule_notnull_condition = concat(v_rule_notnull_condition,v_build_condition);
-
-              set v_rule_groupby = concat(v_rule_groupby,',',v_source_field);
             end loop rule_loop;
 
             close rule_cursor;
@@ -1684,11 +1753,17 @@ me:BEGIN
 
 						  set v_match_sql = concat(v_match_sql,'where true ');
 
+              /*
               if v_source_acc_mode <> 'B' then
 						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
               end if;
+              */
 
-						  set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
+              if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> a.tran_acc_mode ');
+              else
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = a.tran_acc_mode ');
+              end if;
 						end if;
 
 						set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');
