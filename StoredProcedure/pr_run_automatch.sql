@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 07-10-2025
+    updated Date : 11-10-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -1134,9 +1134,9 @@ me:BEGIN
                                              v_join_condition);
                 else
                   if v_extraction_criteria = '$ADHOC$' then
-                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_comparison_field),v_comparison_criteria);
+                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_comparison_field),' ',v_comparison_criteria);
                   elseif v_comparison_criteria = '$ADHOC$' then
-                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_source_field_format),v_extraction_criteria);
+                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_source_field_format),' ',v_extraction_criteria);
                   end if;
 
                   set v_build_condition = concat(v_open_parentheses_flag,
@@ -1760,9 +1760,9 @@ me:BEGIN
               */
 
               if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
-						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> a.tran_acc_mode ');
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> b.tran_acc_mode ');
               else
-						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = a.tran_acc_mode ');
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
               end if;
 						end if;
 

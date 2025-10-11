@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 07-10-2025
+    updated Date : 10-10-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -127,6 +127,9 @@ me:BEGIN
   declare v_open_parentheses_flag text default '';
   declare v_close_parentheses_flag text default '';
   declare v_join_condition text default '';
+
+  declare v_source_join_condition text default '';
+  declare v_comparison_join_condition text default '';
 
   declare v_tran_fields text default '';
   declare v_tranbrkp_fields text default '';
@@ -292,15 +295,15 @@ me:BEGIN
   insert into recon_tmp_t6index select 'recon_tmp_t6source','idx_tran_date','Y';
   insert into recon_tmp_t6index select 'recon_tmp_t6comparison','idx_tran_date','Y';
 
-  /*
   drop table if exists recon_tmp_t6match;
+  /*
   drop table if exists recon_tmp_t6matchdtl;
   drop table if exists recon_tmp_t6matchko;
   drop table if exists recon_tmp_t6matchdiff;
   drop table if exists recon_tmp_t6matchdiffdtl;
   */
 
-  CREATE temporary TABLE recon_tmp_t6match(
+  CREATE /*temporary*/ TABLE recon_tmp_t6match(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -396,11 +399,9 @@ me:BEGIN
     key idx_ko_gid(ko_gid)
   ) ENGINE = MyISAM;
 
-  /*
   drop table if exists recon_tmp_t6manymatch;
-  */
 
-  CREATE temporary TABLE recon_tmp_t6manymatch(
+  CREATE /*temporary*/ TABLE recon_tmp_t6manymatch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     source_value double(15,2) not null default 0,
@@ -873,12 +874,10 @@ me:BEGIN
           drop temporary table if exists recon_tmp_t6comparison;
           drop temporary table if exists recon_tmp_t6sourcedup;
 
-          /*
           drop table if exists recon_tmp_t6source;
           drop table if exists recon_tmp_t6comparison;
-          */
 
-          create temporary table recon_tmp_t6source select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t6source select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t6source ENGINE = MyISAM;
           alter table recon_tmp_t6source add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t6source(excp_value);
@@ -886,7 +885,7 @@ me:BEGIN
           create index idx_recon_code on recon_tmp_t6source(recon_code);
           create index idx_dataset_code on recon_tmp_t6source(recon_code,dataset_code);
 
-          create temporary table recon_tmp_t6comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create /*temporary*/ table recon_tmp_t6comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t6comparison ENGINE = MyISAM;
           alter table recon_tmp_t6comparison add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t6comparison(excp_value);
@@ -993,28 +992,61 @@ me:BEGIN
               set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
               set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-              -- source condition
-              set v_source_condition = concat(v_source_condition,' ',v_open_parentheses_flag);
-              if v_source_field_org_type = 'TEXT' then
-                set v_source_condition = concat(v_source_condition,' ',v_source_field ,' <> '''' ');
-              else
-                set v_source_condition = concat(v_source_condition,' ',v_source_field ,' is not null ');
-              end if;
+              set v_source_join_condition = v_join_condition;
 
-              set v_source_condition = concat(v_source_condition,' ',v_close_parentheses_flag);
-              set v_source_condition = concat(v_source_condition,' ',v_join_condition);
+              -- source condition
+              -- if v_extraction_criteria <> '$ADHOC$' then
+                set v_source_condition = concat(v_source_condition,' ',v_open_parentheses_flag);
+
+                if v_extraction_criteria = '$ADHOC$' then
+                  set v_source_condition = concat(v_source_condition,' 1 = 1 ');
+                elseif v_source_field <> '' then
+                  if v_source_field_org_type = 'TEXT' then
+                    set v_source_condition = concat(v_source_condition,' ',v_source_field ,' <> '''' ');
+                  else
+                    set v_source_condition = concat(v_source_condition,' ',v_source_field ,' is not null ');
+                  end if;
+                else
+                  if v_open_parentheses_flag = '(' then
+                    set v_source_join_condition = '';
+                  end if;
+
+                  if v_close_parentheses_flag = ')' then
+                    set v_source_condition = concat(v_source_condition,' 1 = 1 ');
+                  end if;
+                end if;
+
+                set v_source_condition = concat(v_source_condition,' ',v_close_parentheses_flag);
+                set v_source_condition = concat(v_source_condition,' ',v_source_join_condition);
+              -- end if;
 
               -- comparison condition
-              set v_comparison_condition = concat(v_comparison_condition,' ',v_open_parentheses_flag);
+              set v_comparison_join_condition = v_join_condition;
 
-              if v_comparison_field_org_type = 'TEXT' then
-                set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' <> '''' ');
-              else
-                set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' is not null ');
-              end if;
+              -- if v_comparison_criteria <> '$ADHOC$' then
+                set v_comparison_condition = concat(v_comparison_condition,' ',v_open_parentheses_flag);
+
+                if v_comparison_criteria = '$ADHOC$' then
+                  set v_comparison_condition = concat(v_comparison_condition,' 1 = 1 ');
+                elseif v_comparison_field <> '' then
+                  if v_comparison_field_org_type = 'TEXT' then
+                    set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' <> '''' ');
+                  else
+                    set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_field ,' is not null ');
+                  end if;
+                else
+                  if v_open_parentheses_flag = '(' then
+                    set v_comparison_join_condition = '';
+                  end if;
+
+                  if v_close_parentheses_flag = ')' then
+                    set v_comparison_condition = concat(v_comparison_condition,' 1 = 1 ');
+                  end if;
+                end if;
+              -- end if;
 
               set v_comparison_condition = concat(v_comparison_condition,' ',v_close_parentheses_flag);
-              set v_comparison_condition = concat(v_comparison_condition,' ',v_join_condition);
+              set v_comparison_condition = concat(v_comparison_condition,' ',v_comparison_join_condition);
 
               if v_source_field <> '' and v_comparison_field <> '' then
                 set v_source_field = ifnull(concat('a.',v_source_field),'');
@@ -1098,9 +1130,9 @@ me:BEGIN
                                              v_join_condition);
                 else
                   if v_extraction_criteria = '$ADHOC$' then
-                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_comparison_field),v_comparison_criteria);
+                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_comparison_field),' ',v_comparison_criteria);
                   elseif v_comparison_criteria = '$ADHOC$' then
-                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_source_field_format),v_extraction_criteria);
+                    set v_build_condition = concat(fn_get_reconfieldnamecast(in_recon_code,v_source_field_format),' ',v_extraction_criteria);
                   end if;
 
                   set v_build_condition = concat(v_open_parentheses_flag,
@@ -1115,7 +1147,7 @@ me:BEGIN
                 end if;
 
                 if v_close_parentheses_flag = ')' then
-                  set v_build_condition = concat(' 1 = 1 ) ',v_join_condition);
+                  set v_build_condition = concat(' 1= 1 ) ',v_join_condition);
                 end if;
               end if;
 
@@ -1154,9 +1186,6 @@ me:BEGIN
 
           truncate recon_tmp_t6source;
           truncate recon_tmp_t6comparison;
-
-          select v_rule_condition,v_rule_notnull_condition;
-          leave me;
 
           if v_source_condition = ' and ' or v_comparison_condition = ' and ' then
             set v_source_condition = ' and 1 = 2 ';
@@ -1742,7 +1771,10 @@ me:BEGIN
             end if;
 
             -- run match sql one to one
+            select v_match_sql;
 						call pr_run_sql(v_match_sql,@msg,@result);
+
+            leave me;
 
 						truncate recon_tmp_t6pseudorows;
 
