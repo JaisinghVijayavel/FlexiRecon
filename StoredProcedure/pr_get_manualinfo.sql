@@ -218,10 +218,10 @@ me:BEGIN
 			select
 				count(distinct match_gid) as 'Match Count',
 				sum(if(c.dataset_type = 'B',1,0)) as 'Base Count',
-				format(sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult,0)),2,'en_IN') as 'Base Total',
+				format(sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult - a.roundoff_value*a.ko_mult,0)),2,'en_IN') as 'Base Total',
 				sum(if(c.dataset_type = 'T',1,0)) as 'Target Count',
-				format(sum(if(c.dataset_type = 'T',b.excp_value*b.tran_mult,0)),2,'en_IN') as 'Target Total',
-				sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult,0)) - sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult,0)) as 'Difference'
+				format(sum(if(c.dataset_type = 'T',b.excp_value*b.tran_mult - a.roundoff_value*a.ko_mult,0)),2,'en_IN') as 'Target Total',
+				sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult - a.roundoff_value*a.ko_mult,0)) - sum(if(c.dataset_type = 'B',b.excp_value*b.tran_mult - a.roundoff_value*a.ko_mult,0)) as 'Difference'
 			from recon_trn_tmanualtran as a
 			inner join ",v_tran_table," as b on a.tran_gid = b.tran_gid
 				and b.recon_code = '",v_recon_code,"'
