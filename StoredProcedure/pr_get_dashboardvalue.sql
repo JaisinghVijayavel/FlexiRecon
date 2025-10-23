@@ -16,9 +16,9 @@ me:BEGIN
     Created Date : 19-02-2025
 
     Updated By : Vijayavel
-    updated Date : 22-03-2025
+    updated Date : 23-10-2025
 
-    Version : 3
+    Version : 4
   */
     
 	declare v_ko_count bigint default 0;
@@ -127,8 +127,9 @@ me:BEGIN
     and c.recontype_code in ('W','B','I')
     and c.delete_flag = 'N'
   inner join ",v_tran_table," as t on r.recon_code = t.recon_code
-	and t.delete_flag = 'N'
     and t.recon_code = '",in_recon_code,"'
+    and t.tran_value <> 0
+	  and t.delete_flag = 'N'
 	LOCK IN SHARE MODE) as a");
 
   call pr_run_sql2(v_sql,@msg2,@result2);

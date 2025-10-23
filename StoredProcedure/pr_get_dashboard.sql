@@ -16,9 +16,9 @@ me:BEGIN
     Created Date : 24-11-2023
 
     Updated By : Vijayavel
-    updated Date : 22-03-2025
+    updated Date : 23-10-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recontype_code text default '';
@@ -165,6 +165,7 @@ me:BEGIN
   inner join ",v_tran_table," as t on r.recon_code = t.recon_code
     and t.tran_date >= '",cast(in_period_from as nchar),"'
     and t.tran_date <= '",cast(in_period_to as nchar),"'
+    and t.tran_value <> 0
     and t.delete_flag = 'N'
     LOCK IN SHARE MODE) as a");
 
@@ -202,6 +203,7 @@ me:BEGIN
   inner join ",v_tranko_table," as t on r.recon_code = t.recon_code
     and t.tran_date >= '",cast(in_period_from as nchar),"'
     and t.tran_date <= '",cast(in_period_to as nchar),"'
+    and t.tran_value <> 0
     and t.delete_flag = 'N'
     LOCK IN SHARE MODE) as a");
 
