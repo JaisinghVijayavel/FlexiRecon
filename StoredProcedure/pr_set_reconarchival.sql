@@ -64,6 +64,7 @@ begin
 
   declare v_lookup_filter text default '';
 
+  declare v_filter_applied_on text default '';
   declare v_filter_field text default '';
   declare v_filter_criteria text default '';
   declare v_filter_value_flag text default '';

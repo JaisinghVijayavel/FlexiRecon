@@ -5,7 +5,7 @@ CREATE PROCEDURE `pr_run_manualfile`
 (
   in in_scheduler_gid int,
   in in_ip_addr varchar(255),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )

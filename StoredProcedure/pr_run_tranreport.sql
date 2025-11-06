@@ -18,9 +18,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 24-04-2025
+    updated Date : 27-10-2025
 
-    Version : 7
+    Version : 8
   */
 
   declare v_count int default 0;
@@ -48,7 +48,8 @@ me:BEGIN
   create index idx_dataset_code on recon_tmp_ttran(recon_code,dataset_code);
 
   -- get transaction table
-  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
+  -- set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
+  set v_table_prefix = fn_get_recontableprefix('',in_recon_code);
 
   set v_tran_table = concat(v_table_prefix,'tran');
   set v_tranko_table = concat(v_table_prefix,'tranko');

@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-08-2025
+    Updated Date : 05-11-2025
 
-    Version : 5
+    Version : 6
   */
   declare v_recon_version text default '';
 
@@ -138,7 +138,7 @@ me:BEGIN
 
   if in_automatch_flag = 'Y' and in_theme_code is null then
     -- postprocess
-    call pr_run_preprocess(in_recon_code,'',v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+    call pr_run_preprocess(in_recon_code,'',v_job_gid,'Y',in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
   end if;
 
   -- theme

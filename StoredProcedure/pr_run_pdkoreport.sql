@@ -10,6 +10,16 @@ CREATE PROCEDURE `pr_run_pdkoreport`(
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date : 
+
+    Updated By : Vijayavel
+    updated Date : 27-10-2025
+
+    Version : 1
+  */
+
   declare v_sql text default '';
 
   declare v_pdrecon_code text default '';

@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 10-10-2025
+    updated Date : 05-11-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -141,6 +141,7 @@ me:BEGIN
   declare v_sys_index_name text default '';
 
   declare v_recon_name text default '';
+  declare v_recon_version text default '';
   declare v_recon_value_flag text default '';
   declare v_recon_date_flag text default '';
   declare v_recon_automatch_partial text default '';
@@ -577,11 +578,11 @@ me:BEGIN
 
   -- get recon value
   select
-    recon_name,recontype_code,recon_date_flag,
+    recon_name,recon_rule_version,recontype_code,recon_date_flag,
     recon_value_flag,recon_automatch_partial,threshold_code,
     abs(threshold_plus_value),abs(threshold_minus_value)
   into
-    v_recon_name,v_recontype_code,v_recon_date_flag,
+    v_recon_name,v_recon_version,v_recontype_code,v_recon_date_flag,
     v_recon_value_flag,v_recon_automatch_partial,
     v_threshold_code,
     v_threshold_plus_value,
@@ -595,6 +596,7 @@ me:BEGIN
 
   set v_recontype_code = ifnull(v_recontype_code,'');
   set v_recon_name = ifnull(v_recon_name,'');
+  set v_recon_version = ifnull(v_recon_version,'');
   set v_threshold_code = ifnull(v_threshold_code,'');
   -- set v_recon_value_flag = ifnull(v_recon_value_flag,'Y');
   set v_recon_automatch_partial = ifnull(v_recon_automatch_partial,'N');
@@ -609,9 +611,10 @@ me:BEGIN
       set v_threshold_plus_value = 0;
     end if;
   else
-    if exists(select rule_code from recon_mst_trule
+    if exists(select rule_code from recon_mst_trulehistory
       where recon_code = in_recon_code
       and rule_code = ifnull(in_rule_code,rule_code)
+      and recon_version = v_recon_version
       and period_from <= curdate()
       and (until_active_flag = 'Y'
       or period_to >= curdate())
@@ -654,8 +657,9 @@ me:BEGIN
         a.threshold_code,
         abs(a.threshold_plus_value) as threshold_plus_value,
         abs(a.threshold_minus_value) as threshold_minus_value
-      from recon_mst_trule as a
+      from recon_mst_trulehistory as a
       where a.recon_code = in_recon_code
+      and a.recon_version = v_recon_version
       and a.rule_code = ifnull(in_rule_code,a.rule_code)
       and a.period_from <= curdate()
       and (a.until_active_flag = 'Y'
@@ -900,11 +904,12 @@ me:BEGIN
               filter_applied_on,filter_field,filter_criteria,add_filter,ident_criteria,
               ident_value_flag,ident_value,
               open_parentheses_flag,close_parentheses_flag,join_condition
-            from recon_mst_truleselefilter
+            from recon_mst_truleselefilterhistory
             where rule_code = v_rule_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N'
-            order by filter_applied_on,ruleselefilter_seqno,ruleselefilter_gid;
+            order by filter_applied_on,ruleselefilter_seqno,ruleselefilterhistory_gid;
 
             declare continue handler for not found set basefilter_done=1;
 
@@ -1027,11 +1032,12 @@ me:BEGIN
               a.comparison_field,a.comparison_criteria,a.comparison_filter,
               a.open_parentheses_flag,a.close_parentheses_flag,
               a.join_condition
-            from recon_mst_trulecondition as a
+            from recon_mst_truleconditionhistory as a
             where a.rule_code = v_rule_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N'
-            order by rulecondition_seqno,rulecondition_gid;
+            order by rulecondition_seqno,ruleconditionhistory_gid;
 
             declare continue handler for not found set rule_done=1;
 
@@ -1463,10 +1469,11 @@ me:BEGIN
               )
             into
               v_grp_field,v_grp_field_condition
-            from recon_mst_trulegrpfield as a
+            from recon_mst_trulegrpfieldhistory as a
             inner join recon_mst_tfieldstru as b on b.field_name = a.grp_field
               and b.delete_flag = 'N'
             where a.rule_code = v_rule_code
+            and a.recon_version = v_recon_version
             and a.active_status = 'Y'
             and a.delete_flag = 'N';
 
@@ -1897,8 +1904,9 @@ me:BEGIN
 
           -- get target addtional group field
           if v_group_flag = 'Y' then
-            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfield
+            select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfieldhistory
             where rule_code = v_rule_code
+            and recon_version = v_recon_version
             and active_status = 'Y'
             and delete_flag = 'N';
 

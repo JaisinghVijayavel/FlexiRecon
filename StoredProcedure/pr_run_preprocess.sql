@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_run_preprocess`(
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -753,6 +754,9 @@ me:BEGIN
 
             set v_process_function = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
 
+            call pr_get_reconstaticvaluesql(v_process_function,'',in_recon_code,'',in_user_code,@v_process_function,@msg22,@result22);
+            set v_process_function = @v_process_function;
+
 						set v_sql = 'update $TABLENAME$ set ';
 						set v_sql = concat(v_sql,v_set_recon_field,' = ',v_process_function,' ');
 						set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -796,6 +800,9 @@ me:BEGIN
 
             set v_process_function = fn_get_expressionformat_ds(v_lookup_dataset_code,v_set_lookup_field,
                                                                 v_process_expression,false,'');
+
+            call pr_get_reconstaticvaluesql(v_process_function,'',in_recon_code,'',in_user_code,@v_process_function,@msg22,@result22);
+            set v_process_function = @v_process_function;
 
 						set v_sql = concat('update ',v_lookup_table,' set ');
 						set v_sql = concat(v_sql,v_set_lookup_field,' = ',v_process_function,' ');
@@ -906,6 +913,16 @@ me:BEGIN
                                           in_automatch_flag,
                                           @msg1,
                                           @result1);
+      elseif v_process_method = 'QCD_COMPARISONEXP_AGG' then
+        call pr_run_preprocess_comparisonagg(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          @msg_1,
+                                          @result_1);
       elseif v_process_method = 'QCD_LOOKUP_EXP_AGG' then
         call pr_run_preprocess_agglookup(in_recon_code,
                                           v_preprocess_code,

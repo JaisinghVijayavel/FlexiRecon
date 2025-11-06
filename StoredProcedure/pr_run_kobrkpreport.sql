@@ -12,6 +12,16 @@ CREATE PROCEDURE `pr_run_kobrkpreport`(
   out out_result int
 )
 me:BEGIN
+	/*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 27-10-2025
+
+    Version : 1
+  */
+
   declare v_sql text default '';
 
 	declare v_tran_table text default '';
@@ -38,6 +48,9 @@ me:BEGIN
 
   set v_tran_table = concat(v_table_prefix,'tran');
   set v_tranbrkp_table = concat(v_table_prefix,'tranbrkp');
+
+  -- remove archival code
+  set v_table_prefix = fn_get_recontableprefix('',in_recon_code);
 
   set v_tranko_table = concat(v_table_prefix,'tranko');
   set v_tranbrkpko_table = concat(v_table_prefix,'tranbrkpko');

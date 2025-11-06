@@ -1,15 +1,16 @@
 ﻿DELIMITER $$
 
-DROP FUNCTION IF EXISTS `fn_get_reportfiltervalue` $$
-CREATE FUNCTION `fn_get_reportfiltervalue`(
+DROP FUNCTION IF EXISTS `fn_get_reconstaticfieldsvalue` $$
+CREATE FUNCTION `fn_get_reconstaticfieldsvalue`(
+  in_archival_code text,
   in_recon_code text,
   in_condition text,
   in_filter_value text,
   in_user_code text
-) RETURNS text CHARSET latin1
+) RETURNS text
 begin
   /*
-    Created By : Vijayavel
+    Created By : Hari
     Created Date :
 
     Updated By : Vijayavel
@@ -30,6 +31,8 @@ begin
     return in_recon_code;
   elseif in_filter_value = '$USERCODE$' then
     return in_user_code;
+  elseif in_filter_value = '$ARCHIVALCODE$' then
+    return in_archival_code;
   elseif in_filter_value = '$RECONCLOSUREDATE$' then
     select
       cast(recon_closure_date as nchar)
@@ -38,9 +41,7 @@ begin
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
-
     set v_closure_date = ifnull(v_closure_date,'2000-01-01');
-
     return v_closure_date;
   elseif in_filter_value = '$RECONCYCLEDATE$' or in_filter_value = '$CYCLEDATE$' then
     select
@@ -50,9 +51,7 @@ begin
     from recon_mst_trecon
     where recon_code = in_recon_code
     and delete_flag = 'N';
-
     set v_cycle_date = ifnull(v_cycle_date,'2000-01-01');
-
     return v_cycle_date;
   elseif in_filter_value = '$CONDITION$' then
     return in_condition;

@@ -18,9 +18,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 24-04-2025
+    updated Date : 27-10-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_sql text default '';
@@ -70,6 +70,9 @@ me:BEGIN
 
   set v_tran_table = concat(v_table_prefix,'tran');
   set v_tranbrkp_table = concat(v_table_prefix,'tranbrkp');
+
+  -- remove archival code
+  set v_table_prefix = fn_get_recontableprefix('',in_recon_code);
 
   set v_tranko_table = concat(v_table_prefix,'tranko');
   set v_tranbrkpko_table = concat(v_table_prefix,'tranbrkpko');

@@ -227,7 +227,7 @@ me:BEGIN
   */
 
   if v_koseq_flag = 'N' then
-    call pr_run_preprocess(in_recon_code,'',v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+    call pr_run_preprocess(in_recon_code,'',v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
   end if;
 
   drop temporary table if exists recon_tmp_ttran;
@@ -476,7 +476,7 @@ me:BEGIN
 				if koseq_done = 1 then leave koseq_loop; end if;
 
 				if v_koseq_type = 'Preprocess' or v_koseq_type = 'Postprocess' or v_koseq_type = 'Process' then
-					call pr_run_preprocess(in_recon_code,v_koseq_ref_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+					call pr_run_preprocess(in_recon_code,v_koseq_ref_code,v_job_gid,'N',in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
 				elseif v_koseq_type = 'Theme' then
 					call pr_run_theme(v_recon_code,v_koseq_ref_code,v_job_gid,in_period_from,in_period_to,
 						in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
@@ -682,7 +682,9 @@ me:BEGIN
                            0,
                            false,
                            'table',
-                           in_user_code,@msg,@result);
+                           in_user_code,
+                           '0',-- result set code
+                           @msg,@result);
   end if;
 
 

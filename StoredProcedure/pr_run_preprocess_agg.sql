@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_run_preprocess_agg`(
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -18,9 +19,9 @@ me:BEGIN
     Created Date : 18-09-2025
 
     Updated By : Vijayavel
-    Updated Date :
+    Updated Date : 06-11-2025
 
-    Version : 2
+    Version : 4
   */
 
   declare v_recon_version text default '';
@@ -69,7 +70,6 @@ me:BEGIN
   declare v_lookup_multi_return_flag text default '';
   declare v_lookup_agg_return_function text default '';
   declare v_lookup_update_fields text default '';
-  declare v_lookup_filter text default '';
   declare v_reverse_update_flag text default '';
   declare v_value_flag text default '';
 
@@ -172,7 +172,9 @@ me:BEGIN
   -- recon date flag
 	if v_recon_date_flag = 'Y' then
 		if v_recon_date_field <> 'tran_date' then
-			set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
+			set v_recon_date_field = concat('cast(a.',v_recon_date_field,' as date)');
+    else
+			set v_recon_date_field = concat('a.tran_date');
 		end if;
 
 		set v_recon_date_condition = '';
@@ -312,7 +314,6 @@ me:BEGIN
       -- filter condition
       if v_process_method = 'QCD_AGGEXP' then
         set v_preprocess_filter = ' and (';
-        set v_lookup_filter = ' and (';
 
 				-- filter block
 				filter_block:begin
@@ -384,31 +385,19 @@ me:BEGIN
             set v_open_parentheses_flag = if(v_open_parentheses_flag = 'Y','(','');
             set v_close_parentheses_flag = if(v_close_parentheses_flag = 'Y',')','');
 
-              if v_filter_applied_on = 'LOOKUP' then
-                set v_filter_field = concat('b.',v_filter_field);
-                set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
-              else
+              if v_filter_applied_on = 'RECON' then
                 set v_filter_field = concat('a.',v_filter_field);
                 set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
               end if;
 
               if v_filter_value_flag <> 'Y' then
-                if v_filter_applied_on = 'LOOKUP' then
-                  set v_filter_value = concat('b.',v_filter_value);
-                  set v_filter_value = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_value);
-                else
+                if v_filter_applied_on = 'RECON' then
                   set v_filter_value = concat('a.',v_filter_value);
                   set v_filter_value = fn_get_reconfieldnamecast(in_recon_code,v_filter_value);
                 end if;
               end if;
 
-            if v_filter_applied_on = 'LOOKUP' then
-              set v_lookup_filter = concat(v_lookup_filter,
-                                             v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
-                                             v_close_parentheses_flag,' ',
-                                             v_join_condition,' ');
-            else
+            if v_filter_applied_on = 'RECON' then
               set v_preprocess_filter = concat(v_preprocess_filter,
                                              v_open_parentheses_flag,
                                              fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
@@ -422,7 +411,9 @@ me:BEGIN
 				end filter_block;
 
         set v_preprocess_filter = concat(v_preprocess_filter,' 1 = 1) ');
-        set v_lookup_filter = concat(v_lookup_filter,' 1 = 1) ');
+
+        call pr_get_reconstaticvaluesql(v_preprocess_filter,'',in_recon_code,'',in_user_code,@v_preprocess_filter,@msg22,@result22);
+        set v_preprocess_filter = @v_preprocess_filter;
 
 				-- order by field block
         set v_orderby_field = '';
@@ -560,7 +551,11 @@ me:BEGIN
 				  create index idx_col128 on recon_tmp_t2tranbrkpagg(col128(255));
         end if;
 
+        -- set field expression
         set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
+
+        call pr_get_reconstaticvaluesql(v_field_expression,'',in_recon_code,'',in_user_code,@v_field_expression,@msg22,@result22);
+        set v_field_expression = @v_field_expression;
 
         -- create index
         if v_grp_field <> '' then

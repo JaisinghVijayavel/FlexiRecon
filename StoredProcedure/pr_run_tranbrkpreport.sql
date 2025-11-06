@@ -19,9 +19,9 @@ me:BEGIN
     Created Date : 28-07-2023
 
     Updated By : Vijayavel
-    updated Date : 24-04-2025
+    updated Date : 27-10-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_count int default 0;
@@ -62,7 +62,8 @@ me:BEGIN
   set in_user_code = ifnull(in_user_code,'');
 
   -- get transaction table
-  set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
+  -- set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
+  set v_table_prefix = fn_get_recontableprefix('',in_recon_code);
 
   set v_tran_table = concat(v_table_prefix,'tran');
   set v_tranbrkp_table = concat(v_table_prefix,'tranbrkp');
