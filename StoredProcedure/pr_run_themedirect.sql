@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_run_themedirect`
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -18,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-08-2025
+    Updated Date : 07-11-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_theme_code text default '';
@@ -218,6 +219,9 @@ me:BEGIN
 				end filter_block;
 
         set v_theme_filter = concat(v_theme_filter,' 1 = 1 )');
+
+        call pr_get_reconstaticvaluesql(v_theme_filter,'',in_recon_code,'',in_user_code,@v_theme_filter,@msg22,@result22);
+        set v_theme_filter = @v_theme_filter;
 
         /*
         if v_theme_filter = ' and ' then

@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_run_preprocess_agglookup`(
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -18,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 18-09-2025
+    Updated Date : 06-11-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_recon_version text default '';
@@ -368,6 +369,9 @@ me:BEGIN
         set v_lookup_filter = concat(v_lookup_filter,' 1 = 1) ');
         set v_dataset_condition = v_lookup_filter;
 
+        call pr_get_reconstaticvaluesql(v_dataset_condition,'',in_recon_code,'',in_user_code,@v_dataset_condition,@msg22,@result22);
+        set v_dataset_condition = @v_dataset_condition;
+
         -- aggregation validation starts
         set v_aggjoin_condition = ' 1 = 1 ';
         set v_grp_field = '';
@@ -657,6 +661,9 @@ me:BEGIN
           ) ENGINE = MyISAM;
 
           set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_set_dataset_field,false,'');
+
+          call pr_get_reconstaticvaluesql(v_field_expression,'',in_recon_code,'',in_user_code,@v_field_expression,@msg22,@result22);
+          set v_field_expression = @v_field_expression;
 
           set v_value_variable = concat("@value_",v_sysdatetime);
           set v_col128_variable = concat("@col128_",v_sysdatetime);

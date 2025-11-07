@@ -9,10 +9,21 @@ CREATE PROCEDURE `pr_run_themequery`
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 07-11-2025
+
+    Version : 1
+  */
+
   declare v_recon_version text default '';
   declare v_theme_code text default '';
   declare v_theme_desc text default '';
@@ -76,6 +87,9 @@ me:BEGIN
       set v_theme_query = ifnull(v_theme_query,'');
 
       call pr_upd_job(in_job_gid,'P',concat('Applying Theme - ',v_theme_desc),@msg,@result);
+
+      call pr_get_reconstaticvaluesql(v_theme_query,'',in_recon_code,'',in_user_code,@v_theme_query,@msg22,@result22);
+      set v_theme_query = @v_theme_query;
 
       call pr_run_sql1(v_theme_query,@msg,@result);
     end loop theme_loop;

@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 05-11-2025
+    Updated Date : 07-11-2025
 
-    Version : 6
+    Version : 7
   */
   declare v_recon_version text default '';
 
@@ -169,14 +169,14 @@ me:BEGIN
 
       -- set theme
       if v_theme_type_code = 'QCD_THEME_DIRECT' then
-        call pr_run_themedirect(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+        call pr_run_themedirect(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       elseif v_theme_type_code = 'QCD_THEME_COMPARE' then
         call pr_run_theme_comparison(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
       elseif v_theme_type_code = 'QCD_THEME_COMPARE_AGG' then
         call pr_run_theme_comparisonagg(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
         call pr_run_theme_comparisonagg_new(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
       elseif v_theme_type_code = 'QCD_THEME_QUERY' then
-        call pr_run_themequery(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+        call pr_run_themequery(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       end if;
     end loop theme_loop;
 
