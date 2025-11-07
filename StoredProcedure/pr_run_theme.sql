@@ -171,10 +171,10 @@ me:BEGIN
       if v_theme_type_code = 'QCD_THEME_DIRECT' then
         call pr_run_themedirect(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       elseif v_theme_type_code = 'QCD_THEME_COMPARE' then
-        call pr_run_theme_comparison(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+        call pr_run_theme_comparison(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       elseif v_theme_type_code = 'QCD_THEME_COMPARE_AGG' then
-        call pr_run_theme_comparisonagg(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
-        call pr_run_theme_comparisonagg_new(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,@msg,@result);
+        call pr_run_theme_comparisonagg(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
+        call pr_run_theme_comparisonagg_new(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       elseif v_theme_type_code = 'QCD_THEME_QUERY' then
         call pr_run_themequery(in_recon_code,v_theme_code,v_job_gid,in_period_from,in_period_to,in_automatch_flag,in_user_code,@msg,@result);
       end if;

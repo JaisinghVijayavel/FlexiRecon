@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 05-11-2025
+    updated Date : 07-11-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -965,6 +965,12 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
+          call pr_get_reconstaticvaluesql(v_sourcebase_filter,'',in_recon_code,'',in_user_code,@v_sourcebase_filter,@msg22,@result22);
+          set v_sourcebase_filter = @v_sourcebase_filter;
+
+          call pr_get_reconstaticvaluesql(v_comparisonbase_filter,'',in_recon_code,'',in_user_code,@v_comparisonbase_filter,@msg22,@result22);
+          set v_comparisonbase_filter = @v_comparisonbase_filter;
+
           set v_rule_condition = ' and a.excp_value <> 0 and b.excp_value <> 0 and ';
           set v_rule_notnull_condition = ' and ';
           set v_rule_groupby = '';
@@ -1313,6 +1319,9 @@ me:BEGIN
             set v_rule_condition  = concat(v_rule_condition,' 1 = 1 ');
             set v_rule_notnull_condition  = concat(v_rule_notnull_condition,' 1 = 1 ');
           end if;
+
+          call pr_get_reconstaticvaluesql(v_rule_condition,'',in_recon_code,'',in_user_code,@v_rule_condition,@msg22,@result22);
+          set v_rule_condition = @v_rule_condition;
 
           -- set v_rule_condition = concat(v_rule_condition,v_rule_notnull_condition);
 

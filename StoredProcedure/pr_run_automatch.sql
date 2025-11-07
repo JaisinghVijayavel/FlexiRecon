@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 11-10-2025
+    updated Date : 07-11-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -862,6 +862,12 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
+          call pr_get_reconstaticvaluesql(v_sourcebase_filter,'',in_recon_code,'',in_user_code,@v_sourcebase_filter,@msg22,@result22);
+          set v_sourcebase_filter = @v_sourcebase_filter;
+
+          call pr_get_reconstaticvaluesql(v_comparisonbase_filter,'',in_recon_code,'',in_user_code,@v_comparisonbase_filter,@msg22,@result22);
+          set v_comparisonbase_filter = @v_comparisonbase_filter;
+
           -- if v_sourcebase_filter = ' and ' then set v_sourcebase_filter = ''; end if;
           -- if v_comparisonbase_filter = ' and ' then set v_comparisonbase_filter = ''; end if;
 
@@ -1202,6 +1208,9 @@ me:BEGIN
             set v_comparison_condition  = concat(v_comparison_condition,' 1 = 1 ');
             set v_rule_condition  = concat(v_rule_condition,' 1 = 1 ');
           end if;
+
+          call pr_get_reconstaticvaluesql(v_rule_condition,'',in_recon_code,'',in_user_code,@v_rule_condition,@msg22,@result22);
+          set v_rule_condition = @v_rule_condition;
 
           -- source from tran table
           set v_source_sql = v_source_head_sql;

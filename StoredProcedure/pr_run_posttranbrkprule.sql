@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 20-08-2025
+    updated Date : 07-11-2025
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_name text default '';
@@ -440,6 +440,12 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
+          call pr_get_reconstaticvaluesql(v_sourcebase_filter,'',in_recon_code,'',in_user_code,@v_sourcebase_filter,@msg22,@result22);
+          set v_sourcebase_filter = @v_sourcebase_filter;
+
+          call pr_get_reconstaticvaluesql(v_comparisonbase_filter,'',in_recon_code,'',in_user_code,@v_comparisonbase_filter,@msg22,@result22);
+          set v_comparisonbase_filter = @v_comparisonbase_filter;
+
           set v_rule_condition = ' and ';
           set v_rule_notnull_condition = ' and (1 = 1 ';
           set v_rule_groupby = '';
@@ -665,6 +671,10 @@ me:BEGIN
           end if;
 
           set v_rule_notnull_condition = concat(v_rule_notnull_condition,') ');
+
+          call pr_get_reconstaticvaluesql(v_rule_condition,'',in_recon_code,'',in_user_code,@v_rule_condition,@msg22,@result22);
+          set v_rule_condition = @v_rule_condition;
+
           set v_rule_condition = concat(v_rule_condition,v_rule_notnull_condition);
 
           set v_source_sql = concat(v_source_head_sql,' and tran_date >= ',char(39),in_period_from,char(39));

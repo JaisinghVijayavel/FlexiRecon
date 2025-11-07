@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_run_theme_comparison`
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -18,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-08-2025
+    Updated Date : 07-11-2025
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_version text default '';
@@ -633,6 +634,12 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
+          call pr_get_reconstaticvaluesql(v_sourcebase_filter,'',in_recon_code,'',in_user_code,@v_sourcebase_filter,@msg22,@result22);
+          set v_sourcebase_filter = @v_sourcebase_filter;
+
+          call pr_get_reconstaticvaluesql(v_comparisonbase_filter,'',in_recon_code,'',in_user_code,@v_comparisonbase_filter,@msg22,@result22);
+          set v_comparisonbase_filter = @v_comparisonbase_filter;
+
           set v_theme_condition = ' and ';
           set v_theme_notnull_condition = ' and ';
           set v_theme_groupby = '';
@@ -877,6 +884,9 @@ me:BEGIN
             set v_comparison_condition  = concat(v_comparison_condition,' 1 = 1 ');
             set v_theme_condition  = concat(v_theme_condition,' 1 = 1 ');
           end if;
+
+          call pr_get_reconstaticvaluesql(v_theme_condition,'',in_recon_code,'',in_user_code,@v_theme_condition,@msg22,@result22);
+          set v_theme_condition = @v_theme_condition;
 
           -- source from tran table
           set v_source_sql = v_source_head_sql;
