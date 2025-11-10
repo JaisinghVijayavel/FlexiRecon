@@ -9,6 +9,7 @@ CREATE PROCEDURE `pr_run_preprocesschk`(
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -18,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 17-09-2025
+    Updated Date : 10-11-2025
 
-    Version : 9
+    Version : 11
   */
 
   declare v_recon_version text default '';
@@ -419,6 +420,12 @@ me:BEGIN
         set v_preprocess_filter = concat(v_preprocess_filter,' 1 = 1) ');
         set v_lookup_filter = concat(v_lookup_filter,' 1 = 1) ');
 
+        call pr_get_reconstaticvaluesql(v_preprocess_filter,'',in_recon_code,'',in_user_code,@v_preprocess_filter,@msg22,@result22);
+        set v_preprocess_filter = @v_preprocess_filter;
+
+        call pr_get_reconstaticvaluesql(v_lookup_filter,'',in_recon_code,'',in_user_code,@v_lookup_filter,@msg22,@result22);
+        set v_lookup_filter = @v_lookup_filter;
+
 				-- order by field block
         set v_orderby_field = '';
 
@@ -525,6 +532,9 @@ me:BEGIN
           set v_lookup_update_fields = concat('a.',v_set_recon_field,'=b.',v_lookup_return_field,' ');
         end if;
 
+        call pr_get_reconstaticvaluesql(v_lookup_update_fields,'',in_recon_code,'',in_user_code,@v_lookup_update_fields,@msg22,@result22);
+        set v_lookup_update_fields = @v_lookup_update_fields;
+
         -- lookup condition
         set v_lookup_condition = ' and (';
 
@@ -603,8 +613,6 @@ me:BEGIN
                                            v_join_condition);
             end if;
 
-            select v_source_field_type,in_recon_code,v_recon_field_format,v_lookup_dataset_code,v_lookup_field,v_comparison_criteria,v_build_condition;
-
             set v_lookup_condition = concat(v_lookup_condition,v_build_condition,' ');
 
             -- index lookup field
@@ -643,6 +651,9 @@ me:BEGIN
         else
           set v_lookup_condition = concat(v_lookup_condition,' 1 = 1) ');
         end if;
+
+        call pr_get_reconstaticvaluesql(v_lookup_condition,'',in_recon_code,'',in_user_code,@v_lookup_condition,@msg22,@result22);
+        set v_lookup_condition = @v_lookup_condition;
 
         -- group field
         if v_lookup_group_flag = 'Y' and v_lookup_multi_return_flag <> 'Y' then
@@ -755,6 +766,9 @@ me:BEGIN
 
             set v_process_function = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_process_expression,false);
 
+            call pr_get_reconstaticvaluesql(v_process_function,'',in_recon_code,'',in_user_code,@v_process_function,@msg22,@result22);
+            set v_process_function = @v_process_function;
+
 						set v_sql = 'update $TABLENAME$ set ';
 						set v_sql = concat(v_sql,v_set_recon_field,' = ',v_process_function,' ');
 						set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -764,9 +778,10 @@ me:BEGIN
 						set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
 						set v_sql = concat(v_sql,v_orderby_field);
 
+            select v_sql;
+
 						call pr_run_sql('set @sno := 0',@msg,@result);
 
-            select v_sql;
 						call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
 						call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
 					end loop reconexp_loop;
@@ -799,6 +814,9 @@ me:BEGIN
 
             set v_process_function = fn_get_expressionformat_ds(v_lookup_dataset_code,v_set_lookup_field,
                                                                 v_process_expression,false,'');
+
+            call pr_get_reconstaticvaluesql(v_process_function,'',in_recon_code,'',in_user_code,@v_process_function,@msg22,@result22);
+            set v_process_function = @v_process_function;
 
 						set v_sql = concat('update ',v_lookup_table,' set ');
 						set v_sql = concat(v_sql,v_set_lookup_field,' = ',v_process_function,' ');
@@ -833,6 +851,9 @@ me:BEGIN
 
           set v_field_expression = fn_get_expressionformat(in_recon_code,v_set_recon_field,v_field_expression,false);
 
+          call pr_get_reconstaticvaluesql(v_field_expression,'',in_recon_code,'',in_user_code,@v_field_expression,@msg22,@result22);
+          set v_field_expression = @v_field_expression;
+
           set v_sql = 'update $TABLENAME$ set ';
           set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_field_expression,'$FIELD$',v_get_recon_field),' ');
           set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
@@ -863,8 +884,6 @@ me:BEGIN
         set v_sql = concat(v_sql,'and a.tran_gid > 0 ');
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
-        select v_sql;
-
         set v_count_sql = 'select count(*) into @base_count from $TABLENAME$ as a ';
         set v_count_sql = concat(v_count_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_count_sql = concat(v_count_sql,v_recon_date_condition);
@@ -888,9 +907,10 @@ me:BEGIN
 
         set @base_count = 0;
       elseif v_process_method = 'QCD_QUERY' then
-        set v_sql = v_process_query;
+        call pr_get_reconstaticvaluesql(v_process_query,'',in_recon_code,'',in_user_code,@v_process_query,@msg22,@result22);
+        set v_process_query = @v_process_query;
 
-        call pr_run_sql1(v_sql,@msg,@result);
+        call pr_run_sql1(v_process_query,@msg,@result);
       elseif v_process_method = 'QCD_AGGEXP' then
         call pr_run_preprocess_agg(in_recon_code,
                                           v_preprocess_code,
@@ -899,6 +919,7 @@ me:BEGIN
                                           in_period_from,
                                           in_period_to,
                                           in_automatch_flag,
+                                          in_user_code,
                                           @msg_11,
                                           @result_11);
       elseif v_process_method = 'QCD_COMPARISONEXP' then
@@ -909,8 +930,20 @@ me:BEGIN
                                           in_period_from,
                                           in_period_to,
                                           in_automatch_flag,
+                                          in_user_code,
                                           @msg1,
                                           @result1);
+      elseif v_process_method = 'QCD_COMPARISONEXP_AGG' then
+        call pr_run_preprocess_comparisonagg(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          in_user_code,
+                                          @msg_1,
+                                          @result_1);
       elseif v_process_method = 'QCD_LOOKUP_EXP_AGG' then
         call pr_run_preprocess_agglookup(in_recon_code,
                                           v_preprocess_code,
@@ -919,6 +952,7 @@ me:BEGIN
                                           in_period_from,
                                           in_period_to,
                                           in_automatch_flag,
+                                          in_user_code,
                                           @msg_1,
                                           @result_1);
       end if;
