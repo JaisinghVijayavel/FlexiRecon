@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 07-11-2025
+    updated Date : 17-11-2025
 
-    Version : 6
+    Version : 7
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -1672,245 +1672,6 @@ me:BEGIN
           truncate recon_tmp_t5trangid;
           truncate recon_tmp_t5tranbrkpgid;
 
-          /*
-          -- find matchoff diff value
-          -- plus value
-          set v_match_sql = 'insert into recon_tmp_t5thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
-          set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
-          set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
-          set v_match_sql = concat(v_match_sql,'{');
-          set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(a.tranbrkp_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(a.tran_mult as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
-          set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',a.tran_acc_mode,',char(39),'",');
-          set v_match_sql = concat(v_match_sql,'"ko_value":', char(39),',cast(a.excp_value as nchar),',char(39));
-          set v_match_sql = concat(v_match_sql,'},');
-          set v_match_sql = concat(v_match_sql,'{');
-          set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(b.tran_mult as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"src_comp_flag":"C",');
-          set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',b.tran_acc_mode,',char(39),'",');
-          set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
-          set v_match_sql = concat(v_match_sql,'}');
-          set v_match_sql = concat(v_match_sql,']',char(39),') as json) as matched_json ');
-          set v_match_sql = concat(v_match_sql,'from recon_tmp_t5source as a ');
-          set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t5comparison as b ');
-          set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
-
-          set v_match_sql = concat(v_match_sql,'and (a.excp_value - b.excp_value) > 0 ');
-          set v_match_sql = concat(v_match_sql,'and (a.excp_value - b.excp_value) <=  ',cast(v_rule_threshold_plus_value as nchar),' ');
-
-          set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
-
-          if v_recontype_code <> 'N' then
-            set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
-            set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
-          end if;
-
-          set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');
-          -- set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid,a.excp_value,b.excp_value ');
-          set v_match_sql = concat(v_match_sql,'having count(*) = 1 ');
-
-          call pr_run_sql(v_match_sql,@msg,@result);
-
-          -- minus value
-          set v_match_sql = 'insert ignore into recon_tmp_t5thresholddiff (group_flag,tran_gid,tranbrkp_gid,tran_mult,matched_count,diff_value,matched_json) ';
-          set v_match_sql = concat(v_match_sql,'select ',char(39),'N',char(39),',');
-          set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,a.tran_mult,count(*) as matched_count,(a.excp_value-b.excp_value) as diff_value,');
-          set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
-          set v_match_sql = concat(v_match_sql,'{');
-          set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(a.tranbrkp_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(a.tran_mult as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
-          set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',a.tran_acc_mode,',char(39),'",');
-          set v_match_sql = concat(v_match_sql,'"ko_value":', char(39),',cast(a.excp_value as nchar),',char(39));
-          set v_match_sql = concat(v_match_sql,'},');
-          set v_match_sql = concat(v_match_sql,'{');
-          set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(b.tran_mult as nchar),',char(39),',');
-          set v_match_sql = concat(v_match_sql,'"src_comp_flag":"C",');
-          set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',b.tran_acc_mode,',char(39),'",');
-          set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
-          set v_match_sql = concat(v_match_sql,'}');
-          set v_match_sql = concat(v_match_sql,']',char(39),') as json) as matched_json ');
-          set v_match_sql = concat(v_match_sql,'from recon_tmp_t5source as a ');
-          set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t5comparison as b ');
-          set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
-
-          set v_match_sql = concat(v_match_sql,'and (b.excp_value - a.excp_value) > 0 ');
-          set v_match_sql = concat(v_match_sql,'and (b.excp_value - a.excp_value) <=  ',cast(v_rule_threshold_minus_value as nchar),' ');
-
-          set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
-
-          if v_recontype_code <> 'N' then
-            set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = ',char(39),v_source_acc_mode,char(39),' ');
-            set v_match_sql = concat(v_match_sql,'and b.tran_acc_mode = ',char(39),v_comparison_acc_mode,char(39),' ');
-          end if;
-
-          set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid ');
-          -- set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid,a.excp_value,b.excp_value ');
-          set v_match_sql = concat(v_match_sql,'having count(*) = 1 ');
-
-          call pr_run_sql(v_match_sql,@msg,@result);
-
-          truncate recon_tmp_t5pseudorows;
-          insert into recon_tmp_t5pseudorows select 0 union select 1;
-
-          insert into recon_tmp_t5thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
-            select
-              tran_gid as parent_tran_gid,
-              tranbrkp_gid as parent_tranbrkp_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_gid'))) AS tran_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].ko_value'))) AS ko_value,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
-              JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
-            FROM recon_tmp_t5thresholddiff
-            JOIN recon_tmp_t5pseudorows
-            where group_flag = 'N'
-            HAVING tran_gid IS NOT NULL;
-
-          if v_group_flag = 'Y' then
-            -- plus value
-            set v_match_sql = 'insert ignore into recon_tmp_t5thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
-            set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
-            set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) as diff_value,a.tran_mult,');
-
-            set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
-            set v_match_sql = concat(v_match_sql,'{');
-            set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(a.tranbrkp_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(a.tran_mult as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
-            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',a.tran_acc_mode,',char(39),'",');
-            set v_match_sql = concat(v_match_sql,'"ko_value":', char(39),',cast(a.excp_value as nchar),',char(39));
-            set v_match_sql = concat(v_match_sql,'},',char(39),',');
-            set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
-            set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(b.tran_mult as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"src_comp_flag":"C",');
-            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',b.tran_acc_mode,',char(39),'",');
-            set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
-            set v_match_sql = concat(v_match_sql,'}',char(39),'),');
-            set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
-
-            set v_match_sql = concat(v_match_sql,'from recon_tmp_t5source as a ');
-            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t5comparison as b ');
-            set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
-
-            set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
-
-            if v_grp_field_condition <> '' then
-              set v_match_sql = concat(v_match_sql,'and ',v_grp_field_condition);
-            end if;
-
-            set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
-
-            if v_grp_field <> '' then
-              set v_match_sql = concat(v_match_sql,',',v_grp_field,' ');
-            end if;
-
-            set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
-
-            set v_match_sql = concat(v_match_sql,'and (abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) > 0 ');
-            set v_match_sql = concat(v_match_sql,'and (abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) <= ',cast(v_rule_threshold_plus_value  as nchar),' ');
-
-            call pr_run_sql(v_match_sql,@msg,@result);
-
-            insert ignore into recon_tmp_t5gid select tran_gid,tranbrkp_gid from recon_tmp_t5thresholddiff;
-
-            -- minus value
-            set v_match_sql = 'insert ignore into recon_tmp_t5thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
-            set v_match_sql = concat(v_match_sql,'select ',char(39),'Y',char(39),',');
-            set v_match_sql = concat(v_match_sql,'a.tran_gid,a.tranbrkp_gid,count(*) as matched_count,(abs(a.excp_value*a.tran_mult) - abs(sum(b.excp_value*b.tran_mult))) as diff_value,a.tran_mult,');
-
-            set v_match_sql = concat(v_match_sql,'cast(concat(',char(39),'[');
-            set v_match_sql = concat(v_match_sql,'{');
-            set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(a.tran_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(a.tranbrkp_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(a.tran_mult as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"src_comp_flag":"S",');
-            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',a.tran_acc_mode,',char(39),'",');
-            set v_match_sql = concat(v_match_sql,'"ko_value":', char(39),',cast(a.excp_value as nchar),',char(39));
-            set v_match_sql = concat(v_match_sql,'},',char(39),',');
-            set v_match_sql = concat(v_match_sql,'group_concat(',char(39),'{');
-            set v_match_sql = concat(v_match_sql,'"tran_gid":',char(39),',cast(b.tran_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tranbrkp_gid":',char(39),',cast(b.tranbrkp_gid as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"tran_mult":',char(39),',cast(b.tran_mult as nchar),',char(39),',');
-            set v_match_sql = concat(v_match_sql,'"src_comp_flag":"C",');
-            set v_match_sql = concat(v_match_sql,'"tran_acc_mode":"',char(39),',b.tran_acc_mode,',char(39),'",');
-            set v_match_sql = concat(v_match_sql,'"ko_value":',char(39),',cast(b.excp_value as nchar),',char(39));
-            set v_match_sql = concat(v_match_sql,'}',char(39),'),');
-            set v_match_sql = concat(v_match_sql,char(39), ']',char(39),') as json) as matched_json ');
-
-            set v_match_sql = concat(v_match_sql,'from recon_tmp_t5source as a ');
-            set v_match_sql = concat(v_match_sql,'inner join recon_tmp_t5comparison as b ');
-            set v_match_sql = concat(v_match_sql,'on a.recon_code = b.recon_code ');
-
-            set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
-
-            if v_grp_field_condition <> '' then
-              set v_match_sql = concat(v_match_sql,'and ',v_grp_field_condition);
-            end if;
-
-            set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
-
-            if v_grp_field <> '' then
-              set v_match_sql = concat(v_match_sql,',',v_grp_field,' ');
-            end if;
-
-            set v_match_sql = concat(v_match_sql,'having count(*) > 1 ');
-
-            set v_match_sql = concat(v_match_sql,'and (abs(sum(b.excp_value*b.tran_mult)) - abs(a.excp_value*a.tran_mult)) > 0 ');
-            set v_match_sql = concat(v_match_sql,'and (abs(sum(b.excp_value*b.tran_mult)) - abs(a.excp_value*a.tran_mult)) <= ',cast(v_rule_threshold_minus_value as nchar),' ');
-
-            call pr_run_sql(v_match_sql,@msg,@result);
-
-            select max(matched_count) into v_count from recon_tmp_t5thresholddiff;
-            set v_count = ifnull(v_count,0);
-
-            truncate recon_tmp_t5pseudorows;
-
-            if v_count >= 2 then
-              insert into recon_tmp_t5pseudorows select row from pseudo_rows1 where row <= v_count;
-            else
-              insert into recon_tmp_t5pseudorows select 0 union select 1;
-            end if;
-
-            insert into recon_tmp_t5thresholddiffdtl (parent_tran_gid,parent_tranbrkp_gid,tran_gid,tranbrkp_gid,ko_value,src_comp_flag,tran_acc_mode)
-              select
-                tran_gid as parent_tran_gid,
-                tranbrkp_gid as parent_tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_gid'))) AS tran_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tranbrkp_gid'))) AS tranbrkp_gid,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].ko_value'))) AS ko_value,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].src_comp_flag'))) AS src_comp_flag,
-                JSON_UNQUOTE(JSON_EXTRACT(recon_tmp_t5thresholddiff.matched_json, CONCAT('$[', recon_tmp_t5pseudorows.row, '].tran_acc_mode'))) AS tran_acc_mode
-              FROM recon_tmp_t5thresholddiff
-              JOIN recon_tmp_t5pseudorows
-              where group_flag = 'Y'
-              HAVING tran_gid IS NOT NULL;
-          end if;
-
-          -- update match flag in source table
-          update recon_tmp_t5source as a
-          inner join recon_tmp_t5thresholddiffdtl as b on a.tran_gid = b.tran_gid
-            and a.tranbrkp_gid = b.tranbrkp_gid
-          set a.match_flag = 'Y';
-
-          -- update match flag in comparison table
-          update recon_tmp_t5comparison as a
-          inner join recon_tmp_t5thresholddiffdtl as b on a.tran_gid = b.tran_gid
-            and a.tranbrkp_gid = b.tranbrkp_gid
-          set a.match_flag = 'Y';
-          */
-
           -- get target addtional group field
           if v_group_flag = 'Y' then
             select group_concat(concat('b.',grp_field)) into v_grp_field from recon_mst_trulegrpfieldhistory
@@ -2187,19 +1948,19 @@ me:BEGIN
 									if thresholddiff_done = 1 then leave thresholddiff_loop; end if;
 
 									if v_ko_value >= v_diff_value then
-                    if v_src_comp_flag = 'S' then
+                    if v_src_comp_flag = 'S' and v_diff_value > 0 then
 										  update recon_tmp_t5source set
 											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t5comparison set
-											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
+											  excp_value = excp_value - abs(v_diff_value) * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
 
-                    -- set v_diff_value = abs(v_diff_value);
+                    set v_diff_value = abs(v_diff_value);
 
                     -- insert roundoff value
                     insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)
@@ -2232,6 +1993,12 @@ me:BEGIN
             end loop source_loop;
             close source_cursor;
           end source_block;
+
+          /*
+          select * from recon_tmp_t5manymatch;
+          select * from recon_tmp_t5thresholddiff;
+          select * from recon_tmp_t6comparison where tran_gid = 195928;
+          */
 
           truncate recon_tmp_t5manymatch;
 
@@ -2561,9 +2328,9 @@ me:BEGIN
               */
 
               if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
-						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> a.tran_acc_mode ');
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> b.tran_acc_mode ');
               else
-						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = a.tran_acc_mode ');
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
               end if;
             end if;
 
@@ -2649,6 +2416,9 @@ me:BEGIN
               having b.excp_value < sum(a.ko_value*a.tran_mult)*b.tran_mult");
 
 							call pr_run_sql(v_sql,@msg,@result);
+
+              alter table recon_tmp_t5match ENGINE = MyISAM;
+              alter table recon_tmp_t5matchdtl ENGINE = MyISAM;
 
               if exists(select * from recon_tmp_t5matchdiff) then
 								-- diff block
@@ -2805,7 +2575,7 @@ me:BEGIN
 								and m.ko_flag = 'Y'
 								group by a.tran_gid,b.tran_mult
 								having b.excp_value >= sum(a.ko_value*a.tran_mult)*b.tran_mult");
-							
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               update recon_tmp_t5matchdtl as a
@@ -2818,7 +2588,6 @@ me:BEGIN
               set a.ko_flag = 'N'
               where a.dup_flag = 'N';
             end if;
-
 
             -- insert into knockoff
 						set v_sql = concat("

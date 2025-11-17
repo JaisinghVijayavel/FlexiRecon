@@ -1944,14 +1944,14 @@ me:BEGIN
 									if thresholddiff_done = 1 then leave thresholddiff_loop; end if;
 
 									if v_ko_value >= v_diff_value then
-                    if v_src_comp_flag = 'S' then
+                    if v_src_comp_flag = 'S' and v_diff_value > 0 then
 										  update recon_tmp_t6source set
 											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t6comparison set
-											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
+											  excp_value = excp_value - abs(v_diff_value) * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
@@ -1989,8 +1989,6 @@ me:BEGIN
             end loop source_loop;
             close source_cursor;
           end source_block;
-
-          leave me;
 
           truncate recon_tmp_t6manymatch;
 
@@ -2564,7 +2562,7 @@ me:BEGIN
 								and m.ko_flag = 'Y'
 								group by a.tran_gid,b.tran_mult
 								having b.excp_value >= sum(a.ko_value*a.tran_mult)*b.tran_mult");
-							
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               update recon_tmp_t6matchdtl as a
@@ -2578,6 +2576,7 @@ me:BEGIN
               where a.dup_flag = 'N';
             end if;
 
+            leave me;
 
             -- insert into knockoff
 						set v_sql = concat("
