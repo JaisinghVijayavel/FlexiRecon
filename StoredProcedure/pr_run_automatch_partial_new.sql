@@ -2194,12 +2194,12 @@ me:BEGIN
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t5comparison set
-											  excp_value = excp_value + v_diff_value * v_tran_mult * v_base_tran_mult
+											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
 
-                    set v_diff_value = abs(v_diff_value);
+                    -- set v_diff_value = abs(v_diff_value);
 
                     -- insert roundoff value
                     insert into recon_tmp_t5tranroundoff (tran_gid,tranbrkp_gid,roundoff_value)

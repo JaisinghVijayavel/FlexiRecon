@@ -1986,6 +1986,9 @@ me:BEGIN
                 end if;
               end if;
 
+              alter table recon_tmp_t1match ENGINE = MyISAM;
+              alter table recon_tmp_t1matchdtl ENGINE = MyISAM;
+
               update recon_tmp_t1match as a
               inner join recon_tmp_t1matchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
                 and b.tranbrkp_gid > 0

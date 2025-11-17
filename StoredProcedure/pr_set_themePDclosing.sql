@@ -12,9 +12,9 @@ me:begin
     Created Date : 27-02-2025
 
     Updated By : Vijayavel
-    updated Date : 20-03-2025
+    updated Date : 17-11-2025
 
-    Version : 3
+    Version : 4
   */
 
   declare v_sql text default '';
@@ -289,6 +289,20 @@ me:begin
       and b.delete_flag = 'N'
     set
       a.col11 = 'Blocked IP Refund'
+    where a.col1 = '",in_unit_name,"'
+    ",if(v_recon_cycle_date is null,"",concat("and a.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
+    and a.delete_flag = 'N'");
+
+  call pr_run_sql(v_sql,@msg,@result);
+
+  -- update IP Deposit blocked list
+  set v_sql = concat("update ",v_ds_table," as a
+    inner join ",v_ds_blocked_table," as b on a.col3 = b.col3
+      and a.col5 = b.col5
+      and b.col2 = 'IP DEPOSIT'
+      and b.delete_flag = 'N'
+    set
+      a.col11 = 'Blocked IP Deposit'
     where a.col1 = '",in_unit_name,"'
     ",if(v_recon_cycle_date is null,"",concat("and a.col12 = '",cast(v_recon_cycle_date as nchar),"' ")),"
     and a.delete_flag = 'N'");

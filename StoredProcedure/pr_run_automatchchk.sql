@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 10-10-2025
+    updated Date : 07-11-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -295,15 +295,15 @@ me:BEGIN
   insert into recon_tmp_t6index select 'recon_tmp_t6source','idx_tran_date','Y';
   insert into recon_tmp_t6index select 'recon_tmp_t6comparison','idx_tran_date','Y';
 
-  drop table if exists recon_tmp_t6match;
   /*
+  drop table if exists recon_tmp_t6match;
   drop table if exists recon_tmp_t6matchdtl;
   drop table if exists recon_tmp_t6matchko;
   drop table if exists recon_tmp_t6matchdiff;
   drop table if exists recon_tmp_t6matchdiffdtl;
   */
 
-  CREATE /*temporary*/ TABLE recon_tmp_t6match(
+  CREATE temporary TABLE recon_tmp_t6match(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -399,9 +399,11 @@ me:BEGIN
     key idx_ko_gid(ko_gid)
   ) ENGINE = MyISAM;
 
+  /*
   drop table if exists recon_tmp_t6manymatch;
+  */
 
-  CREATE /*temporary*/ TABLE recon_tmp_t6manymatch(
+  CREATE temporary TABLE recon_tmp_t6manymatch(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     source_value double(15,2) not null default 0,
@@ -860,6 +862,12 @@ me:BEGIN
           set v_sourcebase_filter = concat(v_sourcebase_filter,' 1 = 1) ');
           set v_comparisonbase_filter = concat(v_comparisonbase_filter,' 1 = 1) ');
 
+          call pr_get_reconstaticvaluesql(v_sourcebase_filter,'',in_recon_code,'',in_user_code,@v_sourcebase_filter,@msg22,@result22);
+          set v_sourcebase_filter = @v_sourcebase_filter;
+
+          call pr_get_reconstaticvaluesql(v_comparisonbase_filter,'',in_recon_code,'',in_user_code,@v_comparisonbase_filter,@msg22,@result22);
+          set v_comparisonbase_filter = @v_comparisonbase_filter;
+
           -- if v_sourcebase_filter = ' and ' then set v_sourcebase_filter = ''; end if;
           -- if v_comparisonbase_filter = ' and ' then set v_comparisonbase_filter = ''; end if;
 
@@ -874,10 +882,12 @@ me:BEGIN
           drop temporary table if exists recon_tmp_t6comparison;
           drop temporary table if exists recon_tmp_t6sourcedup;
 
+          /*
           drop table if exists recon_tmp_t6source;
           drop table if exists recon_tmp_t6comparison;
+          */
 
-          create /*temporary*/ table recon_tmp_t6source select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_t6source select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t6source ENGINE = MyISAM;
           alter table recon_tmp_t6source add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t6source(excp_value);
@@ -885,7 +895,7 @@ me:BEGIN
           create index idx_recon_code on recon_tmp_t6source(recon_code);
           create index idx_dataset_code on recon_tmp_t6source(recon_code,dataset_code);
 
-          create /*temporary*/ table recon_tmp_t6comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_t6comparison select * from recon_trn_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_t6comparison ENGINE = MyISAM;
           alter table recon_tmp_t6comparison add primary key(tran_gid,tranbrkp_gid);
           create index idx_excp_value on recon_tmp_t6comparison(excp_value);
@@ -1198,6 +1208,9 @@ me:BEGIN
             set v_comparison_condition  = concat(v_comparison_condition,' 1 = 1 ');
             set v_rule_condition  = concat(v_rule_condition,' 1 = 1 ');
           end if;
+
+          call pr_get_reconstaticvaluesql(v_rule_condition,'',in_recon_code,'',in_user_code,@v_rule_condition,@msg22,@result22);
+          set v_rule_condition = @v_rule_condition;
 
           -- source from tran table
           set v_source_sql = v_source_head_sql;
@@ -1756,9 +1769,9 @@ me:BEGIN
               */
 
               if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
-						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> a.tran_acc_mode ');
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode <> b.tran_acc_mode ');
               else
-						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = a.tran_acc_mode ');
+						    set v_match_sql = concat(v_match_sql,'and a.tran_acc_mode = b.tran_acc_mode ');
               end if;
 						end if;
 
@@ -1771,10 +1784,7 @@ me:BEGIN
             end if;
 
             -- run match sql one to one
-            select v_match_sql;
 						call pr_run_sql(v_match_sql,@msg,@result);
-
-            leave me;
 
 						truncate recon_tmp_t6pseudorows;
 
@@ -1841,7 +1851,7 @@ me:BEGIN
 								and m.ko_flag = 'Y'
 								group by a.tran_gid,b.tran_value,b.excp_value,b.tran_mult
 								having b.excp_value < sum(a.ko_value*a.tran_mult)*b.tran_mult");
-							
+
 							call pr_run_sql(v_sql,@msg,@result);
 
               if exists(select * from recon_tmp_t6matchdiff) then
@@ -1976,12 +1986,26 @@ me:BEGIN
                 end if;
               end if;
 
+          alter table recon_tmp_t6match ENGINE = MyISAM;
+          alter table recon_tmp_t6matchdtl ENGINE = MyISAM;
+
+              select b.* from recon_tmp_t6match as a
+              inner join recon_tmp_t6matchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
+                and b.tranbrkp_gid > 0
+                and b.ko_flag = 'N'
+              where a.ko_flag = 'Y' and a.dup_flag = 'N';
+
               update recon_tmp_t6match as a
               inner join recon_tmp_t6matchdtl as b on a.tran_gid = b.parent_tran_gid and a.tranbrkp_gid = b.parent_tranbrkp_gid
                 and b.tranbrkp_gid > 0
                 and b.ko_flag = 'N'
               set b.ko_flag = 'Y'
               where a.ko_flag = 'Y' and a.dup_flag = 'N';
+
+              select * from recon_tmp_t6match;
+              select * from recon_tmp_t6matchdtl;
+              leave me;
+
 
               -- knockoff validation
 							set v_sql = concat("
@@ -2029,6 +2053,7 @@ me:BEGIN
 						else
 							insert into recon_tmp_t6pseudorows select 0 union select 1;
             end if;
+
 
             -- insert in ko table
 						set v_sql = concat("
@@ -2109,7 +2134,7 @@ me:BEGIN
 										a.theme_code = ''
 								where a.ko_gid = 0
 								and a.delete_flag = 'N'");
-								
+
 							call pr_run_sql(v_sql,@msg,@result);
 
 							set v_sql = concat("
