@@ -10,6 +10,16 @@ CREATE PROCEDURE `pr_get_reportfieldtype`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 26-11-2025
+
+    Version : 1
+  */
+
   declare v_field_name varchar(128) default '';
   declare v_field_alias_name varchar(128) default '';
   declare v_field_type varchar(128) default '';
@@ -110,6 +120,7 @@ me:BEGIN
       and b.recon_code = in_recon_code
       and b.delete_flag = 'N'
     where a.reporttemplate_code = in_reporttemplate_code
+    and a.display_flag = 'Y'
     and a.delete_flag = 'N'
     order by a.display_order;
 
@@ -164,7 +175,7 @@ me:BEGIN
         field_name,
         fn_get_reconfieldname(in_recon_code,field_name),
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
-        @sno := @sno + 1
+        if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = v_table_name
       -- and acc_field_flag = 'Y'
@@ -176,7 +187,7 @@ me:BEGIN
         field_name,
         fn_get_reconfieldname(in_recon_code,field_name),
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
-        @sno := @sno + 1
+        if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = v_table_name
       -- and value_field_flag = 'Y'
@@ -188,7 +199,7 @@ me:BEGIN
         field_name,
         fn_get_reconfieldname(in_recon_code,field_name),
         fn_get_fieldtype(in_recon_code,field_name) as field_type,
-        @sno := @sno + 1
+        if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = v_table_name
       and acc_field_flag = 'N'
@@ -334,7 +345,7 @@ me:BEGIN
     select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
   end if;
 
-  select * from recon_tmp_tfield order by display_flag desc;
+  select * from recon_tmp_tfield order by display_order asc;
 
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;

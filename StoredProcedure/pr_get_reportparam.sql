@@ -9,6 +9,7 @@ BEGIN
     declare v_src_table_name text default '';
     declare v_rpt_table_name text default '';
     declare v_recon_field_prefix text default '';
+    declare v_ds_db_name text default '';
 
     drop temporary table if exists recon_tmp_treportparam;
 
@@ -75,7 +76,7 @@ BEGIN
       )
       select
         in_report_code as report_code,
-        concat(v_recon_field_prefix,recon_field_name) as reportparam_code,       
+        concat(v_recon_field_prefix,recon_field_name) as reportparam_code,
         case when recon_field_type is null then fn_get_reconfieldname(recon_code,recon_field_name)
         else concat(fn_get_reconfieldname(recon_code,recon_field_name), '-', ifnull(recon_field_type,'')) end
          as reportparam_desc,
@@ -106,6 +107,26 @@ BEGIN
       and active_status = 'Y'
       and delete_flag = 'N'
       order by dataset_seqno;
+
+      set v_ds_db_name = fn_get_configvalue('dataset_db_name');
+
+      if v_ds_db_name = '' then
+        select database() into v_ds_db_name;
+      end if;
+
+      insert ignore into recon_tmp_treportparam
+      (
+        report_code,
+        reportparam_code,
+        reportparam_desc,
+        reportparam_order
+      )
+      select
+        in_report_code,'scheduler_gid','Scheduler Id - INTEGER',@sno := @sno + 1
+      from INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = in_report_code
+      AND TABLE_SCHEMA = v_ds_db_name
+      and COLUMN_NAME = 'scheduler_gid';
     else
       insert into recon_tmp_treportparam
       (
