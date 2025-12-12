@@ -18,9 +18,9 @@ me:BEGIN
     Created Date : 08-02-2024
 
     Updated By : Vijayavel
-    updated Date : 27-10-2025
+    updated Date : 03-12-2025
 
-    Version : 6
+    Version : 7
   */
 
   declare v_tran_field text default '';
@@ -93,7 +93,7 @@ me:BEGIN
   */
   set v_sql = concat(v_sql,'where true ');
 
-  set v_sql = concat(v_sql,in_condition,' ');
+  set v_sql = concat(v_sql,replace(in_condition,'tranbrkp_gid','bal_mult'),' ');
 
   if v_recontype_code = 'N' then
     set v_sql = concat(v_sql,'and a.ko_gid = 0 ');

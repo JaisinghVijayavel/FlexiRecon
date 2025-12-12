@@ -16,9 +16,9 @@ me:BEGIN
     Created Date : 24-11-2023
 
     Updated By : Vijayavel
-    updated Date : 23-10-2025
+    updated Date : 03-12-2025
 
-    Version : 4
+    Version : 5
   */
 
   declare v_recontype_code text default '';
@@ -153,7 +153,7 @@ me:BEGIN
   end if;
 
   set v_sql = concat("
-  insert into recon_tmp_ttrangid
+  insert ignore into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
@@ -172,7 +172,7 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_sql = concat("
-  insert into recon_tmp_ttrangid
+  insert ignore into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
@@ -191,7 +191,7 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_sql = concat("
-  insert into recon_tmp_ttrangid
+  insert ignore into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
@@ -210,7 +210,7 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_sql = concat("
-  insert into recon_tmp_ttrangid
+  insert ignore into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
@@ -229,7 +229,7 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_sql = concat("
-  insert into recon_tmp_ttrangid
+  insert ignore into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
@@ -245,7 +245,7 @@ me:BEGIN
   call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_sql = concat("
-  insert into recon_tmp_ttrangid
+  insert ignore into recon_tmp_ttrangid
   (
     tran_gid,tran_date,tran_mult,tran_value,excp_value,roundoff_value
   )
