@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 06-11-2025
+    Updated Date : 20-12-2025
 
-    Version : 5
+    Version : 6
   */
 
   declare v_recon_version text default '';
@@ -592,6 +592,7 @@ me:BEGIN
           ) ENGINE = MyISAM;
 
           set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_process_expression,false,'');
+          set v_field_expression = concat("cast(",v_field_expression," as decimal(15,2))");
 
           set v_value_variable = concat("@value_",v_sysdatetime);
           set v_col128_variable = concat("@col128_",v_sysdatetime);

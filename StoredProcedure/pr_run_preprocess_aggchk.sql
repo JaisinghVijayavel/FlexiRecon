@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_preprocess_agg` $$
-CREATE PROCEDURE `pr_run_preprocess_agg`(
+DROP PROCEDURE IF EXISTS `pr_run_preprocess_aggchk` $$
+CREATE PROCEDURE `pr_run_preprocess_aggchk`(
   in in_recon_code text,
   in in_preprocess_code varchar(32),
   in in_job_gid int,
@@ -19,9 +19,9 @@ me:BEGIN
     Created Date : 18-09-2025
 
     Updated By : Vijayavel
-    Updated Date : 21-12-2025
+    Updated Date : 06-11-2025
 
-    Version : 5
+    Version : 4
   */
 
   declare v_recon_version text default '';
@@ -58,7 +58,6 @@ me:BEGIN
   declare v_field_expression text default '';
   declare v_field text default '';
   declare v_orderby_field text default '';
-  declare v_orderby_aliasfield text default '';
   declare v_grp_field text default '';
   declare v_idx_grp_field text default '';
   declare v_grpby_condition text default '';
@@ -416,6 +415,47 @@ me:BEGIN
         call pr_get_reconstaticvaluesql(v_preprocess_filter,'',in_recon_code,'',in_user_code,@v_preprocess_filter,@msg22,@result22);
         set v_preprocess_filter = @v_preprocess_filter;
 
+				-- order by field block
+        set v_orderby_field = '';
+
+				orderbyfield_block:begin
+					declare orderbyfield_done int default 0;
+
+					declare orderbyfield_cursor cursor for
+						select
+							distinct recorder_field
+						from recon_mst_tpreprocessrecorderhistory
+						where preprocess_code = v_preprocess_code
+            and recon_version = v_recon_version
+						and active_status = 'Y'
+						and delete_flag = 'N'
+						order by recorder_seqno;
+
+					declare continue handler for not found set orderbyfield_done=1;
+
+					open orderbyfield_cursor;
+
+					orderbyfield_loop: loop
+						fetch orderbyfield_cursor into v_field;
+
+						if orderbyfield_done = 1 then leave orderbyfield_loop; end if;
+
+						if v_orderby_field = '' then
+							set v_orderby_field = v_field;
+						else
+							set v_orderby_field = concat(v_orderby_field,',',v_field);
+						end if;
+					end loop orderbyfield_loop;
+
+					close orderbyfield_cursor;
+				end orderbyfield_block;
+
+        if v_orderby_field <> '' then
+          set v_orderby_field = concat('order by ',v_orderby_field,',');
+        else
+          set v_orderby_field = 'order by ';
+        end if;
+
         set v_aggjoin_condition = ' 1 = 1 ';
         set v_grp_field = '';
         set v_idx_grp_field = '';
@@ -472,60 +512,6 @@ me:BEGIN
         else
           set v_group_flag = 'N';
           set v_agg_flag = 'N';
-        end if;
-
-				-- order by field block
-        set v_orderby_field = '';
-        set v_orderby_aliasfield = '';
-
-				orderbyfield_block:begin
-					declare orderbyfield_done int default 0;
-
-					declare orderbyfield_cursor cursor for
-						select
-							distinct recorder_field
-						from recon_mst_tpreprocessrecorderhistory
-						where preprocess_code = v_preprocess_code
-            and recon_version = v_recon_version
-						and active_status = 'Y'
-						and delete_flag = 'N'
-						order by recorder_seqno;
-
-					declare continue handler for not found set orderbyfield_done=1;
-
-					open orderbyfield_cursor;
-
-					orderbyfield_loop: loop
-						fetch orderbyfield_cursor into v_field;
-
-						if orderbyfield_done = 1 then leave orderbyfield_loop; end if;
-
-						if v_orderby_field = '' then
-							set v_orderby_field = v_field;
-						else
-							set v_orderby_field = concat(v_orderby_field,',',v_field);
-						end if;
-					end loop orderbyfield_loop;
-
-					close orderbyfield_cursor;
-				end orderbyfield_block;
-
-        -- add grp field as part of order by field
-        if v_grp_field <> '' then
-          if v_orderby_field <> '' then
-            set v_orderby_field = concat(v_orderby_field,',',v_grp_field);
-          else
-            set v_orderby_field = v_grp_field;
-          end if;
-        end if;
-
-        -- order by alignment set
-        if v_orderby_field <> '' then
-          -- order by alias field set
-          set v_orderby_aliasfield = concat('order by a.',replace(v_orderby_field,',',',a.'),',');
-          set v_orderby_field = concat('order by ',v_orderby_field,',');
-        else
-          set v_orderby_field = 'order by ';
         end if;
 
         -- recon condition
@@ -620,6 +606,9 @@ me:BEGIN
 
           call pr_run_sql2(v_sql,@msg,@result);
         end if;
+
+        -- test
+        select * from recon_tmp_t2tranagg;
 
         if v_cumulative_flag = 'Y' and v_group_flag = 'N' then
           -- col128 - Agg Value
@@ -754,6 +743,8 @@ me:BEGIN
             ");
 
           call pr_run_sql2(v_sql,@msg,@result);
+
+          select * from recon_tmp_t2gid;
 
           call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
           call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);

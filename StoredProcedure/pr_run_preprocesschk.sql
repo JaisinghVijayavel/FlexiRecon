@@ -884,6 +884,8 @@ me:BEGIN
         set v_sql = concat(v_sql,'and a.tran_gid > 0 ');
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
 
+        select v_sql;
+
         set v_count_sql = 'select count(*) into @base_count from $TABLENAME$ as a ';
         set v_count_sql = concat(v_count_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
         set v_count_sql = concat(v_count_sql,v_recon_date_condition);
