@@ -64,6 +64,7 @@ me:BEGIN
   declare v_field_expression text default '';
   declare v_field text default '';
   declare v_orderby_field text default '';
+  declare v_orderby_aliasfield text default '';
   declare v_grp_field text default '';
   declare v_idx_grp_field text default '';
   declare v_grpby_condition text default '';
@@ -431,6 +432,7 @@ me:BEGIN
 
 				-- order by field block
         set v_orderby_field = '';
+        set v_orderby_aliasfield = '';
 
 				orderbyfield_block:begin
 					declare orderbyfield_done int default 0;
@@ -474,6 +476,8 @@ me:BEGIN
         end if;
 
         if v_orderby_field <> '' then
+          -- order by alias field set
+          set v_orderby_aliasfield = concat('order by a.',replace(v_orderby_field,',',',a.'),',');
           set v_orderby_field = concat('order by ',v_orderby_field,',');
         else
           set v_orderby_field = 'order by ';
