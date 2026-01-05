@@ -15,9 +15,9 @@ BEGIN
     Created Date: 08-12-2025
 
     Updated By : Vijayavel
-    updated Date :
+    updated Date : 29-12-2025
 
-	  Version - 1
+	  Version - 2
   */
 
 	declare v_tran_table text default '';
@@ -32,6 +32,8 @@ BEGIN
 	declare v_qcd_multivalue_flag text default '';
   declare v_depend_field_flag text default '';
   declare v_depend_recon_field text default '';
+  declare v_clone_field_flag text default '';
+  declare v_clone_recon_field text default '';
 
   declare v_concurrent_ko_flag text default '';
 
@@ -53,6 +55,8 @@ BEGIN
     qcd_multivalue_flag varchar(32) default null,
     depend_field_flag varchar(32) default null,
     depend_recon_field varchar(32) default null,
+    clone_field_flag varchar(32) default null,
+    clone_recon_field varchar(32) default null,
 		PRIMARY KEY (rowvalue_gid),
 		key idx_field_name(field_name)
 	) ENGINE = MyISAM;
@@ -66,6 +70,8 @@ BEGIN
     qcd_multivalue_flag varchar(32) default null,
     depend_field_flag varchar(32) default null,
     depend_recon_field varchar(32) default null,
+    clone_field_flag varchar(32) default null,
+    clone_recon_field varchar(32) default null,
 		PRIMARY KEY (field_name)
 	) ENGINE = MyISAM;
 
@@ -94,7 +100,8 @@ BEGIN
   (
     field_name,field_desc,field_type,
     qcd_parent_code,qcd_multivalue_flag,
-    depend_field_flag,depend_recon_field
+    depend_field_flag,depend_recon_field,
+    clone_field_flag,clone_recon_field
   )
     select
       recon_field_name,
@@ -103,7 +110,9 @@ BEGIN
       qcd_parent_code,
       qcd_multivalue_flag,
       depend_field_flag,
-      depend_recon_field
+      depend_recon_field,
+      clone_field_flag,
+      clone_recon_field
     from recon_mst_treconfield
     where recon_code = in_recon_code
     and edit_field_flag = 'Y'
@@ -118,7 +127,8 @@ BEGIN
 			select
         field_name,field_desc,field_type,
         qcd_parent_code,qcd_multivalue_flag,
-        depend_field_flag,depend_recon_field
+        depend_field_flag,depend_recon_field,
+        clone_field_flag,clone_recon_field
       from recon_tmp_treconcol;
 		declare continue handler for not found set reconfield_done=1;
 
@@ -126,7 +136,9 @@ BEGIN
 
 		reconfield_loop: loop
 			fetch reconfield_cursor into v_field_name,v_field_desc,v_field_type,
-        v_qcd_parent_code,v_qcd_multivalue_flag,v_depend_field_flag,v_depend_recon_field;
+        v_qcd_parent_code,v_qcd_multivalue_flag,
+        v_depend_field_flag,v_depend_recon_field,
+        v_clone_field_flag,v_clone_recon_field;
 			if reconfield_done = 1 then leave reconfield_loop; end if;
 
 			set v_field_name = ifnull(v_field_name,'');
@@ -137,6 +149,8 @@ BEGIN
 			set v_qcd_multivalue_flag = ifnull(v_qcd_multivalue_flag,'');
       set v_depend_field_flag = ifnull(v_depend_field_flag,'');
       set v_depend_recon_field = ifnull(v_depend_recon_field,'');
+      set v_clone_field_flag = ifnull(v_clone_field_flag,'');
+      set v_clone_recon_field = ifnull(v_clone_recon_field,'');
 
 			set @v_field_value  = '';
 
@@ -172,7 +186,9 @@ BEGIN
         qcd_parent_code,
         qcd_multivalue_flag,
         depend_field_flag,
-        depend_recon_field
+        depend_recon_field,
+        clone_field_flag,
+        clone_recon_field
 			)
 			select in_tran_gid,
 						 in_tranbrkp_gid,
@@ -183,7 +199,9 @@ BEGIN
              v_qcd_parent_code,
              v_qcd_multivalue_flag,
              v_depend_field_flag,
-             v_depend_recon_field;
+             v_depend_recon_field,
+             v_clone_field_flag,
+             v_clone_recon_field;
 		end loop reconfield_loop;
 
 		close reconfield_cursor;

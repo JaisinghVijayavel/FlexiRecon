@@ -10,6 +10,16 @@ CREATE FUNCTION `fn_get_comparisoncondition_ds`(
   in_comparison_filter int
 ) RETURNS text CHARSET latin1
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 30-12-2025
+
+    Version : 1
+  */
+
   declare v_txt text;
   declare v_field_src_type text;
   declare v_field_cmp_type text;
@@ -142,7 +152,7 @@ begin
     set in_comparison_field = fn_get_dsfieldnamecast(in_comparison_ds_code,in_comparison_field);
     set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
 
-    set v_txt = concat(' ',in_comparison_field,' ',in_comparison_criteria,' ',in_source_field,' ');
+    set v_txt = concat(' ',in_source_field,' ',in_comparison_criteria,' ',in_comparison_field,' ');
   end if;
 
   if trim(v_txt) = '' then
