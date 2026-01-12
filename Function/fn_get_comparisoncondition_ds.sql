@@ -15,9 +15,9 @@ begin
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 30-12-2025
+    Updated Date : 08-01-2026
 
-    Version : 1
+    Version : 2
   */
 
   declare v_txt text;
@@ -57,6 +57,7 @@ begin
   end if;
 
   if in_comparison_criteria = 'EXACT' then
+    set in_comparison_field = fn_get_dsfieldnamecast(in_comparison_ds_code,in_comparison_field);
     set v_txt = concat(' ',in_source_field,' = ',in_comparison_field,' ');
   elseif in_comparison_criteria = 'CONTAINS'  then
     set v_txt = concat(' ',in_comparison_field,' LIKE concat(''%'',',in_source_field,' collate ',v_collation,',''%'') ');

@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_pagenoreport` $$
-CREATE PROCEDURE `pr_run_pagenoreport`(
+DROP PROCEDURE IF EXISTS `pr_run_pagenoreportchk` $$
+CREATE PROCEDURE `pr_run_pagenoreportchk`(
   in in_reporttemplate_code varchar(32),
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
@@ -230,6 +230,13 @@ me:BEGIN
   end if;
 
   set v_condition = concat(v_condition,' ',v_sorting_field,' limit ',cast(v_start_rec_no as nchar),',',cast(in_page_size as nchar),' ');
+
+  select in_reporttemplate_code,
+                         v_recon_code,
+                         v_report_code,
+                         v_table_name,
+                         v_condition,
+                         v_reporttemplateresultset_code;
 
   call pr_run_tablequery(in_reporttemplate_code,
                          v_recon_code,

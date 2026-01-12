@@ -19,13 +19,14 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 26-08-2025
+    updated Date : 12-01-2026
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_code varchar(32) default '';
   declare v_report_code varchar(32) default '';
+  declare v_reporttemplateresultset_code varchar(32) default '';
   declare v_sortby_code varchar(32);
 
   declare v_rptsession_gid int default 0;
@@ -51,20 +52,36 @@ me:BEGIN
 
   -- get report and recon code
   if in_reporttemplate_code <> '' then
+    -- get report code
     select
-      recon_code,
-      report_code,
-      sortby_code
+      a.recon_code,
+      b.reporttemplateresultset_code,
+      b.src_report_code
     into
       v_recon_code,
-      v_report_code,
-      v_sortby_code
-    from recon_mst_treporttemplate
-    where reporttemplate_code = in_reporttemplate_code
-    and delete_flag = 'N';
+      v_reporttemplateresultset_code,
+      v_report_code
+    from recon_mst_treporttemplate as a
+    inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
+      and b.delete_flag = 'N'
+    where a.reporttemplate_code = in_reporttemplate_code
+    and a.delete_flag = 'N'
+    order by b.resultset_order limit 1;
 
     set v_recon_code = ifnull(v_recon_code,'');
     set v_report_code = ifnull(v_report_code,'');
+    set v_reporttemplateresultset_code = ifnull(v_reporttemplateresultset_code,'');
+
+    -- get sorting field
+    select
+      group_concat(concat(report_field,' ',sorting_type))
+    into
+      v_sortby_code
+    from recon_mst_treporttemplatesorting
+    where reporttemplate_code = in_reporttemplate_code
+    and reporttemplateresultset_code = v_reporttemplateresultset_code
+    order by sorting_order;
+
     set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
   else
     set v_recon_code = ifnull(in_recon_code,'');

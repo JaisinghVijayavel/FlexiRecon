@@ -15,9 +15,9 @@ BEGIN
     Created Date: 02-12-2025
 
     Updated By : Vijayavel
-    updated Date :
+    updated Date : 09-01-2026
 
-	  Version - 1
+	  Version - 2
   */
 
 	declare v_tran_table text default '';
@@ -25,6 +25,7 @@ BEGIN
 
 	declare v_field_name text default '';
 	declare v_field_desc text default '';
+	declare v_field_type text default '';
 	declare v_field_value text default '';
   declare v_concurrent_ko_flag text default '';
 
@@ -41,6 +42,7 @@ BEGIN
 		field_name varchar(255) default null,
 		field_desc varchar(255) default null,
 		field_value text default null,
+    field_type varchar(255) default null,
 		PRIMARY KEY (rowvalue_gid),
 		key idx_field_name(field_name)
 	) ENGINE = MyISAM;
@@ -49,6 +51,7 @@ BEGIN
 	(
 		field_name varchar(255) not null,
 		field_desc varchar(255) not null,
+    field_type varchar(255) default null,
 		PRIMARY KEY (field_name)
 	) ENGINE = MyISAM;
 
@@ -74,21 +77,24 @@ BEGIN
 
 	-- insert system fields
   if in_tranbrkp_gid > 0 then
-	  insert ignore into recon_tmp_treconcol (field_name,field_desc)
-		  select field_name,report_field_desc from recon_mst_tsystemfield
-		  where table_name = 'recon_rpt_ttranbrkp'
-		  and active_status = 'Y'
-      and field_name not in
+	  insert ignore into recon_tmp_treconcol (field_name,field_desc,field_type)
+		  select
+        a.field_name,a.report_field_desc,b.field_type
+      from recon_mst_tsystemfield as a
+      left join recon_mst_tfieldstru as b on b.field_name = a.field_name and b.delete_flag = 'N'
+		  where a.table_name = 'recon_rpt_ttranbrkp'
+		  and a.active_status = 'Y'
+      and a.field_name not in
       (
         'ko_date','ko_gid','tranbrkp_name','tranbrkp_dataset_code',
         'dataset_name'
       )
-		  and delete_flag = 'N'
-		  order by display_order;
+		  and a.delete_flag = 'N'
+		  order by a.display_order;
 
 	  -- insert recon fields
-	  insert ignore into recon_tmp_treconcol (field_name,field_desc)
-		  select recon_field_name,recon_field_desc from recon_mst_treconfield
+	  insert ignore into recon_tmp_treconcol (field_name,field_desc,field_type)
+		  select recon_field_name,recon_field_desc,recon_field_type from recon_mst_treconfield
 		  where recon_code = in_recon_code
       and recon_field_name not in
       (
@@ -98,21 +104,24 @@ BEGIN
 		  and delete_flag = 'N'
 		  order by display_order;
   else
-	  insert ignore into recon_tmp_treconcol (field_name,field_desc)
-		  select field_name,report_field_desc from recon_mst_tsystemfield
-		  where table_name = 'recon_rpt_ttranbrkp'
-		  and active_status = 'Y'
-      and field_name not in
+	  insert ignore into recon_tmp_treconcol (field_name,field_desc,field_type)
+		  select
+        a.field_name,a.report_field_desc,b.field_type
+      from recon_mst_tsystemfield as a
+      left join recon_mst_tfieldstru as b on b.field_name = a.field_name and b.delete_flag = 'N'
+		  where a.table_name = 'recon_rpt_ttranbrkp'
+		  and a.active_status = 'Y'
+      and a.field_name not in
       (
         'ko_date','ko_gid','tranbrkp_gid','tranbrkp_name','tranbrkp_dataset_code',
         'dataset_name'
       )
-		  and delete_flag = 'N'
-		  order by display_order;
+		  and a.delete_flag = 'N'
+		  order by a.display_order;
 
 	  -- insert recon fields
-	  insert ignore into recon_tmp_treconcol (field_name,field_desc)
-		  select recon_field_name,recon_field_desc from recon_mst_treconfield
+	  insert ignore into recon_tmp_treconcol (field_name,field_desc,field_type)
+		  select recon_field_name,recon_field_desc,recon_field_type from recon_mst_treconfield
 		  where recon_code = in_recon_code
 		  and active_status = 'Y'
 		  and delete_flag = 'N'
@@ -124,18 +133,19 @@ BEGIN
 	reconfield_block:begin
 		declare reconfield_done int default 0;
 		declare reconfield_cursor cursor for
-			select field_name,field_desc from recon_tmp_treconcol;
+			select field_name,field_desc,field_type from recon_tmp_treconcol;
 		declare continue handler for not found set reconfield_done=1;
 
 		open reconfield_cursor;
 
 		reconfield_loop: loop
-			fetch reconfield_cursor into v_field_name,v_field_desc;
+			fetch reconfield_cursor into v_field_name,v_field_desc,v_field_type;
 			if reconfield_done = 1 then leave reconfield_loop; end if;
 			
 			set v_field_name = ifnull(v_field_name,'');
 			set v_field_desc = ifnull(v_field_desc,'');
-			
+			set v_field_type = ifnull(v_field_type,'');
+
 			set @v_field_value  = '';
 			
 			if in_tranbrkp_gid > 0 then
@@ -165,19 +175,36 @@ BEGIN
 				tranbrkp_gid,
 				field_name,
 				field_desc,
-				field_value
+				field_value,
+        field_type
 			)
 			select in_tran_gid,
 						 in_tranbrkp_gid,
 						 v_field_name,
 						 v_field_desc,
-						 v_field_value;
+						 v_field_value,
+             v_field_type;
 		end loop reconfield_loop;
-		
+
 		close reconfield_cursor;
 	end reconfield_block;	
 
-	select * from recon_tmp_trowvalue order by rowvalue_gid;
+	select
+    a.*,
+    b.qcd_parent_code,
+    b.qcd_multivalue_flag,
+    b.depend_field_flag,
+    b.depend_recon_field,
+    b.clone_field_flag,
+    b.clone_recon_field,
+    b.edit_field_sno,
+    b.edit_field_flag
+  from recon_tmp_trowvalue as a
+  left join recon_mst_treconfield as b on a.field_name = b.recon_field_name
+    and b.recon_code = in_recon_code
+    and b.active_status = 'Y'
+    and b.delete_flag = 'N'
+  order by a.rowvalue_gid;
 
 	drop temporary table if exists recon_tmp_trowvalue;
 	drop temporary table if exists recon_tmp_treconcol;

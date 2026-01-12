@@ -1,17 +1,17 @@
 ﻿DELIMITER $$
 
 DROP PROCEDURE IF EXISTS `pr_run_tablequery` $$
-CREATE PROCEDURE `pr_run_tablequery`
-(
+CREATE PROCEDURE `pr_run_tablequery`(
   in_reporttemplate_code varchar(32),
   in_recon_code varchar(32),
   in_report_code varchar(32),
   in_table_name varchar(128),
   in_condition text,
   in_job_gid int,
-  in_outputfile_flag boolean,
+  in_outputfile_flag boolean, 
   in_outputfile_type varchar(32),
   in_user_code varchar(32),
+  in_reporttemplate_resultset_code varchar(32),
   out out_msg text,
   out out_result int
 )
@@ -32,9 +32,7 @@ me:BEGIN
   declare v_report_name text default '';
   declare v_rpt_table_name text default '';
   declare v_recon_field_prefix text default '';
-
   declare v_recontype_code text default '';
-
   declare v_report_exec_type text default '';
   declare v_dataset_db_name text default '';
   declare v_table_name text default '';
@@ -44,8 +42,6 @@ me:BEGIN
 
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;
-
-  -- drop table if exists recon_tmp_tfield;
 
   create temporary table recon_tmp_tfield
   (
@@ -67,16 +63,19 @@ me:BEGIN
     key idx_display_order(display_order)
   ) ENGINE = MyISAM;
 
-  -- get report code
+  
   select
-    report_code,
-    reporttemplate_name
+    b.src_report_code,
+    a.reporttemplate_name
   into
     v_report_code,
     v_report_name
-  from recon_mst_treporttemplate
-  where reporttemplate_code = in_reporttemplate_code
-  and delete_flag = 'N';
+  from recon_mst_treporttemplate as a
+  inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
+    and b.delete_flag = 'N'
+  where a.reporttemplate_code = in_reporttemplate_code
+  and b.reporttemplateresultset_code = in_reporttemplate_resultset_code
+  and a.delete_flag = 'N';
 
   set v_report_code = ifnull(v_report_code,in_report_code);
   set v_report_name = ifnull(v_report_name,'');
@@ -119,8 +118,8 @@ me:BEGIN
   set v_report_name = GET_ALPHANUM(v_report_name);
 
   if exists(select * from recon_mst_treporttemplatefield
-    where reporttemplate_code = in_reporttemplate_code
-    and reporttemplate_code <> '' 
+    where reporttemplate_code = in_reporttemplate_code 
+    and reporttemplateresultset_code=in_reporttemplate_resultset_code
     and delete_flag = 'N') then
     set @sno := 0;
 
@@ -135,9 +134,9 @@ me:BEGIN
       from recon_mst_treporttemplatefield as a
       left join recon_mst_tdatasetfield as c on c.dataset_code = v_report_code
         and a.report_field = c.dataset_table_field
-        and c.delete_flag = 'N'
+        and c.delete_flag = 'N' 
       where a.reporttemplate_code = in_reporttemplate_code
-      and a.delete_flag = 'N'
+      and a.delete_flag = 'N' and a.reporttemplateresultset_code=in_reporttemplate_resultset_code
       order by a.display_order;
     else
       insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order)
@@ -152,7 +151,7 @@ me:BEGIN
         and b.recon_code = in_recon_code
         and b.delete_flag = 'N'
       where a.reporttemplate_code = in_reporttemplate_code
-      and a.delete_flag = 'N'
+      and a.delete_flag = 'N' and a.reporttemplateresultset_code=in_reporttemplate_resultset_code
       order by a.display_order;
     end if;
 
@@ -177,15 +176,14 @@ me:BEGIN
     and delete_flag = 'N'
     order by dataset_field_sno;
 
-    -- dataset_gid
+    
     insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
     select
       'dataset_gid',
       'Dataset Id',
       'INTEGER',
       '999';
-
-    -- scheduler_gid
+    
     insert into recon_tmp_tfield (field_name,field_alias_name,field_type,display_order)
     select
       'scheduler_gid',
@@ -197,7 +195,7 @@ me:BEGIN
   elseif exists(select field_name from recon_mst_tsystemfield
     where table_name = in_table_name
     and delete_flag = 'N') then
-    -- get recontype code
+    
     select
       recontype_code into v_recontype_code
     from recon_mst_trecon
@@ -205,7 +203,6 @@ me:BEGIN
     and delete_flag = 'N';
 
     set v_recontype_code = ifnull(v_recontype_code,'');
-
     set @sno := 0;
 
     if v_recontype_code = 'W' or v_recontype_code = 'B' or v_recontype_code = 'I' then
@@ -217,7 +214,7 @@ me:BEGIN
         if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = in_table_name
-      -- and acc_field_flag = 'Y'
+      
       and delete_flag = 'N'
       order by display_order;
     elseif v_recontype_code = 'V' then
@@ -229,7 +226,7 @@ me:BEGIN
         if(display_order < 900,@sno := @sno + 1,display_order)
       from recon_mst_tsystemfield
       where table_name = in_table_name
-      -- and value_field_flag = 'Y'
+      
       and delete_flag = 'N'
       order by display_order;
     else
@@ -252,7 +249,7 @@ me:BEGIN
       a.recon_field_name,
       fn_get_reconfieldname(in_recon_code,a.recon_field_name),
       a.recon_field_type as field_type,
-      @sno := @sno + 1
+      @sno + a.display_order + 1
     from recon_mst_treconfield as a
     inner join recon_mst_ttablestru as b on a.recon_field_name = b.field_name
       and b.table_name = in_table_name
@@ -289,7 +286,7 @@ me:BEGIN
       a.recon_field_name,
       fn_get_reconfieldname(in_recon_code,a.recon_field_name),
       a.recon_field_type as field_type,
-      @sno := @sno + 1
+      @sno + a.display_order + 1
     from recon_mst_treconfield as a
     inner join recon_mst_ttablestru as b on a.recon_field_name = b.field_name
       and b.table_name = in_table_name
@@ -298,25 +295,6 @@ me:BEGIN
     where a.recon_code = in_recon_code
     and a.delete_flag = 'N'
     order by a.display_order;
-
-    /*
-    insert ignore into recon_tmp_tfield (field_name,field_alias_name,field_type)
-      select
-        t.field_name,
-        fn_get_reconfieldname(in_recon_code,t.field_name),
-        ifnull(f.recon_field_type,'')
-      from recon_mst_ttablestru as t
-      left join recon_mst_treconfield as f on t.field_name = f.recon_field_name
-        and f.recon_code = in_recon_code
-        and f.delete_flag = 'N'
-      left join recon_mst_tfieldstru as s on t.field_name = s.field_name and t.delete_flag = 'N'
-      where t.table_name = in_table_name
-      and (t.display_flag = 'Y' or f.display_flag = 'Y')
-      -- and (t.display_flag = 'Y' or (f.display_flag = 'Y' and f.recon_field_name like 'col%'))
-      and t.delete_flag = 'N'
-      order by if(ifnull(f.display_order,999)>t.display_order,t.display_order,f.display_order);
-      -- order by if(t.field_name like 'col%',ifnull(f.display_order,128),t.display_order);
-    */
 
     set v_table_stru_flag := true;
   else
@@ -337,13 +315,11 @@ me:BEGIN
 
     set v_table_stru_flag := false;
   end if;
-
-  -- display table
+  
   if exists(select * from recon_mst_treporttemplatefield
-    where reporttemplate_code = in_reporttemplate_code
-    and reporttemplate_code <> ''
+    where reporttemplate_code = in_reporttemplate_code and reporttemplateresultset_code=in_reporttemplate_resultset_code
     and delete_flag = 'N') then
-    -- get report table name
+    
     select
       table_name,
       recon_field_prefix
@@ -365,12 +341,12 @@ me:BEGIN
     select
       ifnull(b.field_name,replace(a.report_field,v_recon_field_prefix,'')) as field_name,
       a.display_flag,
-      a.display_order
+      a.display_order 
     from recon_mst_treporttemplatefield as a
     left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
       and b.table_name = in_table_name
       and b.delete_flag = 'N'
-    where a.reporttemplate_code = in_reporttemplate_code
+    where a.reporttemplate_code = in_reporttemplate_code and a.reporttemplateresultset_code=in_reporttemplate_resultset_code
     and a.active_status = 'Y'
     and a.display_flag = 'Y'
     and a.delete_flag = 'N'
@@ -384,7 +360,7 @@ me:BEGIN
     )
     select field_name,'Y',display_order from recon_tmp_tfield order by display_order;
   end if;
-
+    
   field_block:begin
     declare field_done int default 0;
     declare field_cursor cursor for
@@ -402,17 +378,8 @@ me:BEGIN
       if field_done = 1 then leave field_loop; end if;
 
       set v_field_alias_name = ifnull(v_field_alias_name,v_field_name);
-
       set v_field = concat(fn_get_fieldtypeformat(in_recon_code,v_field_name,v_field_type,v_field_length),' as ',char(39),v_field_alias_name,char(39));
-
-      /*
-      if v_field_type = 'NUMBER' then
-        set v_field = concat('ifnull(',fn_get_fieldformat(in_recon_code,v_field_name),',0) as ',char(39),v_field_alias_name,char(39));
-      else
-        set v_field = concat('ifnull(cast(',fn_get_fieldformat(in_recon_code,v_field_name),' as nchar),',char(39),char(39),') as ',char(39),v_field_alias_name,char(39));
-      end if;
-      */
-
+     
       if v_sql_field = '' then
         set v_sql_field = v_field;
       else
@@ -453,7 +420,7 @@ me:BEGIN
 
       set v_sql = concat(v_sql,@outfile_qry);
 
-      -- update in job table
+      
       update recon_trn_tjob set
         job_status = 'P',
         job_remark = 'Inprogress',
@@ -466,18 +433,15 @@ me:BEGIN
       if v_report_code = '' then
         set v_report_code = in_report_code;
       end if;
-
       set v_sql1 = concat("drop table if exists ",in_recon_code,"_",v_report_code);
-
 	    call pr_run_sql(v_sql1,@msg,@result);
-
       set v_sql1 = concat("create table ",in_recon_code,"_",v_report_code," ",v_sql);
 	    call pr_run_sql(v_sql1,@msg,@result);
     else
 	    call pr_run_sql(v_sql,@msg,@result);
     end if;
 
-    -- call pr_ins_errorlog('vijay','localhost','sp','pr_run_tablequery',v_sql,@msg,@result);
+    
 
     if in_job_gid > 0 then
       call pr_upd_job(in_job_gid,'C','Completed',@msg,@result);
