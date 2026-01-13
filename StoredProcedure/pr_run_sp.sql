@@ -19,9 +19,9 @@ begin
     Created Date : 
 
     Updated By : Vijayavel
-    updated Date : 24-04-2025
+    updated Date : 13-01-2026
 
-    Version : 1
+    Version : 2
   */
 
   if in_sp_name = 'pr_run_koreport' then
@@ -44,6 +44,8 @@ begin
     call pr_run_kotranreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_tranwithbrkpreport' then
     call pr_run_tranwithbrkpreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
+  elseif in_sp_name = 'pr_run_tranwithbrkpallreport' then
+    call pr_run_tranwithbrkpallreport(in_archival_code,in_recon_code,in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_errorlogreport' then
     call pr_run_errorlogreport(in_job_gid,in_rptsession_gid,in_condition,in_sorting_order,in_user_code,@msg,@result);
   elseif in_sp_name = 'pr_run_accbalreport' then

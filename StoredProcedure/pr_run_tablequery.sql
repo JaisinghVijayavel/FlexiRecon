@@ -8,7 +8,7 @@ CREATE PROCEDURE `pr_run_tablequery`(
   in_table_name varchar(128),
   in_condition text,
   in_job_gid int,
-  in_outputfile_flag boolean, 
+  in_outputfile_flag boolean,
   in_outputfile_type varchar(32),
   in_user_code varchar(32),
   in_reporttemplate_resultset_code varchar(32),
@@ -36,9 +36,14 @@ me:BEGIN
   declare v_report_exec_type text default '';
   declare v_dataset_db_name text default '';
   declare v_table_name text default '';
+  declare v_reporttemplateresultset_code text default '';
 
   set in_condition = ifnull(in_condition,'');
   set in_job_gid = ifnull(in_job_gid,0);
+
+  if in_reporttemplate_resultset_code = '' or in_reporttemplate_resultset_code = '0' then
+    set in_reporttemplate_resultset_code = null;
+  end if;
 
   drop temporary table if exists recon_tmp_tfield;
   drop temporary table if exists recon_tmp_tfielddisplay;
@@ -63,22 +68,25 @@ me:BEGIN
     key idx_display_order(display_order)
   ) ENGINE = MyISAM;
 
-  
   select
     b.src_report_code,
-    a.reporttemplate_name
+    a.reporttemplate_name,
+    b.reporttemplateresultset_code
   into
     v_report_code,
-    v_report_name
+    v_report_name,
+    v_reporttemplateresultset_code
   from recon_mst_treporttemplate as a
   inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
     and b.delete_flag = 'N'
   where a.reporttemplate_code = in_reporttemplate_code
-  and b.reporttemplateresultset_code = in_reporttemplate_resultset_code
-  and a.delete_flag = 'N';
+  and b.reporttemplateresultset_code = ifnull(in_reporttemplate_resultset_code,b.reporttemplateresultset_code)
+  and a.delete_flag = 'N'
+  order by resultset_order limit 1;
 
   set v_report_code = ifnull(v_report_code,in_report_code);
   set v_report_name = ifnull(v_report_name,'');
+  set v_reporttemplateresultset_code = ifnull(v_reporttemplateresultset_code,'');
 
   if v_report_name = '' then
     select
@@ -119,7 +127,7 @@ me:BEGIN
 
   if exists(select * from recon_mst_treporttemplatefield
     where reporttemplate_code = in_reporttemplate_code 
-    and reporttemplateresultset_code=in_reporttemplate_resultset_code
+    and reporttemplateresultset_code=v_reporttemplateresultset_code
     and delete_flag = 'N') then
     set @sno := 0;
 
@@ -136,7 +144,8 @@ me:BEGIN
         and a.report_field = c.dataset_table_field
         and c.delete_flag = 'N' 
       where a.reporttemplate_code = in_reporttemplate_code
-      and a.delete_flag = 'N' and a.reporttemplateresultset_code=in_reporttemplate_resultset_code
+      and a.reporttemplateresultset_code=v_reporttemplateresultset_code
+      and a.delete_flag = 'N'
       order by a.display_order;
     else
       insert into recon_tmp_tfield (field_name,field_alias_name,field_type,field_length,display_order)
@@ -151,7 +160,8 @@ me:BEGIN
         and b.recon_code = in_recon_code
         and b.delete_flag = 'N'
       where a.reporttemplate_code = in_reporttemplate_code
-      and a.delete_flag = 'N' and a.reporttemplateresultset_code=in_reporttemplate_resultset_code
+      and a.reporttemplateresultset_code=v_reporttemplateresultset_code
+      and a.delete_flag = 'N'
       order by a.display_order;
     end if;
 
@@ -315,11 +325,11 @@ me:BEGIN
 
     set v_table_stru_flag := false;
   end if;
-  
+
   if exists(select * from recon_mst_treporttemplatefield
-    where reporttemplate_code = in_reporttemplate_code and reporttemplateresultset_code=in_reporttemplate_resultset_code
+    where reporttemplate_code = in_reporttemplate_code
+    and reporttemplateresultset_code=v_reporttemplateresultset_code
     and delete_flag = 'N') then
-    
     select
       table_name,
       recon_field_prefix
@@ -346,7 +356,8 @@ me:BEGIN
     left join recon_mst_tsystemfield as b on b.report_field_name = a.report_field
       and b.table_name = in_table_name
       and b.delete_flag = 'N'
-    where a.reporttemplate_code = in_reporttemplate_code and a.reporttemplateresultset_code=in_reporttemplate_resultset_code
+    where a.reporttemplate_code = in_reporttemplate_code
+    and a.reporttemplateresultset_code=v_reporttemplateresultset_code
     and a.active_status = 'Y'
     and a.display_flag = 'Y'
     and a.delete_flag = 'N'
@@ -420,7 +431,7 @@ me:BEGIN
 
       set v_sql = concat(v_sql,@outfile_qry);
 
-      
+
       update recon_trn_tjob set
         job_status = 'P',
         job_remark = 'Inprogress',

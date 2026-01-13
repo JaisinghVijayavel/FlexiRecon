@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_dynamicreport` $$
-CREATE PROCEDURE `pr_run_dynamicreport`(
+DROP PROCEDURE IF EXISTS `pr_run_dynamicreportchk` $$
+CREATE PROCEDURE `pr_run_dynamicreportchk`(
   in in_archival_code varchar(32),
   in in_reporttemplate_code varchar(32),
   in in_recon_code varchar(32),
@@ -59,8 +59,6 @@ me:BEGIN
     set out_msg = @full_error;
     set out_result = 0;
 
-    call pr_ins_errorlog('system','localhost','sp','pr_run_dynamicreport',out_msg,@msg,@result);
-
     if v_job_gid > 0 then
       call pr_upd_job(v_job_gid,'F',out_msg,@msg_err,@result_err);
     end if;
@@ -82,11 +80,33 @@ me:BEGIN
    -- get transaction table
   set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
-  set v_recon_code = ifnull(in_recon_code,'');
-  set v_report_code = ifnull(in_report_code,'');
-  set in_outputfile_type = lower(in_outputfile_type);
+  if in_reporttemplate_code <> '' then
+    select
+      recon_code,
+      report_code,
+      sortby_code
+    into
+      v_recon_code,
+      v_report_code,
+      v_sortby_code
+    from recon_mst_treporttemplate
+    where reporttemplate_code = in_reporttemplate_code
+    and delete_flag = 'N';
 
-  set v_sortby_code = '';
+    set v_recon_code = ifnull(v_recon_code,'');
+    set v_report_code = ifnull(v_report_code,'');
+    set v_sortby_code = lower(ifnull(v_sortby_code,'asc'));
+  else
+    set v_recon_code = ifnull(in_recon_code,'');
+    set v_report_code = ifnull(in_report_code,'');
+    set v_sortby_code = 'asc';
+  end if;
+
+  if v_sortby_code = 'asc' then
+    set v_sortby_code = '';
+  end if;
+
+  set in_outputfile_type = lower(in_outputfile_type);
 
 	if exists(select report_desc from recon_mst_treport
     where report_code = v_report_code
@@ -118,7 +138,7 @@ me:BEGIN
     and delete_flag = 'N';
   elseif exists(select reporttemplate_code from recon_mst_treporttemplate
 		where reporttemplate_code = in_reporttemplate_code
-		and delete_flag = 'N' and active_status='Y') then
+		and active_status='Y' and delete_flag = 'N') then
     select
 		  a.reporttemplate_name,
 		  'M',
@@ -309,8 +329,40 @@ me:BEGIN
                          v_job_gid,
                          in_user_code,
                          @msg,@result);
-  elseif v_report_exec_type = 'M' and in_outputfile_type <> 'csv' then
-    call pr_run_customspmultiresultset(in_archival_code,
+  elseif v_report_exec_type = 'M' then
+    select in_archival_code,
+                                       in_reporttemplate_code,
+                                       in_recon_code,
+                                       in_report_code,
+                                       in_report_param,
+                                       v_sp_name,
+                                       in_report_condition,
+                                       v_job_gid,
+                                       in_user_code;
+
+    if in_outputfile_type = 'csv' then
+      select in_reporttemplate_code,
+                           in_recon_code,
+                           in_report_code,
+                           v_table_name,
+                           in_report_condition,
+                           v_job_gid,
+                           in_outputfile_flag,
+                           in_outputfile_type,
+                           in_user_code;
+
+      call pr_run_tablequery(in_reporttemplate_code,
+                           in_recon_code,
+                           in_report_code,
+                           v_table_name,
+                           replace(replace(in_report_condition,'a.',''),'b.',''),
+                           v_job_gid,
+                           in_outputfile_flag,
+                           in_outputfile_type,
+                           in_user_code, '',-- result set code
+                           @msg,@result);
+    else
+      call pr_run_customspmultiresultset(in_archival_code,
                                        in_reporttemplate_code,
                                        in_recon_code,
                                        in_report_code,
@@ -320,6 +372,7 @@ me:BEGIN
                                        v_job_gid,
                                        in_user_code,
                                        @msg,@result);
+    end if;
   else
     call pr_run_tablequery(in_reporttemplate_code,
                            v_recon_code,
@@ -329,25 +382,20 @@ me:BEGIN
                            v_job_gid,
                            in_outputfile_flag,
                            in_outputfile_type,
-                           in_user_code,
-                           '',-- result set code
+                           in_user_code, '0',-- result set code
                            @msg,@result);
   end if;
 
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
   set out_result = v_job_gid;
 
-  set @out_table_name = ifnull(@out_table_name,'');
-
-  if @out_table_name <> '' then
-    set @dynamicreport = concat('drop table if exists ',@out_table_name,';');
+  if in_outputfile_flag = true then
+	  set @dynamicreport = concat('drop table ',@out_table_name,';');
 
     prepare rpt_stmt from @dynamicreport;
     execute rpt_stmt;
     deallocate prepare rpt_stmt;
-  end if;
 
-  if in_outputfile_flag = true then
     select out_result as result, out_msg as msg;
   end if;
 end $$

@@ -16,9 +16,9 @@ me:BEGIN
     Created Date : 19-02-2025
 
     Updated By : Vijayavel
-    updated Date : 23-10-2025
+    updated Date : 13-01-2026
 
-    Version : 4
+    Version : 5
   */
     
 	declare v_ko_count bigint default 0;
@@ -163,15 +163,28 @@ me:BEGIN
 
 	set v_openingexcp_value = ifnull(v_openingexcp_value,0);
 
+  -- get value
 	select
-		ifnull(count(*),0),ifnull(sum(tran_value),0) as tranvalue
+		ifnull(sum(tran_value),0) as tranvalue
   into
-    v_tranbal_count,v_tranbal_value
+    v_tranbal_value
 	from recon_tmp_ttran
 	where recon_code = in_recon_code
 	and tran_date >= in_period_from
 	and tran_date <= in_period_to
-  and excp_value <> roundoff_value 
+  -- and not (excp_value = roundoff_value)
+	and delete_flag='N';
+
+  -- get count
+	select
+		ifnull(count(*),0)
+  into
+    v_tranbal_count
+	from recon_tmp_ttran
+	where recon_code = in_recon_code
+	and tran_date >= in_period_from
+	and tran_date <= in_period_to
+  and not (excp_value = roundoff_value)
 	and delete_flag='N';
 
 	select
@@ -246,7 +259,10 @@ me:BEGIN
 	where recon_code = in_recon_code
 	and tran_date >= in_period_from
 	and tran_date <= in_period_to
-	and tran_value != excp_value and excp_value != 0 and tran_value != 0 and excp_value != roundoff_value
+	and tran_value != excp_value
+  and excp_value != 0
+  and tran_value != 0
+  -- and excp_value != roundoff_value
 	and delete_flag='N';
 
 	select

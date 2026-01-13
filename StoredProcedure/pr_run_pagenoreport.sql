@@ -3,6 +3,7 @@
 DROP PROCEDURE IF EXISTS `pr_run_pagenoreport` $$
 CREATE PROCEDURE `pr_run_pagenoreport`(
   in in_reporttemplate_code varchar(32),
+  in in_reporttemplateresultset_code varchar(32),
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
   in in_rptsession_gid int,
@@ -64,6 +65,10 @@ me:BEGIN
 
   set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
+  if in_reporttemplateresultset_code = '' then
+    set in_reporttemplateresultset_code = null;
+  end if;
+
   -- get recon code
   if in_reporttemplate_code <> '' then
     -- get report code
@@ -79,6 +84,7 @@ me:BEGIN
     inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
       and b.delete_flag = 'N'
     where a.reporttemplate_code = in_reporttemplate_code
+    and b.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,reporttemplateresultset_code)
     and a.delete_flag = 'N'
     order by b.resultset_order limit 1;
 
