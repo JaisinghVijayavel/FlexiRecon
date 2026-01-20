@@ -19,14 +19,15 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-12-2025
+    Updated Date : 20-01-2026
 
-    Version : 6
+    Version : 7
   */
 
   declare v_recon_version text default '';
   declare v_get_recon_field text default '';
   declare v_set_recon_field text default '';
+  declare v_set_recon_field_type text default '';
 
   declare v_set_dataset_field text default '';
 
@@ -232,6 +233,7 @@ me:BEGIN
       set v_preprocess_desc = ifnull(v_preprocess_desc,'');
       set v_get_recon_field = ifnull(v_get_recon_field,'');
       set v_set_recon_field = ifnull(v_set_recon_field,'');
+      set v_set_recon_field_type = fn_get_fieldtype(in_recon_code,v_set_recon_field);
       set v_process_method = ifnull(v_process_method,'');
       set v_process_query = ifnull(v_process_query,'');
 
@@ -543,8 +545,13 @@ me:BEGIN
         end if;
 
         if v_opening_flag = 'Y' and v_group_flag = 'N' then
-          set v_field_expression = concat('cast(',v_set_dataset_field,' as decimal(15,2))',
+          if v_set_recon_field_type = 'INTEGER' then
+            set v_field_expression = concat('cast(',v_set_dataset_field,' as signed)',
+                               ' - cast(col128 as signed)');
+          else
+            set v_field_expression = concat('cast(',v_set_dataset_field,' as decimal(15,2))',
                                ' - cast(col128 as decimal(15,2))');
+          end if;
 
           set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_field_expression,false,'');
 
@@ -596,7 +603,12 @@ me:BEGIN
           ) ENGINE = MyISAM;
 
           set v_field_expression = fn_get_expressionformat_ds(v_dataset_code,v_set_dataset_field,v_process_expression,false,'');
-          set v_field_expression = concat("cast(",v_field_expression," as decimal(15,2))");
+
+          if v_set_recon_field_type = 'INTEGER' then
+            set v_field_expression = concat("cast(",v_field_expression," as signed)");
+          else
+            set v_field_expression = concat("cast(",v_field_expression," as decimal(15,2))");
+          end if;
 
           set v_value_variable = concat("@value_",v_sysdatetime);
           set v_col128_variable = concat("@col128_",v_sysdatetime);
@@ -624,18 +636,32 @@ me:BEGIN
           -- update value
           if v_opening_flag = 'Y' then
             -- update in tran table
-            set v_sql = concat("update ",v_dataset_table ," as a
-              inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
-              set a.",v_set_dataset_field," = cast(b.opening_value as nchar)
-              ");
+            if v_set_recon_field_type = 'INTEGER' then
+              set v_sql = concat("update ",v_dataset_table ," as a
+                inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
+                set a.",v_set_dataset_field," = cast(cast(b.opening_value as signed) as nchar)
+                ");
+            else
+              set v_sql = concat("update ",v_dataset_table ," as a
+                inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
+                set a.",v_set_dataset_field," = cast(b.opening_value as nchar)
+                ");
+            end if;
 
             call pr_run_sql2(v_sql,@msg,@result);
           elseif v_cumulative_flag = 'Y' then
             -- update in tran table
-            set v_sql = concat("update ",v_dataset_table ," as a
-              inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
-              set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
-              ");
+            if v_set_recon_field_type = 'INTEGER' then
+              set v_sql = concat("update ",v_dataset_table ," as a
+                inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
+                set a.",v_set_dataset_field," = cast(cast(b.cumulative_value as signed) as nchar)
+                ");
+            else
+              set v_sql = concat("update ",v_dataset_table ," as a
+                inner join recon_tmp_t3gid as b on a.dataset_gid = b.dataset_gid
+                set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
+                ");
+            end if;
 
             call pr_run_sql2(v_sql,@msg,@result);
           end if;
@@ -695,10 +721,17 @@ me:BEGIN
           -- update value
           if v_opening_flag = 'Y' then
             -- update in tran table
-            set v_sql = concat("update recon_tmp_t3tranagg as a
-              inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
-              set a.",v_set_dataset_field," = cast(b.opening_value as nchar)
-              ");
+            if v_set_recon_field_type = 'INTEGER' then
+              set v_sql = concat("update recon_tmp_t3tranagg as a
+                inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
+                set a.",v_set_dataset_field," = cast(cast(b.opening_value as signed) as nchar)
+                ");
+            else
+              set v_sql = concat("update recon_tmp_t3tranagg as a
+                inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
+                set a.",v_set_dataset_field," = cast(b.opening_value as nchar)
+                ");
+            end if;
 
             call pr_run_sql2(v_sql,@msg,@result);
 
@@ -710,10 +743,17 @@ me:BEGIN
 						call pr_run_sql2(v_sql,@msg,@result);
           elseif v_cumulative_flag = 'Y' then
             -- update in tran table
-            set v_sql = concat("update recon_tmp_t3tranagg as a
-              inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
-              set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
-              ");
+            if v_set_recon_field_type = 'INTEGER' then
+              set v_sql = concat("update recon_tmp_t3tranagg as a
+                inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
+                set a.",v_set_dataset_field," = cast(cast(b.cumulative_value as signed) as nchar)
+                ");
+            else
+              set v_sql = concat("update recon_tmp_t3tranagg as a
+                inner join recon_tmp_t3gid as b on a.agg_gid = b.agg_gid
+                set a.",v_set_dataset_field," = cast(b.cumulative_value as nchar)
+                ");
+            end if;
 
             call pr_run_sql2(v_sql,@msg,@result);
 
