@@ -92,6 +92,24 @@ me:BEGIN
            'Y';
 
   end if;
+
+  if out_result = 1 then
+    -- release the locked record by that user
+    if in_tranbrkp_gid <> 0 then
+      delete from recon_trn_trecordlock
+      where recon_code = in_recon_code
+      and user_code = in_user_code
+      and tran_gid <> in_tran_gid
+      and tranbrkp_gid <> in_tranbrkp_gid
+      and delete_flag = 'N';
+    else
+      delete from recon_trn_trecordlock
+      where recon_code = in_recon_code
+      and user_code = in_user_code
+      and tran_gid <> in_tran_gid
+      and delete_flag = 'N';
+    end if;
+  end if;
 END $$
 
 DELIMITER ;

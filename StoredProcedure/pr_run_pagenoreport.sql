@@ -92,6 +92,10 @@ me:BEGIN
     set v_report_code = ifnull(v_report_code,'');
     set v_reporttemplateresultset_code = ifnull(v_reporttemplateresultset_code,'');
 
+    if v_report_code <> '' then
+      set in_report_code = v_report_code;
+    end if;
+
     -- get sorting field
     select
       group_concat(concat(report_field,' ',sorting_type))

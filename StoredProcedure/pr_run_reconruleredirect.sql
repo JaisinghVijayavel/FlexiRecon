@@ -18,9 +18,9 @@ me:BEGIN
     Created Date - 2025-02-19
 
     Updated By : Vijayavel
-    updated Date : 01-12-2025
+    updated Date : 21-01-2026
 
-	  Version - 9
+	  Version - 10
 */
 
   declare i int default 0;
@@ -671,7 +671,7 @@ me:BEGIN
         in_automatch_flag,in_ip_addr,in_user_code,@msg,@result);
     end if;
 
-    call pr_run_dynamicreport('','',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',
+    call pr_run_dynamicreport('','','',v_recon_code,'RPT_EXCP_WITHBRKP','','',false,'table',
       in_ip_addr,in_user_code,@msg,@result);
 
     call pr_run_tablequery('',
@@ -683,7 +683,7 @@ me:BEGIN
                            false,
                            'table',
                            in_user_code,
-                           '0',-- result set code
+                           '',-- result set code
                            @msg,@result);
   end if;
 

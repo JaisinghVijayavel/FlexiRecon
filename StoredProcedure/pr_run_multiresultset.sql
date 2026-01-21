@@ -15,6 +15,15 @@ CREATE PROCEDURE `pr_run_multiresultset`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By :
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 21-01-2026
+
+    Version : 1
+  */
 
 	declare v_count int default 0;
 	declare v_increment int default 1;
@@ -160,18 +169,19 @@ me:BEGIN
 		  end if;
 		  
 		  if v_report_exec_type = 'S' then
-		  	call pr_run_sp('',v_recon_code,v_sp_name,v_job_gid,0,v_sql_condition,v_sorting_field,in_user_code,@msg,@result);
+		  	call pr_run_sp('',v_recon_code,v_sp_name,v_job_gid,v_increment,v_sql_condition,v_sorting_field,in_user_code,@msg,@result);
 
 		    set v_report_condition = concat(' and job_gid = ', cast(v_job_gid as nchar) ,' ');
-		
+		    set v_report_condition = concat(v_report_condition,' and rptsession_gid = ',cast(v_increment as nchar),' ');
+
 		    if v_job_gid = 0 then
 		      set v_report_condition = concat(v_report_condition," and user_code = '",in_user_code,"' and rptsession_gid = 0 ");
 		    end if;
-		
+
 		    set v_report_condition = concat(v_report_condition,' ',v_sorting_field,' ');
-			
+
 		    call pr_run_tablequery(in_reporttemplate_code,
-		                           v_recon_code, 
+		                           v_recon_code,
 		                           v_report_code_es,
 		                           v_table_name,
 		                           v_report_condition,

@@ -14,9 +14,9 @@ BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 20-01-2026
+    updated Date : 21-01-2026
 
-    Version : 1
+    Version : 2
   */
 
 	declare v_report_code text default '';
@@ -29,23 +29,26 @@ BEGIN
 
 	set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
 
-	-- get recon and report code
-	select
-		report_code,
-		recon_code
-	into
-		v_report_code,
-		v_recon_code
-	from recon_mst_treporttemplate
-	where reporttemplate_code = in_reporttemplate_code 
-	and delete_flag = 'N';
+	if in_reporttemplate_code <> '' then
+	  -- get recon and report code
+	  select
+		  b.src_report_code,
+		  a.recon_code
+	  into
+		  v_report_code,
+		  v_recon_code
+	  from recon_mst_treporttemplate as a
+    inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
+      and b.active_status = 'Y'
+      and b.delete_flag = 'N'
+	  where a.reporttemplate_code = in_reporttemplate_code
+    and b.reporttemplateresultset_code = in_reporttemplateresultset_code
+    and a.active_status = 'Y'
+	  and a.delete_flag = 'N';
 
-	set v_report_code=in_report_code;
-	-- set v_recon_code = in_recon_code; -- hari changes 28-08-25
-	set v_report_code = ifnull(v_report_code,'');
-	set v_recon_code = ifnull(v_recon_code,'');
-    
-	if in_reporttemplate_code = '' then
+	  set v_report_code = ifnull(v_report_code,'');
+	  set v_recon_code = ifnull(v_recon_code,'');
+  else
 		set v_recon_code = in_recon_code;
 		set v_report_code = in_report_code;
 	end if;

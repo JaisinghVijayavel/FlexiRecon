@@ -4,6 +4,7 @@ DROP PROCEDURE IF EXISTS `pr_run_dynamicreport` $$
 CREATE PROCEDURE `pr_run_dynamicreport`(
   in in_archival_code varchar(32),
   in in_reporttemplate_code varchar(32),
+  in in_reporttemplateresultset_code varchar(32),
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
   in in_report_param text, 
@@ -21,13 +22,14 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 11-12-2025
+    updated Date : 21-01-2026
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recon_code varchar(32);
   declare v_report_code varchar(32);
+  declare v_reporttemplateresultset_code varchar(32) default '';
   declare v_sortby_code varchar(32);
   declare v_job_gid int default 0;
   declare v_report_exec_type char(1) default '';
@@ -73,6 +75,12 @@ me:BEGIN
   set in_archival_code = ifnull(in_archival_code,'');
   set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
   set in_outputfile_type = ifnull(in_outputfile_type,'');
+
+  if in_reporttemplateresultset_code = '' then
+    set in_reporttemplateresultset_code = null;
+  else
+    set v_reporttemplateresultset_code = in_reporttemplateresultset_code;
+  end if;
 
   CALL pr_parse_store_and_rebuild1( in_report_condition, @out_reference_id, @out_rebuilt_condition,@out_table_name);
 
@@ -122,13 +130,16 @@ me:BEGIN
     select
 		  a.reporttemplate_name,
 		  'M',
-		  r.table_name
+		  r.table_name,
+      b.reporttemplateresultset_code
 		into
 		  v_report_desc,
 		  v_report_exec_type,
-      v_table_name
+      v_table_name,
+      v_reporttemplateresultset_code
 		from recon_mst_treporttemplate as a
     inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
+      and b.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,b.reporttemplateresultset_code)
       and b.delete_flag = 'N'
     inner join recon_mst_treport as r on b.src_report_code = r.report_code
       and r.delete_flag = 'N'
@@ -136,6 +147,8 @@ me:BEGIN
     and a.active_status='Y'
 		and a.delete_flag = 'N'
     order by b.resultset_order limit 1;
+
+    set v_reporttemplateresultset_code = ifnull(v_reporttemplateresultset_code,'');
   else
     set out_msg = 'Invalid report';
     set out_result = 0;
@@ -210,6 +223,7 @@ me:BEGIN
 		  and b.table_name = v_table_name
 		  and b.delete_flag = 'N'
 		where a.reporttemplate_code = in_reporttemplate_code
+    and a.reporttemplateresultset_code = v_reporttemplateresultset_code
 		and a.active_status = 'Y'
 		and a.delete_flag = 'N'
 		order by a.sorting_order;
@@ -273,7 +287,7 @@ me:BEGIN
                            in_outputfile_flag,
                            in_outputfile_type,
                            in_user_code,
-                           '0',-- result set code
+                           v_reporttemplateresultset_code,-- result set code
                            @msg,@result);
 	elseif v_report_exec_type = 'D' then
     set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
@@ -298,7 +312,7 @@ me:BEGIN
                            in_outputfile_flag,
                            in_outputfile_type,
                            in_user_code,
-                            '0',-- result set code
+                           v_reporttemplateresultset_code,-- result set code
                            @msg,@result);
   elseif v_report_exec_type = 'C' then
     call pr_run_customsp(in_archival_code,
@@ -330,7 +344,7 @@ me:BEGIN
                            in_outputfile_flag,
                            in_outputfile_type,
                            in_user_code,
-                           '',-- result set code
+                           v_reporttemplateresultset_code,-- result set code
                            @msg,@result);
   end if;
 

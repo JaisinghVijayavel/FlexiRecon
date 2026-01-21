@@ -16,9 +16,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 20-01-2026
+    updated Date : 21-01-2026
 
-    Version : 1
+    Version : 2
   */
 
 	declare v_report_code text default '';
@@ -27,7 +27,9 @@ me:BEGIN
 	declare v_file_path text default '';
 	declare v_file_name text default '';
 
-  set in_reporttemplate_code = ifnull(in_reporttemplate_code,'');
+  if in_reporttemplate_code = '' then
+    set in_reporttemplate_code = null;
+  end if;
 
 	select 
     a.recon_code,
@@ -45,8 +47,10 @@ me:BEGIN
     and c.active_status = 'Y'
     and c.delete_flag = 'N'
   where a.reporttemplate_code = in_reporttemplate_code
-  and a.active_status = 'Y'
-  and a.delete_flag = 'N';
+  and b.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,b.reporttemplateresultset_code)
+  -- and a.active_status = 'Y'
+  and a.delete_flag = 'N'
+  limit 1;
 
   set v_report_code = ifnull(v_report_code,'');
   set v_recon_code = ifnull(v_recon_code,'');
@@ -75,7 +79,7 @@ me:BEGIN
 			fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
 		from recon_mst_treporttemplate a
 		where a.reporttemplate_code = in_reporttemplate_code
-		and a.active_status = 'Y'
+		-- and a.active_status = 'Y'
 		and a.delete_flag = 'N';
   else
     set v_file_path = fn_get_configvalue('temp_file_folder_path');
@@ -137,13 +141,14 @@ me:BEGIN
 		from recon_mst_treporttemplatefilter a
 		inner join recon_mst_treporttemplate as rt on a.reporttemplate_code  = rt.reporttemplate_code
 			and rt.report_code = v_report_code
-			and rt.delete_flag  = 'N' -- and rt.active_status = 'Y'
+      -- and rt.active_status = 'Y'
+			and rt.delete_flag  = 'N'
 		inner join recon_mst_treporttemplateresultset as rr on a.report_code = rr.src_report_code
 			and rr.report_code = v_report_code
-			and rr.active_status = 'Y'
+			-- and rr.active_status = 'Y'
 			and rr.delete_flag = 'N'
 		where a.reporttemplate_code = in_reporttemplate_code
-			and a.reporttemplateresultset_code =in_reporttemplateresultset_code
+			and a.reporttemplateresultset_code =ifnull(in_reporttemplateresultset_code,a.reporttemplateresultset_code)
 			and a.active_status = 'Y'
 			and a.delete_flag = 'N'
 		order by a.filter_seqno;
@@ -173,19 +178,15 @@ me:BEGIN
 			case
 				when rr.resultset_exec_type = 'R' then src_report_code
 				else ''
-			end as report_code
+			end as report_code,
+      a.reporttemplateresultset_code
 		from recon_mst_treporttemplatefilter a
 		left join recon_mst_treporttemplateresultset as rr on a.reporttemplate_code = rr.reporttemplate_code
 			and rr.reporttemplateresultset_code=a.reporttemplateresultset_code
 			and rr.active_status='Y'
 			and rr.delete_flag='N'
 		where a.reporttemplate_code = in_reporttemplate_code
-        -- and  case when v_report_code ='' then a.report_code=rr.src_report_code else a.report_code=v_report_code end
-		and
-			case
-				when in_reporttemplateresultset_code is null then a.reporttemplateresultset_code =a.reporttemplateresultset_code
-				else a.reporttemplateresultset_code =in_reporttemplateresultset_code
-			end
+    and a.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,a.reporttemplateresultset_code)
     and rr.resultset_name is not null
     and a.active_status = 'Y'
 		and a.delete_flag = 'N'
@@ -212,7 +213,8 @@ me:BEGIN
       'Y' as system_flag,
 			a.active_status,
 			fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
-      a.report_code
+      a.report_code,
+      '' as reporttemplateresultset_code
 		from recon_mst_treportfilter a
 		where a.report_code = v_report_code
 		and a.active_status = 'Y'
@@ -232,8 +234,12 @@ me:BEGIN
 			'' as join_condition,
       'Y' as system_flag,
 			'Y' as active_status,
-			fn_get_mastername('Y', 'QCD_STATUS') as active_status_desc;
+			fn_get_mastername('Y', 'QCD_STATUS') as active_status_desc,
+      '' as report_code,
+      '' as reporttemplateresultset_code;
   end if;
+
+  set in_reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,'');
 
   call pr_get_reporttemplatefield(in_reporttemplate_code,in_reporttemplateresultset_code,v_recon_code,v_report_code);
 
