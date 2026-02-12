@@ -12,11 +12,25 @@ CREATE FUNCTION `fn_get_basefilterreconformat`
   in_ident_value text
 ) RETURNS text
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 12-02-2026
+
+    Version : 1
+  */
+
   declare v_filter_field text default '';
+  declare v_filter_org_field text default '';
   declare v_filter_field_type text default '';
   declare v_ident_field_type text default '';
   declare v_txt text default '';
   declare v_collation text default '';
+
+  declare v_from text;
+  declare v_to text;
 
   set in_ident_value = ifnull(in_ident_value,'');
   set in_ident_value_flag = ifnull(in_ident_value_flag,'');
@@ -27,7 +41,16 @@ begin
   set v_filter_field = trim(in_filter_criteria);
 
   set in_filter_field = ifnull(in_filter_field,'');
-  set v_filter_field_type = fn_get_fieldtype(in_recon_code,in_filter_field);
+  set v_filter_org_field = in_filter_field;
+
+  if instr(v_filter_org_field,'.') > 0 then
+    set v_filter_org_field = split(v_filter_org_field,'.',2);
+  elseif mid(v_filter_org_field,1,4) = 'cast' then
+    set v_filter_org_field = split(v_filter_org_field,'(',2);
+    set v_filter_org_field = split(v_filter_org_field,' ',1);
+  end if;
+
+  set v_filter_field_type = fn_get_fieldtype(in_recon_code,v_filter_org_field);
 
   if lower(mid(in_filter_field,1,3)) = 'col' then
     -- cast ident field
@@ -171,6 +194,20 @@ begin
 		end if;
   elseif in_ident_value = '$ADHOC$' then
 			set v_txt = concat(v_filter_field,' ',in_comparison_criteria,' ');
+  elseif substr(in_comparison_criteria,1,7) = 'BETWEEN' then
+    set v_from = SPLIT(in_comparison_criteria,',',1);
+    set v_to = SPLIT(in_comparison_criteria,',',2);
+
+    set v_from = replace(v_from,'BETWEEN(','');
+    set v_to = replace(v_to,')','');
+
+    if v_filter_field_type = 'DATE' or v_filter_field_type = 'DATETIME' then
+      set v_txt = concat(' ',in_ident_value,' >= adddate(',v_filter_field,',',v_from,') and ',in_ident_value,' <= adddate(',v_filter_field,',',v_to,') ');
+    elseif v_filter_field_type = 'INTEGER' or v_filter_field_type = 'NUMERIC' then
+      set v_txt = concat(' ',in_ident_value,' between (',v_filter_field,'+',v_from,') and (',v_filter_field,'+',v_to,') ');
+    else
+      set v_txt = concat(' ',v_filter_field,' between (',v_from,') and (',v_to,') ');
+    end if;
   else
 		if in_ident_value_flag = 'Y' then
 			set v_txt = concat(v_filter_field,' ',in_comparison_criteria,char(39),in_ident_value,char(39),' ');

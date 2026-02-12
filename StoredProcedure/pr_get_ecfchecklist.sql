@@ -10,10 +10,10 @@ me:BEGIN
     Created By : Vijayavel
     Created Date : 23-01-2026
 
-    Updated By :
-    updated Date :
+    Updated By : Vijayavel
+    updated Date : 29-01-2026
 
-    Version : 1
+    Version : 2
   */
 
 	declare v_checklist_info text default '';
@@ -30,7 +30,7 @@ me:BEGIN
 
 
   select
-    JSON_EXTRACT(in_checklist_json,'$.info'),
+    JSON_UNQUOTE(JSON_EXTRACT(in_checklist_json,'$.info')),
     cast(JSON_EXTRACT(in_checklist_json,'$.checklist') as json)
   into
     v_checklist_info,

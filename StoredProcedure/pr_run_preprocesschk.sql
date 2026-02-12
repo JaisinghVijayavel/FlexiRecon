@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 10-11-2025
+    Updated Date : 06-11-2025
 
-    Version : 11
+    Version : 10
   */
 
   declare v_recon_version text default '';
@@ -400,15 +400,17 @@ me:BEGIN
             if v_filter_applied_on = 'LOOKUP' then
               set v_lookup_filter = concat(v_lookup_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                             fn_get_basefilterdsformat(v_lookup_dataset_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
             else
               set v_preprocess_filter = concat(v_preprocess_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                             fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
+
+              select in_recon_code,v_filter_field,v_filter_criteria,v_filter_value_flag,v_filter_value,fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),v_preprocess_filter;
             end if;
 
 					end loop filter_loop;
@@ -425,6 +427,8 @@ me:BEGIN
 
         call pr_get_reconstaticvaluesql(v_lookup_filter,'',in_recon_code,'',in_user_code,@v_lookup_filter,@msg22,@result22);
         set v_lookup_filter = @v_lookup_filter;
+
+        select v_preprocess_filter;
 
 				-- order by field block
         set v_orderby_field = '';
@@ -883,8 +887,6 @@ me:BEGIN
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and a.tran_gid > 0 ');
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
-
-        select v_sql;
 
         set v_count_sql = 'select count(*) into @base_count from $TABLENAME$ as a ';
         set v_count_sql = concat(v_count_sql,'where a.recon_code = ',char(39),in_recon_code,char(39),' ');
