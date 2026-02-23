@@ -4,7 +4,21 @@ drop trigger if exists trg_con_mst_tdataset_after_update $$
 create trigger trg_con_mst_tdataset_after_update after update on recon_mst_tdataset
 for each row
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 19-02-2026
+
+    Version : 1
+  */
+
   if New.active_status = 'Y' then
+    select max(display_order) into @sno from recon_mst_treport;
+
+    set @sno = ifnull(@sno,0) + 1;
+
     insert ignore into recon_mst_treport
     (
       report_code,
@@ -26,8 +40,10 @@ begin
   end if;
 
 	if New.active_status <> Old.active_status
+    or New.dataset_name <> Old.dataset_name
     or New.delete_flag <> Old.delete_flag then
     update recon_mst_treport set
+      report_desc = New.dataset_name,
       active_status = New.active_status,
       update_date = sysdate(),
       update_by = New.update_by,

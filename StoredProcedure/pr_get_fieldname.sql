@@ -9,6 +9,16 @@ CREATE procedure `pr_get_fieldname`
   out out_field_type varchar(32)
 )
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 19-02-2026
+
+    Version : 1
+  */
+
   declare v_field_name varchar(255);
   declare v_field_type varchar(128);
 
@@ -46,7 +56,8 @@ begin
   end if;
 
   if v_field_type = 'INTEGER' then
-    set v_field_name = concat("cast(",v_field_name," as unsigned)");
+    set v_field_name = concat("cast(",v_field_name," as decimal)");
+    set v_field_name = concat("cast(",v_field_name," as signed)");
   elseif v_field_type = 'NUMERIC' then
     set v_field_name = concat("cast(",v_field_name," as decimal(15,3))");
   elseif v_field_type = 'DATE' then

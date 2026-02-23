@@ -235,6 +235,10 @@ me:begin
     end if;
   end if;
 
+  select 'velu';
+  leave me;
+
+
   -- set last job_gid
   update recon_mst_tdataset set
     last_job_gid = v_job_gid
@@ -248,6 +252,7 @@ me:begin
   call pr_run_sql2(v_sql,@msg2,@result2);
 
   set v_result = ifnull(@v_result,0);
+
 
   -- update in scheduler table
   update recon_trn_tscheduler set

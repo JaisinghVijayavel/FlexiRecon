@@ -360,7 +360,7 @@ me:BEGIN
 
               set v_lookup_filter = concat(v_lookup_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                             fn_get_basefilterdsformat(v_lookup_dataset_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
             end if;

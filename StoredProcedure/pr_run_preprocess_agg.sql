@@ -19,9 +19,9 @@ me:BEGIN
     Created Date : 18-09-2025
 
     Updated By : Vijayavel
-    Updated Date : 20-01-2026
+    Updated Date : 13-02-2026
 
-    Version : 6
+    Version : 7
   */
 
   declare v_recon_version text default '';
@@ -403,7 +403,7 @@ me:BEGIN
             if v_filter_applied_on = 'RECON' then
               set v_preprocess_filter = concat(v_preprocess_filter,
                                              v_open_parentheses_flag,
-                                             fn_get_basefilterformat(v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
+                                             fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
             end if;

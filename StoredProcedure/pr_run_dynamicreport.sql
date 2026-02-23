@@ -22,9 +22,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 21-01-2026
+    updated Date : 17-02-2026
 
-    Version : 4
+    Version : 5
   */
 
   declare v_recon_code varchar(32);
@@ -130,7 +130,7 @@ me:BEGIN
     select
 		  a.reporttemplate_name,
 		  'M',
-		  r.table_name,
+		  ifnull(r.table_name,b.src_report_code) as table_name,
       b.reporttemplateresultset_code
 		into
 		  v_report_desc,

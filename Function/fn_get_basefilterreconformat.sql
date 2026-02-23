@@ -17,9 +17,9 @@ begin
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 12-02-2026
+    Updated Date : 19-02-2026
 
-    Version : 1
+    Version : 2
   */
 
   declare v_filter_field text default '';
@@ -55,7 +55,8 @@ begin
   if lower(mid(in_filter_field,1,3)) = 'col' then
     -- cast ident field
     if v_filter_field_type = 'INTEGER' then
-      set in_filter_field = concat('cast(',in_filter_field,' as unsigned)');
+      set in_filter_field = concat('cast(',in_filter_field,' as decimal)');
+      set in_filter_field = concat('cast(',in_filter_field,' as signed)');
     end if;
 
     if v_filter_field_type = 'NUMERIC' then
@@ -81,7 +82,8 @@ begin
 
     -- cast ident field
     if v_ident_field_type = 'INTEGER' then
-      set in_ident_value = concat('cast(',in_ident_value,' as unsigned)');
+      set in_ident_value = concat('cast(',in_ident_value,' as decimal)');
+      set in_ident_value = concat('cast(',in_ident_value,' as signed)');
     end if;
 
     if v_ident_field_type = 'NUMERIC' then

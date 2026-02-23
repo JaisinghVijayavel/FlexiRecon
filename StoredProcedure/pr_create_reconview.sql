@@ -3,6 +3,16 @@
 DROP PROCEDURE IF EXISTS `pr_create_reconview` $$
 CREATE PROCEDURE `pr_create_reconview`( IN in_recon_code VARCHAR(64))
 BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 19-02-2026
+
+    Version : 1
+  */
+
   DECLARE done INT DEFAULT FALSE;
   DECLARE v_sql TEXT DEFAULT '';
   DECLARE v_view_name VARCHAR(128);
@@ -76,7 +86,8 @@ BEGIN
     ELSEIF UPPER(v_recon_field_type) = 'DATE' THEN
       SET v_select_line = CONCAT('CAST(`', v_recon_field_name, '` AS DATE) AS `', v_recon_field_desc, '`');
     ELSEIF UPPER(v_recon_field_type) = 'INTEGER' THEN
-      SET v_select_line = CONCAT('CAST(`', v_recon_field_name, '` AS SIGNED) AS `', v_recon_field_desc, '`');
+      SET v_recon_field_name = CONCAT('CAST(`', v_recon_field_name, '` AS DECIMAL)');
+      SET v_select_line = CONCAT('CAST(', v_recon_field_name, ' AS SIGNED) AS `', v_recon_field_desc, '`');
     ELSE
       -- Default fallback: no cast
       SET v_select_line = CONCAT('`', v_recon_field_name, '` AS `', v_recon_field_desc, '`');
@@ -113,6 +124,7 @@ BEGIN
     WHERE recon_code = '",in_recon_code,"'
     and delete_flag = 'N'
    ");
+
   -- select @full_sql;
 
   PREPARE stmt FROM @full_sql;

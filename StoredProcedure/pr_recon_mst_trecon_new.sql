@@ -31,6 +31,15 @@ CREATE PROCEDURE `pr_recon_mst_trecon_new`
 	out out_result int(10)
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 19-02-2026
+
+    Version : 1
+  */
 
 	declare v_recon_gid int default 0;
 	declare v_result int default 0;
@@ -56,7 +65,7 @@ me:BEGIN
 			set err_msg := concat(err_msg,'Recon Name cannot be empty,');
 			set err_flag := true;
 		end if;
-		
+
 		if in_recontype_code = '' or in_recontype_code is null then
 			set err_msg := concat(err_msg,'Type Code cannot be empty,');
 			set err_flag := true;
@@ -362,7 +371,7 @@ me:BEGIN
         4,
         'NUMERIC',
         '14,2',
-        'N',
+        'Y',
         'Y',
         sysdate(),
         in_user_code;
@@ -388,7 +397,7 @@ me:BEGIN
         5,
         'NUMERIC',
         '14,2',
-        'N',
+        'Y',
         'Y',
         sysdate(),
         in_user_code;
@@ -445,7 +454,7 @@ me:BEGIN
 			active_status = 'N',
 			update_date = sysdate(),
 			update_by = in_action_by 
-		where recon_code = in_recon_code 
+		where recon_code = in_recon_code
 		and delete_flag = 'N';
 		
 		update recon_mst_treconfieldmapping set 

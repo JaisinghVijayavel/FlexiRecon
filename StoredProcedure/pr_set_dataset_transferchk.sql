@@ -60,6 +60,7 @@ me:begin
   drop temporary table if exists recon_tmp_ttrangid;
   drop temporary table if exists recon_tmp_tbalance;
 
+  set out_msg = '';
 
   CREATE temporary TABLE recon_tmp_ttrangid
   (
@@ -206,6 +207,8 @@ me:begin
     end if;
   end if;
   */
+
+  select 1;
 
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');

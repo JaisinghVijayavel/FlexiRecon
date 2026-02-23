@@ -105,7 +105,7 @@ me:BEGIN
 			fn_get_mastername('Y', 'QCD_YN') as system_flag_desc,
 			fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc
 		from recon_mst_treport as a
-		where a.report_code = in_report_code
+		where a.report_code = v_report_code
 		and a.active_status = 'Y'
 		and a.delete_flag = 'N';
   end if;
@@ -116,7 +116,7 @@ me:BEGIN
 			a.filter_seqno,
 			a.report_field,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(in_report_code,a.report_field),
+         fn_get_datasetfieldname(v_report_code,a.report_field),
 		-- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
         fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
@@ -159,7 +159,7 @@ me:BEGIN
 			a.filter_seqno,
 			a.report_field,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(in_report_code,a.report_field),
+         fn_get_datasetfieldname(v_report_code,a.report_field),
          -- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
         fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
@@ -200,7 +200,7 @@ me:BEGIN
 			a.filter_seqno,
 			a.report_field,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(in_report_code,a.report_field),
+         fn_get_datasetfieldname(v_report_code,a.report_field),
          -- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
         fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
@@ -251,7 +251,7 @@ me:BEGIN
 			a.sorting_order,
 			a.active_status,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(in_report_code,report_field),
+         fn_get_datasetfieldname(v_report_code,report_field),
 			-- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
         fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
@@ -270,7 +270,7 @@ me:BEGIN
 			a.sorting_order,
 			a.active_status,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(in_report_code,report_field),
+         fn_get_datasetfieldname(v_report_code,report_field),
 		-- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
 			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
         fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value

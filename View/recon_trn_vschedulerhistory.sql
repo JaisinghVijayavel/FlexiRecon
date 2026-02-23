@@ -1,4 +1,4 @@
-﻿create view recon_trn_vschedulerhistory as
+﻿alter view recon_trn_vschedulerhistory as
 select
   a.dataset_code,
   a.dataset_name,

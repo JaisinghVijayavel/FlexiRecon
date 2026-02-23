@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 12-01-2026
+    updated Date : 18-02-2026
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recon_code varchar(32) default '';
@@ -223,9 +223,9 @@ me:BEGIN
     set v_dataset_db_name = fn_get_configvalue('dataset_db_name');
 
     if v_dataset_db_name <> '' then
-      set v_table_name = concat(v_dataset_db_name,'.',in_report_code);
+      set v_table_name = concat(v_dataset_db_name,'.',v_report_code);
     else
-      set v_table_name = in_report_code;
+      set v_table_name = v_report_code;
     end if;
 
     set v_sql = concat('select count(*) into @rec_count from ',v_table_name,' ');

@@ -953,6 +953,17 @@ me:BEGIN
                                           in_user_code,
                                           @msg_1,
                                           @result_1);
+      elseif v_process_method = 'QCD_LOOKUP_COMPARISON' then
+        call pr_run_preprocess_ds_comparison(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          in_user_code,
+                                          @msg_1,
+                                          @result_1);
       end if;
     end loop process_loop;
 

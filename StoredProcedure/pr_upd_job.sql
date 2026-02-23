@@ -4,11 +4,21 @@ DROP PROCEDURE IF EXISTS `pr_upd_job` $$
 CREATE PROCEDURE `pr_upd_job`(
   in in_job_gid int,
   in in_job_status varchar(32),
-  in in_job_remark varchar(255),
+  in in_job_remark text,
   out out_msg text,
   out out_result int(10)
 )
 BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 20-02-2026
+
+    Version : 1
+  */
+
   IF in_job_status = 'C' or in_job_status = 'F' then
 		update recon_trn_tjob set
       end_date = sysdate(),
