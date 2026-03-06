@@ -22,9 +22,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 17-02-2026
+    updated Date : 06-03-2026
 
-    Version : 5
+    Version : 6
   */
 
   declare v_recon_code varchar(32);
@@ -82,7 +82,10 @@ me:BEGIN
     set v_reporttemplateresultset_code = in_reporttemplateresultset_code;
   end if;
 
-  CALL pr_parse_store_and_rebuild1( in_report_condition, @out_reference_id, @out_rebuilt_condition,@out_table_name);
+  -- set condition static value
+  set in_report_condition = fn_get_reconstaticcondition(in_archival_code,in_recon_code,in_report_condition,in_user_code);
+
+  CALL pr_parse_store_and_rebuild1(in_report_condition, @out_reference_id, @out_rebuilt_condition,@out_table_name);
 
   set @out_reference_id = @out_reference_id;
   set in_report_condition = @out_rebuilt_condition;

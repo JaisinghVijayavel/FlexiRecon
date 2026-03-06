@@ -1392,6 +1392,11 @@ me:BEGIN
           alter table recon_tmp_t6comparison ENGINE = MyISAM;
           alter table recon_tmp_t6source ENGINE = MyISAM;
 
+          select * from recon_tmp_t6source;
+          select * from recon_tmp_t6comparison;
+
+          leave me;
+
 					-- many to many match
 					if v_manytomany_match_flag = 'Y' then
 						set v_match_sql = 'insert ignore into recon_tmp_t6manymatch (tran_gid,tranbrkp_gid,matched_count,';

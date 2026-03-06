@@ -16,13 +16,13 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 21-01-2026
+    updated Date : 06-03-2026
 
-    Version : 2
+    Version : 3
   */
 
 	declare v_report_code text default '';
-	declare v_recon_code text default ''; 
+	declare v_recon_code text default '';
 	declare v_report_exec_type text default '';
 	declare v_file_path text default '';
 	declare v_file_name text default '';
@@ -31,7 +31,7 @@ me:BEGIN
     set in_reporttemplate_code = null;
   end if;
 
-	select 
+	select
     a.recon_code,
     b.src_report_code,
     c.report_exec_type
@@ -49,7 +49,7 @@ me:BEGIN
   where a.reporttemplate_code = in_reporttemplate_code
   and b.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,b.reporttemplateresultset_code)
   -- and a.active_status = 'Y'
-  and a.delete_flag = 'N'
+  and a.delete_flag = 'N' order by resultset_order
   limit 1;
 
   set v_report_code = ifnull(v_report_code,'');
@@ -116,10 +116,10 @@ me:BEGIN
 			a.filter_seqno,
 			a.report_field,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(v_report_code,a.report_field),
-		-- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
-			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
-        fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
+        concat(fn_get_datasetfieldname(v_report_code,a.report_field),'-',
+          fn_get_datasetfieldtype(v_report_code,a.report_field)),
+			  concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
+          fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
 			fn_get_reportfiltervalue(in_recon_code,'',a.filter_value,in_user_code) as filter_value,
@@ -158,11 +158,11 @@ me:BEGIN
 			a.reporttemplatefilter_gid,
 			a.filter_seqno,
 			a.report_field,
-      if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(v_report_code,a.report_field),
-         -- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
-			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
-        fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
+      if(ifnull(r.report_exec_type,'') = 'D',
+        concat(fn_get_datasetfieldname(v_report_code,a.report_field),'-',
+          fn_get_datasetfieldtype(v_report_code,a.report_field)),
+			  concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
+          fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
 			-- fn_get_reportfiltervalue(in_recon_code,'',a.filter_value,in_user_code) as filter_value,
@@ -185,6 +185,9 @@ me:BEGIN
 			and rr.reporttemplateresultset_code=a.reporttemplateresultset_code
 			and rr.active_status='Y'
 			and rr.delete_flag='N'
+    left join recon_mst_treport as r on rr.src_report_code = r.report_code
+      and r.active_status = 'Y'
+      and r.delete_flag = 'N'
 		where a.reporttemplate_code = in_reporttemplate_code
     and a.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,a.reporttemplateresultset_code)
     and rr.resultset_name is not null
@@ -200,10 +203,10 @@ me:BEGIN
 			a.filter_seqno,
 			a.report_field,
       if(v_report_exec_type = 'D',
-         fn_get_datasetfieldname(v_report_code,a.report_field),
-         -- fn_get_reconfieldname(v_recon_code,a.report_field)) as reportparam_value,
-			concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
-        fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
+        concat(fn_get_datasetfieldname(v_report_code,a.report_field),'-',
+          fn_get_datasetfieldname(v_report_code,a.report_field)),
+			  concat(fn_get_reconfieldname(v_recon_code,a.report_field), '-',
+          fn_get_fieldtype(in_recon_code, a.report_field))) as reportparam_value,
 			a.filter_criteria,
 			fn_get_mastername(a.filter_criteria, 'QCD_RP_CONSTRAINT') as filter_criteria_desc,
 			fn_get_reportfiltervalue(in_recon_code,'',a.filter_value,in_user_code) as filter_value,

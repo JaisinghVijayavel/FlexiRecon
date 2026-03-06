@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_pagereport` $$
-CREATE PROCEDURE `pr_run_pagereport`(
+DROP PROCEDURE IF EXISTS `pr_run_pagereportchk` $$
+CREATE PROCEDURE `pr_run_pagereportchk`(
   in in_archival_code varchar(32),
   in in_reporttemplate_code varchar(32),
   in in_reporttemplateresultset_code varchar(32),
@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 18-02-2026
+    updated Date : 06-03-2026
 
-    Version : 4
+    Version : 1
   */
 
   declare v_recon_code varchar(32) default '';
@@ -241,6 +241,8 @@ me:BEGIN
 
     call pr_run_sql(v_sql,@msg,@result);
   end if;
+
+  select v_report_exec_type,v_sql;
 
   set out_rec_count = ifnull(@rec_count,0);
   set out_msg = concat(v_report_desc,' generation initiated in the report session id ',cast(v_rptsession_gid as nchar));

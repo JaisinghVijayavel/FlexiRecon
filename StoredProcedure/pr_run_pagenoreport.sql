@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 12-01-2026
+    updated Date : 06-03-2026
 
-    Version : 1
+    Version : 2
   */
 
   declare v_recon_code text default '';
@@ -37,6 +37,7 @@ me:BEGIN
   declare v_start_rec_no int default 0;
   declare v_sortby_code varchar(32);
   declare v_sorting_field text default '';
+  declare v_user_code text default '';
 
   declare v_rptsession_gid int default 0;
 
@@ -152,9 +153,9 @@ me:BEGIN
      where rptsession_gid = in_rptsession_gid
      and delete_flag = 'N') and v_report_exec_type = 'S' then
     select
-      b.table_name,b.rpt_table_name
+      b.table_name,b.rpt_table_name,a.insert_by
     into
-      v_table_name,v_rpt_table_name
+      v_table_name,v_rpt_table_name,v_user_code
     from recon_trn_treportsession as a
     inner join recon_mst_treport as b on a.report_code = b.report_code and b.delete_flag = 'N'
     where a.rptsession_gid = in_rptsession_gid
@@ -233,6 +234,8 @@ me:BEGIN
     set v_condition = concat('and rptsession_gid = ',cast(in_rptsession_gid as nchar) ,' ');
   else
     set v_condition = ifnull(in_condition,'');
+
+    set v_condition = fn_get_reconstaticcondition('',in_recon_code,v_condition,v_user_code);
 
     if v_recon_code_field <> '' and v_recon_flag = 'Y' and v_multi_recon_flag = 'N' then
       set v_condition = concat(' and ',v_recon_code_field,' = ',char(34),v_recon_code,char(34),' ', v_condition);

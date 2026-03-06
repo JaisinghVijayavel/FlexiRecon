@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 13-02-2026
+    Updated Date : 25-02-2026
 
-    Version : 4
+    Version : 5
   */
 
   declare v_recon_version text default '';
@@ -111,7 +111,7 @@ me:BEGIN
   declare v_comparison_tran_gid text default '';
   declare v_count int default 0;
 
-  declare v_filter_applied_on char(1) default '';
+  declare v_filter_applied_on text default '';
   declare v_filter_field text default '';
   declare v_filter_criteria text default '';
   declare v_filter_value_flag text default '';
@@ -596,7 +596,7 @@ me:BEGIN
 				and recon_version = v_recon_version
 				and active_status = 'Y'
 				and delete_flag = 'N'
-				order by filter_applied_on,filter_seqno,preprocessfilter_gid;
+				order by filter_applied_on,filter_seqno,preprocessfilterhistory_gid;
 
 				declare continue handler for not found set preprocessfilter_done=1;
 
