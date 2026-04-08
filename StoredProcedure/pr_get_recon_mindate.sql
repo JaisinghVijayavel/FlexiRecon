@@ -6,6 +6,16 @@ CREATE PROCEDURE `pr_get_recon_mindate`
   in in_recon_code varchar(32)
 )
 me:begin
+  /*
+    Created By :
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 01-04-2026
+
+    Version : 1
+  */
+
   declare v_sql text default '';
 
   declare v_finyear_start_date date;

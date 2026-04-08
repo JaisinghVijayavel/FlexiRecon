@@ -22,9 +22,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 06-03-2026
+    updated Date : 11-03-2026
 
-    Version : 6
+    Version : 7
   */
 
   declare v_recon_code varchar(32);
@@ -49,7 +49,8 @@ me:BEGIN
   declare v_txt text default '';
   declare err_msg text default '';
   declare err_flag varchar(10) default false;
-  declare  v_table_prefix text default '';
+  declare v_table_prefix text default '';
+  declare v_filter_criteria_table text default '';
 
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
   BEGIN
@@ -89,7 +90,8 @@ me:BEGIN
 
   set @out_reference_id = @out_reference_id;
   set in_report_condition = @out_rebuilt_condition;
-  set @out_table_name = @out_table_name;
+  set v_filter_criteria_table = ifnull(@out_table_name,'');
+
    -- get transaction table
   set v_table_prefix = fn_get_recontableprefix(in_archival_code,in_recon_code);
 
@@ -354,10 +356,9 @@ me:BEGIN
   set out_msg = concat(v_report_desc,' generation initiated in the job id ',cast(v_job_gid as nchar));
   set out_result = v_job_gid;
 
-  set @out_table_name = ifnull(@out_table_name,'');
-
-  if @out_table_name <> '' then
-    set @dynamicreport = concat('drop table if exists ',@out_table_name,';');
+  -- drop filter criteria temporary table
+  if v_filter_criteria_table <> '' then
+    set @dynamicreport = concat('drop table if exists ',v_filter_criteria_table,';');
 
     prepare rpt_stmt from @dynamicreport;
     execute rpt_stmt;
