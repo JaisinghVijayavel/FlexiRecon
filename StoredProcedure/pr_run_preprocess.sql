@@ -394,7 +394,11 @@ me:BEGIN
                 end if;
               end if;
             else
-              set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
+              if v_filter_applied_on = 'LOOKUP' then
+                set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
+              else
+                set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
+              end if;
             end if;
 
             if v_filter_applied_on = 'LOOKUP' then

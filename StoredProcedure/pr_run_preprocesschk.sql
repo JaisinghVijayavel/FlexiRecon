@@ -394,7 +394,11 @@ me:BEGIN
                 end if;
               end if;
             else
-              set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
+              if v_filter_applied_on = 'LOOKUP' then
+                set v_filter_field = fn_get_dsfieldnamecast(v_lookup_dataset_code,v_filter_field);
+              else
+                set v_filter_field = fn_get_reconfieldnamecast(in_recon_code,v_filter_field);
+              end if;
             end if;
 
             if v_filter_applied_on = 'LOOKUP' then
@@ -827,6 +831,8 @@ me:BEGIN
 						set v_sql = concat(v_sql,'where true ');
 						set v_sql = concat(v_sql,v_lookup_filter);
 						set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+            select v_sql;
 
 						call pr_run_sql(v_sql,@msg,@result);
 					end loop lookupexp_loop;

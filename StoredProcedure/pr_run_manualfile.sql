@@ -15,9 +15,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 21-08-2025
+    updated Date : 09-04-2026
 
-    Version : 1
+    Version : 2
   */
 
   declare v_dataset_code text default '';
@@ -55,6 +55,7 @@ me:BEGIN
     call pr_run_manualpostfile(in_scheduler_gid,v_job_gid,in_ip_addr,in_user_code,@out_msg,@out_result);
   elseif v_dataset_code = 'THEMEMANUAL'
     or v_dataset_code = 'FIELDUPDATE'
+    or v_dataset_code = 'DATASETUPDATE'
     or v_dataset_code = 'IUTFIELDUPDATE'
     or v_dataset_code = 'IUTENTRY' then
     if v_dataset_code = 'THEMEMANUAL' then
@@ -66,6 +67,13 @@ me:BEGIN
       call pr_set_themeupdate(in_scheduler_gid,v_job_gid,in_user_code,'','',@out_msg,@out_result);
     elseif v_dataset_code = 'FIELDUPDATE' then
 	    call pr_ins_job('','M',in_scheduler_gid,concat('Field update - ',v_file_name),v_file_name,
+        in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
+
+      set v_job_gid = @out_job_gid;
+
+      call pr_set_fieldupdate(in_scheduler_gid,v_job_gid,in_user_code,'','',@out_msg,@out_result);
+    elseif v_dataset_code = 'DATASETUPDATE' then
+	    call pr_ins_job('','M',in_scheduler_gid,concat('Dataset Field update - ',v_file_name),v_file_name,
         in_user_code,in_ip_addr,'I','Initiated...',@out_job_gid,@msg,@result);
 
       set v_job_gid = @out_job_gid;

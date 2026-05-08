@@ -14,9 +14,9 @@ me:begin
     Created Date - 14-03-2025
 
     Updated By - Vijayavel
-    Updated Date - 31-07-2025
+    Updated Date - 09-04-2026
 
-	  Version - 003
+	  Version - 4
 	*/
 
 	declare v_tran_table text default '';
@@ -112,9 +112,20 @@ me:begin
   elseif v_dataset_code = 'IUTENTRY' then
     if exists
       (
-        select a.iutentry_gid from recon_trn_tiutentry as a
+        select a.scheduler_gid from recon_trn_tiutentry as a
         where a.scheduler_gid = in_scheduler_gid
         and a.iutentry_status = 'C'
+        and a.delete_flag = 'N'
+      ) then
+      set err_flag = true;
+      set err_msg = concat(err_msg,'Access denied !');
+    end if;
+  elseif v_dataset_code = 'FIELDUPDATE' or v_dataset_code = 'DATASETUPDATE' then
+    if exists
+      (
+        select a.scheduler_gid from recon_trn_tfieldupdatepost as a
+        where a.scheduler_gid = in_scheduler_gid
+        and a.update_status = 'C'
         and a.delete_flag = 'N'
       ) then
       set err_flag = true;
@@ -221,6 +232,8 @@ me:begin
     delete from recon_trn_tiutentry where scheduler_gid = in_scheduler_gid;
   elseif v_dataset_code = 'ACCBALANCE' then
     delete from recon_trn_taccbal where scheduler_gid = in_scheduler_gid;
+  elseif v_dataset_code = 'FIELDUPDATE' or v_dataset_code = 'DATASETUPDATE' then
+    delete from recon_trn_tfieldupdate where scheduler_gid = in_scheduler_gid;
   else
 		-- recon1 block
 		recon1_block:begin

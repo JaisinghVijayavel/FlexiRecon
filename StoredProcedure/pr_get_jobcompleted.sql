@@ -10,6 +10,16 @@ CREATE PROCEDURE `pr_get_jobcompleted`(
   in in_lang_code varchar(32)
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 05-05-2026
+
+    Version : 1
+  */
+
   declare v_app_datetime_format text default '';
 
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
@@ -21,12 +31,14 @@ if in_jobtype_code = '0' then
 		a.job_name,
     a.recon_code,
 		d.recon_name,
-        -- DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
-        -- DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
+    DATE_FORMAT(a.start_date, '%d-%m-%Y %H:%i:%s') as start_date,
+    DATE_FORMAT(a.end_date, '%d-%m-%Y %H:%i:%s') as end_date,
        -- a.start_date,
        -- a.end_date,
-		date_format(a.start_date,v_app_datetime_format) as start_date,
-		date_format(a.end_date,v_app_datetime_format) as end_date,
+		-- date_format(a.start_date,v_app_datetime_format) as start_date,
+		-- date_format(a.end_date,v_app_datetime_format) as end_date,
+    -- a.start_date,
+    -- a.end_date,
 		a.job_status,
 		a.job_remark,
 		b.jobstatus_desc,
@@ -50,12 +62,14 @@ else
 		a.job_name,
 		a.recon_code,
 		d.recon_name,
-    -- DATE_FORMAT(a.start_date, '%d-%m-%Y %h:%i %p') as start_date,
-		-- DATE_FORMAT(a.end_date, '%d-%m-%Y %h:%i %p') as end_date,
+    DATE_FORMAT(a.start_date, '%d-%m-%Y %H:%i:%s') as start_date,
+		DATE_FORMAT(a.end_date, '%d-%m-%Y %H:%i:%s') as end_date,
        -- a.start_date,
         -- a.end_date,
-		date_format(a.start_date,v_app_datetime_format) as start_date,
-		date_format(a.end_date,v_app_datetime_format) as end_date,
+		-- date_format(a.start_date,v_app_datetime_format) as start_date,
+		-- date_format(a.end_date,v_app_datetime_format) as end_date,
+    -- a.start_date,
+    -- a.end_date,
 		a.job_status,
 		a.job_remark,
 		b.jobstatus_desc,

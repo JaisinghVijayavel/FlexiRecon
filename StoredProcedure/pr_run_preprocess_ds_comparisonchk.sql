@@ -1,7 +1,7 @@
 ﻿DELIMITER $$
 
-DROP PROCEDURE IF EXISTS `pr_run_preprocess_ds_comparison` $$
-CREATE PROCEDURE `pr_run_preprocess_ds_comparison`
+DROP PROCEDURE IF EXISTS `pr_run_preprocess_ds_comparisonchk` $$
+CREATE PROCEDURE `pr_run_preprocess_ds_comparisonchk`
 (
   in in_recon_code text,
   in in_preprocess_code text,
@@ -190,6 +190,8 @@ me:BEGIN
       else
         call pr_upd_job(in_job_gid,'P',concat('Applying Preprocess - ',v_preprocess_desc),@msg,@result);
       end if;
+
+      select v_process_method;
 
       -- lookup method
       if v_process_method = 'QCD_LOOKUP_COMPARISON' then
@@ -467,6 +469,8 @@ me:BEGIN
         set v_sql = concat(v_sql,'where 1 = 1 ');
         set v_sql = concat(v_sql,v_source_filter);
         set v_sql = concat(v_sql,'and a.delete_flag = ',char(39),'N',char(39),' ');
+
+        select v_sql;
 
         call pr_run_sql(v_sql,@msg,@result);
       end if;

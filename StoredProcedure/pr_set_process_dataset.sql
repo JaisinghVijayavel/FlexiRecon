@@ -16,9 +16,9 @@ me:begin
     Created Date : 19-11-2023
 
     Updated By : Vijayavel
-    Updated Date : 19-10-2024
+    Updated Date : 09-04-2026
 
-    Version : 4
+    Version : 6
   */
   declare v_pipeline_code text default '';
   declare v_dataset_code text default '';
@@ -200,20 +200,20 @@ me:begin
   elseif v_dataset_code = 'FIELDUPDATE' then
     set v_sql = concat("insert into recon_trn_tfieldupdate
       (
-        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,field_desc,field_value
+        scheduler_gid,recon_code,dataset_code,tranbrkp_gid,tran_gid,field_desc,field_value,insert_date
       )
       select
-        scheduler_gid,recon_code,ifnull(dataset_code,''),tranbrkp_gid,tran_gid,recon_field_desc,field_value
+        scheduler_gid,recon_code,ifnull(dataset_code,''),tranbrkp_gid,tran_gid,recon_field_desc,field_value,sysdate()
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");
   elseif v_dataset_code = 'DATASETUPDATE' then
     set v_sql = concat("insert into recon_trn_tfieldupdate
       (
-        scheduler_gid,dataset_code,dataset_gid,field_desc,field_value
+        scheduler_gid,recon_code,dataset_code,dataset_gid,field_desc,field_value,insert_date
       )
       select
-        scheduler_gid,ifnull(dataset_code,''),dataset_gid,dataset_field_desc,field_value
+        scheduler_gid,recon_code,ifnull(dataset_code,''),dataset_gid,dataset_field_desc,field_value,sysdate()
       from ",v_dataset_table_name,"
       where scheduler_gid = ",cast(in_scheduler_gid as nchar),"
       and delete_flag = 'N'");

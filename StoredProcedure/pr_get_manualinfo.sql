@@ -12,9 +12,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 08-10-2025
+    Updated Date : 09-04-2026
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recon_code varchar(32) default '';
@@ -83,7 +83,7 @@ me:BEGIN
     where a.scheduler_gid = in_scheduler_gid
     and a.delete_flag = 'N'
     limit 0,1;
-  elseif v_dataset_code = 'FIELDUPDATE' then
+  elseif v_dataset_code = 'FIELDUPDATE' or v_dataset_code = 'DATASETUPDATE' then
     select
       a.recon_code,
       b.recon_name,
@@ -353,6 +353,31 @@ me:BEGIN
       tranbrkp_gid as 'Supporting Tran Id',
       field_desc as 'Field',
       field_value as 'Field Value'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N';
+  elseif v_dataset_code = 'DATASETUPDATE' then
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+
+    /*
+    select scheduler_gid as 'Scheduler Id',
+      count(*) as 'Record Count'
+    from recon_trn_tfieldupdate
+    where scheduler_gid = in_scheduler_gid
+    and delete_flag = 'N'
+    group by scheduler_gid;
+    */
+
+    select scheduler_gid as 'Scheduler Id',
+      dataset_gid as 'Dataset Id',
+      dataset_code as 'Dataset Code',
+      field_desc as 'Dataset Field Name',
+      field_value as 'Dataset Field Value'
     from recon_trn_tfieldupdate
     where scheduler_gid = in_scheduler_gid
     and delete_flag = 'N';
