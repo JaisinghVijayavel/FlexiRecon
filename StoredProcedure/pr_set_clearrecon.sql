@@ -20,8 +20,14 @@ begin
 
   declare v_concurrent_ko_flag text default '';
 
+  declare v_dataset_code text default '';
+  declare v_dataset_db text default '';
+
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
+
+  -- get dataset db name
+  set v_dataset_db = fn_get_configvalue('dataset_db_name');
 
   if v_concurrent_ko_flag = 'Y' then
 	  set v_tran_table = concat(in_recon_code,'_tran');
@@ -110,6 +116,40 @@ begin
   and delete_flag = 'N'");
 
   call pr_run_sql2(v_sql,@msg2,@result2);
+
+	-- recondataset block
+	recondataset_block:begin
+		declare recondataset_done int default 0;
+		declare recondataset_cursor cursor for
+			select
+				dataset_code
+			from recon_mst_trecondataset
+			where recon_code = in_recon_code
+			and dataset_type in ('B','T','S')
+			and active_status = 'Y'
+			and delete_flag = 'N'
+			order by 1;
+		declare continue handler for not found set recondataset_done=1;
+
+		open recondataset_cursor;
+
+		recondataset_loop: loop
+			fetch recondataset_cursor into v_dataset_code;
+			if recondataset_done = 1 then leave recondataset_loop; end if;
+
+			if v_dataset_code <> '' then
+        if v_dataset_db <> '' then
+          set v_dataset_code = concat(v_dataset_db,'.',v_dataset_code);
+        end if;
+
+        set v_sql = concat('truncate ',v_dataset_code);
+
+        call pr_run_sql2(v_sql,@msg2,@result2);
+			end if;
+		end loop recondataset_loop;
+
+		close recondataset_cursor;
+	end recondataset_block;
 end $$
 
 DELIMITER ;
