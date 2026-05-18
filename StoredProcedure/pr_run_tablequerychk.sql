@@ -8,7 +8,7 @@ CREATE PROCEDURE `pr_run_tablequerychk`(
   in_table_name varchar(128),
   in_condition text,
   in_job_gid int,
-  in_outputfile_flag boolean, 
+  in_outputfile_flag boolean,
   in_outputfile_type varchar(32),
   in_user_code varchar(32),
   in_reporttemplate_resultset_code varchar(32),
@@ -429,6 +429,8 @@ me:BEGIN
       where job_gid = in_job_gid
       and delete_flag = 'N';
     end if;
+
+    select v_sql;
 
     if in_job_gid = 0 and in_outputfile_type = 'table' then
       if v_report_code = '' then
