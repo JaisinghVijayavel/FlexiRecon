@@ -9,6 +9,16 @@ CREATE PROCEDURE `pr_get_datasetagainstrecon`
 	in in_lang_code varchar(32)
 )
 BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 20-05-2026
+
+    Version : 1
+  */
+
   declare v_app_datetime_format text default '';
 
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
@@ -24,7 +34,7 @@ BEGIN
     b.dataset_category,
 		b.dataset_name,
 		a.dataset_type,
-    date_format(d.start_date, v_app_datetime_format) as last_sync_date,
+    date_format(d.start_date, '%d-%m-%Y %H:%i:%s') as last_sync_date,
 		fn_get_mastername(a.dataset_type, 'QCD_DS_TYPE') as dataset_type_desc,
 		fn_get_mastername(d.job_status, 'QCD_JOB_STATUS') as last_sync_status,
 		fn_get_mastername(a.active_status, 'QCD_STATUS') as active_status_desc,
