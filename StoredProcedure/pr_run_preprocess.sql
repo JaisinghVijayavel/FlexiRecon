@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 08-05-2026
+    Updated Date : 04-06-2026
 
-    Version : 12
+    Version : 13
   */
 
   declare v_recon_version text default '';
@@ -71,8 +71,10 @@ me:BEGIN
   declare v_lookup_agg_return_function text default '';
   declare v_lookup_update_fields text default '';
   declare v_lookup_filter text default '';
+
   declare v_reverse_update_flag text default '';
   declare v_value_flag text default '';
+  declare v_applytoall_tranbrkp_flag text default '';
 
   declare v_filter_applied_on text default '';
   declare v_filter_field text default '';
@@ -227,7 +229,8 @@ me:BEGIN
         lookup_group_flag,
         lookup_multi_return_flag,
         lookup_agg_return_function,
-        recorderby_type
+        recorderby_type,
+        applytoall_tranbrkp_flag
       from recon_mst_tpreprocesshistory
       where recon_code = in_recon_code
       and recon_version = v_recon_version
@@ -260,7 +263,8 @@ me:BEGIN
         v_lookup_group_flag,
         v_lookup_multi_return_flag,
         v_lookup_agg_return_function,
-        v_recorderby_type;
+        v_recorderby_type,
+        v_applytoall_tranbrkp_flag;
 
       if process_done = 1 then leave process_loop; end if;
 
@@ -287,6 +291,8 @@ me:BEGIN
       set v_lookup_multi_return_flag = ifnull(v_lookup_multi_return_flag,'N');
       set v_lookup_agg_return_function = ifnull(v_lookup_agg_return_function,'');
       set v_recorderby_type = ifnull(v_recorderby_type,'asc');
+
+      set v_applytoall_tranbrkp_flag = ifnull(v_applytoall_tranbrkp_flag,'N');
 
       set v_lookup_table = v_lookup_dataset_code;
 
@@ -745,6 +751,10 @@ me:BEGIN
 
         call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+        if v_applytoall_tranbrkp_flag = 'Y' then
+          call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
       elseif v_process_method = 'QCD_EXPRESSION' then
         set v_field_expression = '';
 
@@ -799,6 +809,10 @@ me:BEGIN
 
           call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
           call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+          if v_applytoall_tranbrkp_flag = 'Y' then
+            call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          end if;
         end if;
       elseif v_process_method = 'QCD_LOOKUP_EXPRESSION' then
         set v_field_expression = '';
@@ -868,6 +882,11 @@ me:BEGIN
         call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
 
+        if v_applytoall_tranbrkp_flag = 'Y' then
+          call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
+          call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
+
         if v_opening_flag = 'Y' then
           set v_field_expression = concat(fn_get_fieldnamecast(in_recon_code,v_set_recon_field),'-',
                                fn_get_castexpression(in_recon_code,v_process_expression));
@@ -888,6 +907,10 @@ me:BEGIN
 
           call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
           call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+          if v_applytoall_tranbrkp_flag = 'Y' then
+            call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          end if;
         end if;
       elseif v_process_method = 'QCD_LOOKUP' then
         set v_sql = 'update $TABLENAME$ as a ';
@@ -926,6 +949,21 @@ me:BEGIN
 
         if @base_count > 0 then
           call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
+
+        -- support not posted cases
+        if v_applytoall_tranbrkp_flag = 'Y' then
+          set @base_count = 0;
+
+          set v_sql = replace(v_sql,'and a.tran_gid > 0 ','and a.tran_gid = 0 ');
+          set v_count_sql = replace(v_count_sql,'and a.tran_gid > 0 ','and a.tran_gid = 0 ');
+
+          call pr_run_sql(replace(v_count_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          set @base_count = ifnull(@base_count,0);
+
+          if @base_count > 0 then
+            call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          end if;
         end if;
 
         set @base_count = 0;

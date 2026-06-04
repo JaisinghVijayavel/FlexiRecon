@@ -6,6 +6,16 @@ CREATE PROCEDURE `pr_set_clearrecon`
   in in_recon_code varchar(32)
 )
 begin
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 25-05-2026
+
+    Version : 1
+  */
+
   declare v_sql text default '';
 
 	declare v_tran_table text default '';
@@ -39,6 +49,34 @@ begin
 	  set v_ko_table = concat(in_recon_code,'_ko');
 	  set v_kodtl_table = concat(in_recon_code,'_kodtl');
 	  set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
+
+    -- tran table
+    set v_sql = concat("truncate ",v_tran_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+    -- tranbrkp table
+    set v_sql = concat("truncate ",v_tranbrkp_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+    -- tran ko table
+    set v_sql = concat("truncate ",v_tranko_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+    -- tranbrkp ko table
+    set v_sql = concat("truncate ",v_tranbrkpko_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+    -- ko table
+    set v_sql = concat("truncate ",v_ko_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+    -- kodtl table
+    set v_sql = concat("truncate ",v_kodtl_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+    -- koroundoff table
+    set v_sql = concat("truncate ",v_koroundoff_table);
+		call pr_run_sql2(v_sql,@msg2,@result2);
   else
 	  set v_tran_table = 'recon_trn_ttran';
 	  set v_tranbrkp_table = 'recon_trn_ttranbrkp';
@@ -49,73 +87,73 @@ begin
 	  set v_ko_table = 'recon_trn_tko';
 	  set v_kodtl_table = 'recon_trn_tkodtl';
 	  set v_koroundoff_table = 'recon_trn_tkoroundoff';
+
+		-- kodtl
+		set v_sql = concat("
+		delete from ",v_kodtl_table,"
+		where ko_gid in
+		(
+			select ko_gid from ",v_ko_table,"
+			where recon_code = '",in_recon_code,"'
+			and delete_flag = 'N'
+		)
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+		-- koroundoff
+		set v_sql = concat("
+		delete from ",v_koroundoff_table,"
+		where ko_gid in
+		(
+			select ko_gid from ",v_ko_table,"
+			where recon_code = '",in_recon_code,"'
+			and delete_flag = 'N'
+		)
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+		-- ko
+		set v_sql = concat("
+		delete from ",v_ko_table,"
+		where recon_code = '",in_recon_code,"'
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+		-- tran
+		set v_sql = concat("
+		delete from ",v_tran_table,"
+		where recon_code = '",in_recon_code,"'
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+		-- tranko
+		set v_sql = concat("
+		delete from ",v_tranko_table,"
+		where recon_code = '",in_recon_code,"'
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+		-- tranbrkp
+		set v_sql = concat("
+		delete from ",v_tranbrkp_table,"
+		where recon_code = '",in_recon_code,"'
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
+
+		-- tranbrkpko
+		set v_sql = concat("
+		delete from ",v_tranbrkpko_table,"
+		where recon_code = '",in_recon_code,"'
+		and delete_flag = 'N'");
+
+		call pr_run_sql2(v_sql,@msg2,@result2);
   end if;
-
-  -- kodtl
-  set v_sql = concat("
-  delete from ",v_kodtl_table,"
-  where ko_gid in
-  (
-    select ko_gid from ",v_ko_table,"
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'
-  )
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
-
-  -- koroundoff
-  set v_sql = concat("
-  delete from ",v_koroundoff_table,"
-  where ko_gid in
-  (
-    select ko_gid from ",v_ko_table,"
-    where recon_code = '",in_recon_code,"'
-    and delete_flag = 'N'
-  )
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
-
-  -- ko
-  set v_sql = concat("
-  delete from ",v_ko_table,"
-  where recon_code = '",in_recon_code,"'
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
-
-  -- tran
-  set v_sql = concat("
-  delete from ",v_tran_table,"
-  where recon_code = '",in_recon_code,"'
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
-
-  -- tranko
-  set v_sql = concat("
-  delete from ",v_tranko_table,"
-  where recon_code = '",in_recon_code,"'
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
-
-  -- tranbrkp
-  set v_sql = concat("
-  delete from ",v_tranbrkp_table,"
-  where recon_code = '",in_recon_code,"'
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
-
-  -- tranbrkpko
-  set v_sql = concat("
-  delete from ",v_tranbrkpko_table,"
-  where recon_code = '",in_recon_code,"'
-  and delete_flag = 'N'");
-
-  call pr_run_sql2(v_sql,@msg2,@result2);
 
 	-- recondataset block
 	recondataset_block:begin

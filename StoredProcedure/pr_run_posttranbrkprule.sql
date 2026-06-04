@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 07-11-2025
+    updated Date : 03-06-2026
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_name text default '';
@@ -515,7 +515,7 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_t3source'
                             and index_name = v_index_name) then
 
-                if subtr(v_source_field,1,3) = 'col' then
+                if substr(v_source_field,1,3) = 'col' then
                   set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t3source(',v_source_field,'(255))');
                 else
                   set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t3source(',v_source_field,')');
