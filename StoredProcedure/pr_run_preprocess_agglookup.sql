@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 20-01-2026
+    Updated Date : 10-06-2026
 
-    Version : 7
+    Version : 8
   */
 
   declare v_recon_version text default '';
@@ -414,7 +414,7 @@ me:BEGIN
             set v_aggjoin_condition = concat(v_aggjoin_condition,' and a.',v_field,' = b.',v_field,' ');
 
             if substr(v_field,1,3) = 'col' then
-              set v_field = concat(v_field,'(255)');
+              set v_field = concat(v_field,'(100)');
             end if;
 
             if v_idx_grp_field = '' then

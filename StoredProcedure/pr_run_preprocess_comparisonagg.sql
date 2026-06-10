@@ -16,12 +16,12 @@ CREATE PROCEDURE `pr_run_preprocess_comparisonagg`
 me:BEGIN
   /*
     Created By : Vijayavel
-    Created Date : 06-11-2025
+    Created Date : 10-06-2026
 
     Updated By :
     Updated Date :
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_version text default '';
@@ -630,7 +630,7 @@ me:BEGIN
                             and index_name = v_index_name) then
 
                 if substr(v_source_field,1,3) = 'col' then
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesssource(',v_source_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesssource(',v_source_field,'(100))');
                 else
                   set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesssource(',v_source_field,')');
                 end if;
@@ -646,7 +646,7 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_t2preprocesssourceagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesssourceagg(',v_source_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesssourceagg(',v_source_field,'(100))');
 
                   call pr_run_sql(v_index_sql,@msg,@result);
 
@@ -659,7 +659,7 @@ me:BEGIN
                             and index_name = v_index_name) then
 
                   if substr(v_source_field,1,3) = 'col' then
-                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesstranagg(',v_source_field,'(255))');
+                    set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesstranagg(',v_source_field,'(100))');
                   else
                     set v_index_sql = concat('create index idx_',v_source_field,' on recon_tmp_t2preprocesstranagg(',v_source_field,')');
                   end if;
@@ -678,7 +678,7 @@ me:BEGIN
                             and index_name = v_index_name) then
 
                 if substr(v_comparison_field,1,3) = 'col' then
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesscomparison(',v_comparison_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesscomparison(',v_comparison_field,'(100))');
                 else
                   set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesscomparison(',v_comparison_field,')');
                 end if;
@@ -694,7 +694,7 @@ me:BEGIN
                             WHERE table_name = 'recon_tmp_t2preprocesscomparisonagg'
                             and index_name = v_index_name) then
 
-                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesscomparisonagg(',v_comparison_field,'(255))');
+                  set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesscomparisonagg(',v_comparison_field,'(100))');
 
                   call pr_run_sql(v_index_sql,@msg,@result);
 
@@ -707,7 +707,7 @@ me:BEGIN
                             and index_name = v_index_name) then
 
                   if substr(v_comparison_field,1,3) = 'col' then
-                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesstranagg(',v_comparison_field,'(255))');
+                    set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesstranagg(',v_comparison_field,'(100))');
                   else
                     set v_index_sql = concat('create index idx_',v_comparison_field,' on recon_tmp_t2preprocesstranagg(',v_comparison_field,')');
                   end if;
