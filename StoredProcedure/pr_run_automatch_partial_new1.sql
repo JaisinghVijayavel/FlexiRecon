@@ -236,7 +236,9 @@ me:BEGIN
 
   if in_automatch_flag = 'Y' then
     set v_system_matchoff = 'Y';
+    set v_manual_matchoff = 'N';
   else
+    set v_system_matchoff = 'N';
     set v_manual_matchoff = 'Y';
   end if;
 

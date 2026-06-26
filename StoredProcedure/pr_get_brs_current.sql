@@ -516,7 +516,7 @@ me:begin
     format(v_bal_value2,2,'en_IN')
   );
 
-  set v_value = v_cr_total - v_dr_total + (v_bal_value1 * -1) + v_threshold_total;
+  set v_value = v_cr_total - v_dr_total + (v_bal_value1*-1) + v_threshold_total;
   set v_value = round(v_value,2);
   set v_bal_value2 = round(v_bal_value2,2);
 

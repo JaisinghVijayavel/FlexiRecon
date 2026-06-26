@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 04-06-2026
+    Updated Date : 22-06-2026
 
-    Version : 13
+    Version : 14
   */
 
   declare v_recon_version text default '';
@@ -175,7 +175,9 @@ me:BEGIN
   -- recon date flag
 	if v_recon_date_flag = 'Y' then
 		if v_recon_date_field <> 'tran_date' then
-			set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
+			set v_recon_date_field = concat('cast(a.',v_recon_date_field,' as date)');
+    else
+      set v_recon_date_field = 'a.tran_date';
 		end if;
 
 		set v_recon_date_condition = '';
@@ -741,7 +743,7 @@ me:BEGIN
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-        set v_sql = concat(v_sql,v_recon_date_condition);
+        set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -799,7 +801,7 @@ me:BEGIN
           set v_sql = 'update $TABLENAME$ set ';
           set v_sql = concat(v_sql,v_field_expression,' ');
           set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,v_recon_date_condition);
+          set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
           set v_sql = concat(v_sql,v_preprocess_filter);
           set v_sql = concat(v_sql,'and tran_gid > 0 ');
           set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -870,7 +872,7 @@ me:BEGIN
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-        set v_sql = concat(v_sql,v_recon_date_condition);
+        set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -899,7 +901,7 @@ me:BEGIN
           set v_sql = 'update $TABLENAME$ set ';
           set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_field_expression,'$FIELD$',v_get_recon_field),' ');
           set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,v_recon_date_condition);
+          set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
           set v_sql = concat(v_sql,v_preprocess_filter);
           set v_sql = concat(v_sql,'and tran_gid > 0 ');
           set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');

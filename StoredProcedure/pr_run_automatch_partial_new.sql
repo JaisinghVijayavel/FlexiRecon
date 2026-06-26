@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 18-11-2025
+    updated Date : 19-06-2026
 
-    Version : 8
+    Version : 9
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -239,9 +239,11 @@ me:BEGIN
   end if;
 
   if in_automatch_flag = 'Y' then
+    set v_manual_matchoff = 'N';
     set v_system_matchoff = 'Y';
   else
     set v_manual_matchoff = 'Y';
+    set v_system_matchoff = 'N';
   end if;
 
   if not exists(select recon_code from recon_mst_trecon
@@ -1720,7 +1722,7 @@ me:BEGIN
               and b.match_flag = 'N' ");
 
             if in_group_flag <> 'OTO' then
-						  set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
+						  set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
             else
 						  if v_recontype_code <> 'N' then
                 if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
@@ -1750,7 +1752,7 @@ me:BEGIN
                 end if;
               end if;
 
-						  set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid');
+						  set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid');
             end if;
 
             if in_group_flag <> 'MTM' and in_group_flag <> 'OTO' then
@@ -2043,7 +2045,7 @@ me:BEGIN
 
 						set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
-						set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
+						set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
 
             -- add record order by
             if v_recorder <> '' then
@@ -2194,7 +2196,7 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,v_rule_condition,' ');
 
             if v_recontype_code <> 'N' then
-              set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
+              set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
             else
               set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid',v_rule_groupby,' ');
             end if;

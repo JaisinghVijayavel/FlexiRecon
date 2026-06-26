@@ -203,6 +203,24 @@ me:BEGIN
 	set v_koroundoff_table = concat(in_recon_code,'_koroundoff');
   */
 
+  set v_sql = concat("drop table if exists recon_tmp_t6tran");
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("drop table if exists recon_tmp_t6tranbrkp");
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("create table recon_tmp_t6tran like ",in_recon_code,"_tran");
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("create table recon_tmp_t6tranbrkp like ",in_recon_code,"_tranbrkp");
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("insert into recon_tmp_t6tran select * from ",in_recon_code,"_tran");
+  call pr_run_sql(v_sql,@msg,@result);
+
+  set v_sql = concat("insert into recon_tmp_t6tranbrkp select * from ",in_recon_code,"_tranbrkp");
+  call pr_run_sql(v_sql,@msg,@result);
+
   -- concurrent KO flag
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
@@ -240,7 +258,9 @@ me:BEGIN
 
   if in_automatch_flag = 'Y' then
     set v_system_matchoff = 'Y';
+    set v_manual_matchoff = 'N';
   else
+    set v_system_matchoff = 'N';
     set v_manual_matchoff = 'Y';
   end if;
 
@@ -640,6 +660,9 @@ me:BEGIN
   end if;
   */
 
+      -- and a.system_match_flag = ifnull(",v_system_matchoff,",a.system_match_flag)
+      -- and a.manual_match_flag = ifnull(",v_manual_matchoff,",a.manual_match_flag)
+
   applyrule_block:begin
     declare applyrule_done int default 0;
     declare applyrule_cursor cursor for
@@ -799,7 +822,7 @@ me:BEGIN
       if in_automatch_flag = 'Y' then
         set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
       else
-        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from recon_tmp_ttran ');
+        set v_source_head_sql = concat(v_source_head_sql,' select ',v_tran_fields ,' from recon_tmp_t6tran ');
       end if;
 
       set v_source_head_sql = concat(v_source_head_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
@@ -825,7 +848,7 @@ me:BEGIN
       if in_automatch_flag = 'Y' then
         set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from ',v_tran_table,' ');
       else
-        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from recon_tmp_ttran ');
+        set v_comparison_head_sql = concat(v_comparison_head_sql,' select ',v_tran_fields ,' from recon_tmp_t6tran ');
       end if;
 
       set v_comparison_head_sql = concat(v_comparison_head_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
@@ -851,7 +874,7 @@ me:BEGIN
       if in_automatch_flag = 'Y' then
         set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
       else
-        set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_tmp_ttranbrkp ');
+        set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_tmp_t6tranbrkp ');
       end if;
 
       set v_source_headbrkp_sql = concat(v_source_headbrkp_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
@@ -876,7 +899,7 @@ me:BEGIN
       if in_automatch_flag = 'Y' then
         set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from ',v_tranbrkp_table,' ');
       else
-        set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_tmp_ttranbrkp ');
+        set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' select ',v_tranbrkp_fields ,' from recon_tmp_t6tranbrkp ');
       end if;
 
       set v_comparison_headbrkp_sql = concat(v_comparison_headbrkp_sql,' where recon_code = ',char(39),in_recon_code,char(39)) ;
@@ -1746,7 +1769,7 @@ me:BEGIN
                 end if;
               end if;
 
-						  set v_match_sql = concat(v_match_sql,'group by a.excp_value,a.tran_gid,a.tranbrkp_gid');
+						  set v_match_sql = concat(v_match_sql,'group by a.tran_gid,a.tranbrkp_gid');
             end if;
 
             if in_group_flag <> 'MTM' and in_group_flag <> 'OTO' then
@@ -1788,6 +1811,8 @@ me:BEGIN
 
 						call pr_run_sql(v_match_sql,@msg,@result);
 
+            select v_match_sql;
+
             -- plus value
 						-- insert in match table
 						set v_match_sql = 'insert into recon_tmp_t6thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
@@ -1813,6 +1838,8 @@ me:BEGIN
 
 						call pr_run_sql(v_match_sql,@msg,@result);
 
+            select v_match_sql;
+
             -- minus value
 						-- insert in match table
 						set v_match_sql = 'insert into recon_tmp_t6thresholddiff (group_flag,tran_gid,tranbrkp_gid,matched_count,diff_value,tran_mult,matched_json) ';
@@ -1837,6 +1864,8 @@ me:BEGIN
             set v_match_sql = concat(v_match_sql,'and (abs(comparison_value)-abs(sum(source_value*tran_mult))) <= ',cast(v_rule_threshold_minus_value as nchar),' ');
 
 						call pr_run_sql(v_match_sql,@msg,@result);
+
+            select v_match_sql;
 
 						select max(matched_count) into v_count from recon_tmp_t6thresholddiff;
 						set v_count = ifnull(v_count,0);
@@ -2334,6 +2363,8 @@ me:BEGIN
 
             -- run match query one to one
 						call pr_run_sql(v_match_sql,@msg,@result);
+
+            select v_match_sql;
 
 						-- pseudorows
 						select max(matched_count) into v_count from recon_tmp_t6match;
@@ -2932,7 +2963,7 @@ me:BEGIN
             and delete_flag = 'N';
 
             if v_recontype_code <> 'N' then
-              update recon_tmp_ttran as a
+              update recon_tmp_t6tran as a
               inner join recon_trn_tpreviewdtl as b on a.tran_gid = b.tran_gid
                 and b.job_gid = in_job_gid
                 and b.preview_gid > v_preview_gid
@@ -2940,7 +2971,7 @@ me:BEGIN
               where a.excp_value <> 0
               and a.delete_flag = 'N';
 
-              update recon_tmp_ttranbrkp as a
+              update recon_tmp_t6tranbrkp as a
 							inner join recon_tmp_t6matchdtl as c on a.tranbrkp_gid = c.tranbrkp_gid and a.tran_gid = c.tran_gid
               inner join recon_trn_tpreviewdtl as b on c.tran_gid = b.tran_gid
                 and b.job_gid = in_job_gid
@@ -2949,7 +2980,7 @@ me:BEGIN
               where a.excp_value <> 0
               and a.delete_flag = 'N';
             else
-              update recon_tmp_ttran as a
+              update recon_tmp_t6tran as a
               inner join recon_trn_tpreviewdtl as b on a.tran_gid = b.tran_gid
                 and b.job_gid = in_job_gid
                 and b.preview_gid > v_preview_gid
@@ -2957,7 +2988,7 @@ me:BEGIN
               where a.ko_gid = 0
               and a.delete_flag = 'N';
 
-              update recon_tmp_ttranbrkp as a
+              update recon_tmp_t6tranbrkp as a
               inner join recon_trn_tpreviewdtl as b on a.tranbrkp_gid = b.tranbrkp_gid
                 and b.job_gid = in_job_gid
                 and b.preview_gid > v_preview_gid
@@ -2967,6 +2998,7 @@ me:BEGIN
             end if;
           end if;
 
+          leave me;
           -- vijay end
 
           truncate recon_tmp_t6source;
@@ -3021,8 +3053,8 @@ me:BEGIN
   drop temporary table if exists recon_tmp_t6gid;
   drop temporary table if exists recon_tmp_t6tranroundoff;
 
-  drop temporary table if exists recon_tmp_t6thresholddiff;
-  drop temporary table if exists recon_tmp_t6thresholddiffdtl;
+  -- drop temporary table if exists recon_tmp_t6thresholddiff;
+  -- drop temporary table if exists recon_tmp_t6thresholddiffdtl;
 end $$
 
 DELIMITER ;
