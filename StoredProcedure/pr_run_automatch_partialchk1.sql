@@ -711,6 +711,7 @@ me:BEGIN
 
       if applyrule_done = 1 then leave applyrule_loop; end if;
 
+      select 2;
       -- check threshold at rule level
       set v_rule_automatch_partial = ifnull(v_rule_automatch_partial,'N');
       set v_threshold_flag = ifnull(v_threshold_flag,'N');
@@ -1980,7 +1981,7 @@ me:BEGIN
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
 										  update recon_tmp_t6comparison set
-											  excp_value = excp_value - abs(v_diff_value) * v_tran_mult * v_base_tran_mult
+											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     end if;
@@ -2018,6 +2019,8 @@ me:BEGIN
             end loop source_loop;
             close source_cursor;
           end source_block;
+
+          leave me;
 
           truncate recon_tmp_t6manymatch;
 

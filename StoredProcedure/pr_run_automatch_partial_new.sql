@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 19-06-2026
+    updated Date : 30-06-2026
 
-    Version : 9
+    Version : 10
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -1950,7 +1950,14 @@ me:BEGIN
 									if thresholddiff_done = 1 then leave thresholddiff_loop; end if;
 
 									if v_ko_value >= v_diff_value then
-                    if v_src_comp_flag = 'S' and v_diff_value > 0 then
+
+                    /*
+                    update recon_tmp_t5source set
+                      excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
+                    where tran_gid = v_tran_gid
+                    and tranbrkp_gid = v_tranbrkp_gid;
+                    */
+                    if v_src_comp_flag = 'S' and v_diff_value <> 0 then
 										  update recon_tmp_t5source set
 											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										  where tran_gid = v_tran_gid
@@ -1963,9 +1970,15 @@ me:BEGIN
 										    and tranbrkp_gid = v_tranbrkp_gid;
                       else
 										    update recon_tmp_t5comparison set
-											    excp_value = excp_value - abs(v_diff_value)
+											    excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
 										    where tran_gid = v_tran_gid
 										    and tranbrkp_gid = v_tranbrkp_gid;
+                        /*
+										    update recon_tmp_t5comparison set
+											    excp_value = excp_value - v_diff_value
+										    where tran_gid = v_tran_gid
+										    and tranbrkp_gid = v_tranbrkp_gid;
+                        */
                       end if;
                     end if;
 
