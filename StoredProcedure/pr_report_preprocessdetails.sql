@@ -809,10 +809,90 @@ BEGIN
       and a.recon_version = in_version_code
 			and a.active_status ='Y'
 			and a.recorder_on = 'LOOKUP' 
-			and a.delete_flag = 'N' 
+			and a.delete_flag = 'N'
 			order by a.recorder_seqno
 		)as b
 	) as a order by a.Id;
+
+
+  /*PreProcess Condition Table 19 */
+	SET @row_number = 0;
+
+  SELECT a.*
+  FROM
+  (
+    SELECT
+      0 AS 'Id',
+      '10f' AS 'Seq No',
+      '35f' AS 'Source Field',
+      '35f' AS 'Comparison Field',
+      '10f' AS 'Value',
+      '10f' AS 'Reverse Update'
+    UNION ALL
+    SELECT
+      (@row_number := @row_number + 1) AS 'Id',
+       b.*
+    FROM
+    (
+			SELECT
+				a.rec_seqno AS 'Seq No',
+				CASE
+					WHEN IFNULL(a.value_flag,'N') = 'Y'
+						AND IFNULL(a.reverse_update_flag,'N') = 'N'
+						THEN IFNULL(c.field_name,'')
+
+					WHEN IFNULL(a.reverse_update_flag,'N') = 'Y'
+						AND IFNULL(a.value_flag,'N') = 'N'
+						THEN IFNULL(c.field_name,'')
+
+					WHEN IFNULL(a.reverse_update_flag,'N') = 'Y'
+						AND IFNULL(a.value_flag,'N') = 'Y'
+						THEN a.source_field
+
+					WHEN IFNULL(a.reverse_update_flag,'N') = 'N'
+						AND IFNULL(a.value_flag,'N') = 'N'
+						THEN IFNULL(c.field_name,'')
+
+					ELSE a.source_field
+				END AS 'Source Field',
+
+        CASE
+					WHEN IFNULL(a.value_flag,'N') = 'N'
+            OR IFNULL(a.reverse_update_flag,'N') = 'Y'
+            THEN IFNULL(d.field_name,'')
+         ELSE a.comparison_field
+         END AS 'Comparison Field',
+				 
+        CASE
+					WHEN a.value_flag = 'Y' THEN 'Yes'
+					WHEN a.value_flag = 'N' THEN 'No'
+				ELSE ''
+				END AS 'Value',
+
+				CASE
+					WHEN a.reverse_update_flag = 'Y' THEN 'Yes'
+					WHEN a.reverse_update_flag = 'N' THEN 'No'
+				ELSE ''
+				END AS 'Reverse Update'
+      FROM recon_mst_tpreprocessdsupdatehistory a
+      INNER JOIN recon_mst_tpreprocesshistory b ON a.preprocess_code = b.preprocess_code 
+				AND b.recon_version = in_version_code 
+				AND b.delete_flag = 'N'
+      LEFT JOIN recon_mst_tdatasetfield c ON a.source_field = c.dataset_table_field
+				AND (b.source_dataset_code = c.dataset_code OR c.dataset_code = 'system' )
+        AND c.delete_flag = 'N'
+			LEFT JOIN recon_mst_tdatasetfield d ON a.comparison_field = d.dataset_table_field
+				AND (b.comparison_dataset_code = d.dataset_code OR d.dataset_code = 'system')
+				AND d.delete_flag = 'N'
+      WHERE a.preprocess_code = in_preprocess_code
+      AND a.active_status = 'Y'
+      AND a.delete_flag = 'N'
+		  AND a.recon_version = in_version_code
+			ORDER BY a.rec_seqno
+    ) b
+	) a
+  ORDER BY a.Id;
+
 END $$
 
 DELIMITER ;

@@ -16,6 +16,18 @@ begin
 
   set v_dataset_field_name = ifnull(v_dataset_field_name,in_dataset_field);
 
+  if v_dataset_field_name = in_dataset_field then
+    select
+      field_alias_name
+    into
+      v_dataset_field_name
+    from recon_mst_tfieldstru
+    where field_name = in_dataset_field
+    and delete_flag = 'N';
+
+    set v_dataset_field_name = ifnull(v_dataset_field_name,in_dataset_field);
+  end if;
+
   return v_dataset_field_name;
 end $$
 
