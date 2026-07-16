@@ -7,7 +7,7 @@ CREATE PROCEDURE `pr_run_dynamicreport`(
   in in_reporttemplateresultset_code varchar(32),
   in in_recon_code varchar(32),
   in in_report_code varchar(32),
-  in in_report_param text, 
+  in in_report_param text,
   in in_report_condition longtext,
   in in_outputfile_flag boolean,
   in in_outputfile_type varchar(32),
@@ -146,7 +146,7 @@ me:BEGIN
     inner join recon_mst_treporttemplateresultset as b on a.reporttemplate_code = b.reporttemplate_code
       and b.reporttemplateresultset_code = ifnull(in_reporttemplateresultset_code,b.reporttemplateresultset_code)
       and b.delete_flag = 'N'
-    inner join recon_mst_treport as r on b.src_report_code = r.report_code
+    left join recon_mst_treport as r on b.src_report_code = r.report_code
       and r.delete_flag = 'N'
 		where a.reporttemplate_code = in_reporttemplate_code
     and a.active_status='Y'
@@ -212,7 +212,9 @@ me:BEGIN
     set v_report_desc = concat(v_report_desc,' (',in_outputfile_type,')');
   end if;
 
-  if v_table_name = '' and v_report_exec_type <> 'D' then
+  if v_table_name = ''
+    and v_report_exec_type <> 'M' 
+    and v_report_exec_type <> 'D' then
     set out_msg = 'Invalid table name';
     set out_result = 0;
     leave me;
