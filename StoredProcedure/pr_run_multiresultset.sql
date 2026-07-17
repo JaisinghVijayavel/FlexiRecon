@@ -20,20 +20,20 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 21-01-2026
+    updated Date : 17-07-2026
 
-    Version : 1
+    Version : 2
   */
 
 	declare v_count int default 0;
 	declare v_increment int default 1;
 	declare v_report_code_es text;
 	declare v_reporttemplate_code_es text;
-	
+
 	declare v_sql text;
 	declare v_query_sql longtext;
 	declare v_sql_condition longtext;
-	
+
 	declare v_table_name text default '';
 	declare v_rpt_table_name text default '';
 	declare v_sorting_field text default '';
@@ -44,8 +44,9 @@ me:BEGIN
 	declare v_recon_code text default '';
 	declare v_report_code varchar(32);
 	declare v_report_exec_type char(1) default '';
+  declare v_default_condition text default '';
 	declare v_dataset_db_name text default '';
-	declare  v_table_prefix text default '';
+	declare v_table_prefix text default '';
 	
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
 	BEGIN
@@ -122,32 +123,37 @@ me:BEGIN
 		
 		if @report_exec_type_code = "R" then
 			select 
-				r.report_code,t.reporttemplate_code,r.report_exec_type,r.sp_name,r.table_name,r.rpt_table_name
+				r.report_code,t.reporttemplate_code,r.report_exec_type,r.sp_name,r.table_name,r.rpt_table_name,r.default_condition
 			into 
-				v_report_code_es,v_reporttemplate_code_es,v_report_exec_type,v_sp_name,v_table_name,v_rpt_table_name
+				v_report_code_es,v_reporttemplate_code_es,v_report_exec_type,v_sp_name,v_table_name,v_rpt_table_name,v_default_condition
 			from recon_mst_treport as r
 			inner join recon_mst_treporttemplateresultset as t on r.report_code = t.src_report_code
 				and t.active_status = 'Y'
-				and t.delete_flag = 'N' 
+				and t.delete_flag = 'N'
 			where t.reporttemplateresultset_code = @resultset_code
 			and t.reporttemplate_code = in_reporttemplate_code
-			and r.active_status = 'Y'	
+			and r.active_status = 'Y'
 			and r.delete_flag = 'N';
-			
+
+      set v_default_condition = ifnull(v_default_condition,'');
+
       set v_sql_condition = '';
-            
+
       select
-				sql_condition into v_sql_condition 
+				sql_condition into v_sql_condition
 			from tmp_report_conditions
       where report_name=@resultset_name;
-			
+
 			set v_sql_condition = ifnull(v_sql_condition,'');
 			set v_sp_name = ifnull(v_sp_name,'');
+
+      -- add default condition
+      set v_sql_condition = concat(v_sql_condition,v_default_condition);
 
 			if v_rpt_table_name <> '' then
 				set v_table_name = v_rpt_table_name;
   		end if;
-			
+
 			select
 				group_concat(concat(ifnull(b.field_name,if(instr(a.report_field,'.') = 0,a.report_field,SPLIT(a.report_field,'.',2))),' ',a.sorting_type))
 			into
