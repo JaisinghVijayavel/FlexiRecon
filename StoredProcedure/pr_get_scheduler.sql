@@ -13,6 +13,7 @@ BEGIN
   declare v_app_datetime_format text default '';
 
   set v_app_datetime_format = fn_get_configvalue('app_datetime_format');
+  set v_app_datetime_format = '%d-%m-%Y %H:%i:%s';
 
 	select
 		a.scheduler_gid,

@@ -8,11 +8,21 @@ CREATE PROCEDURE `pr_post_tranbrkpbyrule`(
   in in_period_from date,
   in in_period_to date,
   in in_automatch_flag char(1),
-  in in_user_code varchar(16),
+  in in_user_code varchar(32),
   out out_msg text,
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    updated Date : 27-07-2026
+
+    Version : 2
+  */
+
   declare v_recon_name text default '';
   declare v_recontype_code varchar(16);
 
@@ -41,7 +51,7 @@ me:BEGIN
   declare v_tran_acc_mode char(1) default '';
 
   declare v_source_field varchar(128) default '';
-  declare v_extraction_criteria varchar(32) default '';
+  declare v_extraction_criteria text default '';
   declare v_extraction_filter int default 0;
   declare v_comparison_field varchar(128) default '';
   declare v_comparison_criteria varchar(32) default '';

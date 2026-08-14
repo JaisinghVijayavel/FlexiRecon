@@ -10,9 +10,9 @@ CREATE PROCEDURE `pr_recon_mst_treporttemplateresultset`
 	in in_sheet_name varchar(255),
 	in in_resultset_order decimal(18,2),
 	in in_exec_type char,
-	in in_exec_type_data longtext, 
+	in in_exec_type_data longtext,
 	in in_user_code varchar(32),
-	in in_action varchar(32),  
+	in in_action varchar(32),
 	out out_msg text,
 	out out_result int
 )
@@ -151,7 +151,7 @@ me:BEGIN
 						'Y'as system_flag,
 						active_status 
 					from recon_mst_treportfilter 
-					where report_code = in_exec_type_data 
+					where report_code = in_exec_type_data
 					and active_status = 'Y' 
 					and delete_flag='N';
 				end if;
@@ -283,7 +283,7 @@ me:BEGIN
 		END IF;
 		
 		set in_exec_type_data = fn_get_reconstaticcondition('',v_recon_code,in_exec_type_data,in_user_code);
-            
+
 		set @query=in_exec_type_data;
 		prepare stmt from @query;
 		execute stmt;
@@ -301,21 +301,21 @@ me:BEGIN
 			SIGNAL SQLSTATE '45000'
 			SET MESSAGE_TEXT = 'Query contains restricted keywords!';
     end if;
-	elseif(in_action ='checkSP')then 
+	elseif(in_action ='checkSP')then
 		set out_msg=  'Error in executing SP';
 		set in_exec_type_data = fn_get_reconstaticcondition('',v_recon_code,in_exec_type_data,in_user_code);
-		
+
 		SET @dyn_sql = CONCAT('CALL ', in_exec_type_data,';');
-		
+
     select @dyn_sql;
 		PREPARE stmt FROM @dyn_sql;
 		EXECUTE stmt;
 		DEALLOCATE PREPARE stmt;
-		
+
 		set out_msg = "SP Validated Succesfully..!";
 		set out_result = 0;
-		
-    if fn_recon_check_staticfield(in_exec_type_data) ='Valid' then
+
+    if fn_recon_check_staticfield(@dyn_sql) ='Valid' then
 			set out_msg = "SP Validated Succesfully..!";
 			set out_result = 0;
     else

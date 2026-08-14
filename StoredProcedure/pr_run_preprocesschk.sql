@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 06-11-2025
+    Updated Date : 22-06-2026
 
-    Version : 10
+    Version : 14
   */
 
   declare v_recon_version text default '';
@@ -71,8 +71,10 @@ me:BEGIN
   declare v_lookup_agg_return_function text default '';
   declare v_lookup_update_fields text default '';
   declare v_lookup_filter text default '';
+
   declare v_reverse_update_flag text default '';
   declare v_value_flag text default '';
+  declare v_applytoall_tranbrkp_flag text default '';
 
   declare v_filter_applied_on text default '';
   declare v_filter_field text default '';
@@ -173,7 +175,9 @@ me:BEGIN
   -- recon date flag
 	if v_recon_date_flag = 'Y' then
 		if v_recon_date_field <> 'tran_date' then
-			set v_recon_date_field = concat('cast(',v_recon_date_field,' as date)');
+			set v_recon_date_field = concat('cast(a.',v_recon_date_field,' as date)');
+    else
+      set v_recon_date_field = 'a.tran_date';
 		end if;
 
 		set v_recon_date_condition = '';
@@ -205,6 +209,36 @@ me:BEGIN
     set v_tranbrkp_table = 'recon_tmp_ttranbrkp';
   end if;
 
+      select
+        preprocess_code,
+        preprocess_desc,
+        get_recon_field,
+        set_recon_field,
+        process_method,
+        process_query,
+        process_function,
+        process_expression,
+        cumulative_flag,
+        opening_flag,
+        agg_flag,
+        group_flag,
+        lookup_dataset_code,
+        lookup_return_field,
+        lookup_group_flag,
+        lookup_multi_return_flag,
+        lookup_agg_return_function,
+        recorderby_type,
+        applytoall_tranbrkp_flag
+      from recon_mst_tpreprocesshistory
+      where recon_code = in_recon_code
+      and recon_version = v_recon_version
+      and preprocess_code = ifnull(in_preprocess_code,preprocess_code)
+      and postprocess_flag = ifnull(in_postprocess_flag,postprocess_flag)
+      and hold_flag = 'N'
+      and active_status = 'Y'
+      and delete_flag = 'N'
+      order by preprocess_order;
+
   -- process
   process_block:begin
     declare process_done int default 0;
@@ -227,7 +261,8 @@ me:BEGIN
         lookup_group_flag,
         lookup_multi_return_flag,
         lookup_agg_return_function,
-        recorderby_type
+        recorderby_type,
+        applytoall_tranbrkp_flag
       from recon_mst_tpreprocesshistory
       where recon_code = in_recon_code
       and recon_version = v_recon_version
@@ -260,7 +295,8 @@ me:BEGIN
         v_lookup_group_flag,
         v_lookup_multi_return_flag,
         v_lookup_agg_return_function,
-        v_recorderby_type;
+        v_recorderby_type,
+        v_applytoall_tranbrkp_flag;
 
       if process_done = 1 then leave process_loop; end if;
 
@@ -287,6 +323,8 @@ me:BEGIN
       set v_lookup_multi_return_flag = ifnull(v_lookup_multi_return_flag,'N');
       set v_lookup_agg_return_function = ifnull(v_lookup_agg_return_function,'');
       set v_recorderby_type = ifnull(v_recorderby_type,'asc');
+
+      set v_applytoall_tranbrkp_flag = ifnull(v_applytoall_tranbrkp_flag,'N');
 
       set v_lookup_table = v_lookup_dataset_code;
 
@@ -413,8 +451,6 @@ me:BEGIN
                                              fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),
                                              v_close_parentheses_flag,' ',
                                              v_join_condition,' ');
-
-              select in_recon_code,v_filter_field,v_filter_criteria,v_filter_value_flag,v_filter_value,fn_get_basefilterreconformat(in_recon_code,v_filter_field,'EXACT',0,v_filter_criteria,v_filter_value_flag,v_filter_value),v_preprocess_filter;
             end if;
 
 					end loop filter_loop;
@@ -431,8 +467,6 @@ me:BEGIN
 
         call pr_get_reconstaticvaluesql(v_lookup_filter,'',in_recon_code,'',in_user_code,@v_lookup_filter,@msg22,@result22);
         set v_lookup_filter = @v_lookup_filter;
-
-        select v_preprocess_filter;
 
 				-- order by field block
         set v_orderby_field = '';
@@ -739,7 +773,7 @@ me:BEGIN
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-        set v_sql = concat(v_sql,v_recon_date_condition);
+        set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -749,7 +783,13 @@ me:BEGIN
 
         call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+        if v_applytoall_tranbrkp_flag = 'Y' then
+          call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
       elseif v_process_method = 'QCD_EXPRESSION' then
+        set v_field_expression = '';
+
 				-- reconexp block
 				reconexp_block:begin
 					declare reconexp_done int default 0;
@@ -777,26 +817,38 @@ me:BEGIN
             call pr_get_reconstaticvaluesql(v_process_function,'',in_recon_code,'',in_user_code,@v_process_function,@msg22,@result22);
             set v_process_function = @v_process_function;
 
-						set v_sql = 'update $TABLENAME$ set ';
-						set v_sql = concat(v_sql,v_set_recon_field,' = ',v_process_function,' ');
-						set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-						set v_sql = concat(v_sql,v_recon_date_condition);
-						set v_sql = concat(v_sql,v_preprocess_filter);
-						set v_sql = concat(v_sql,'and tran_gid > 0 ');
-						set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
-						set v_sql = concat(v_sql,v_orderby_field);
-
-            select v_sql;
-
-						call pr_run_sql('set @sno := 0',@msg,@result);
-
-						call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
-						call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+            if v_field_expression = '' then
+						  set v_field_expression = concat(v_set_recon_field,' = ',v_process_function);
+            else
+						  set v_field_expression = concat(v_field_expression,',',v_set_recon_field,' = ',v_process_function);
+            end if;
 					end loop reconexp_loop;
 
 					close reconexp_cursor;
 				end reconexp_block;
+
+        if v_field_expression <> '' then
+          set v_sql = 'update $TABLENAME$ set ';
+          set v_sql = concat(v_sql,v_field_expression,' ');
+          set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
+          set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
+          set v_sql = concat(v_sql,v_preprocess_filter);
+          set v_sql = concat(v_sql,'and tran_gid > 0 ');
+          set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+          set v_sql = concat(v_sql,v_orderby_field);
+
+          call pr_run_sql('set @sno := 0',@msg,@result);
+
+          call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
+          call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+          if v_applytoall_tranbrkp_flag = 'Y' then
+            call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          end if;
+        end if;
       elseif v_process_method = 'QCD_LOOKUP_EXPRESSION' then
+        set v_field_expression = '';
+
         -- Lookup Expression
 				-- lookupexp block
 				lookupexp_block:begin
@@ -826,24 +878,31 @@ me:BEGIN
             call pr_get_reconstaticvaluesql(v_process_function,'',in_recon_code,'',in_user_code,@v_process_function,@msg22,@result22);
             set v_process_function = @v_process_function;
 
-						set v_sql = concat('update ',v_lookup_table,' set ');
-						set v_sql = concat(v_sql,v_set_lookup_field,' = ',v_process_function,' ');
-						set v_sql = concat(v_sql,'where true ');
-						set v_sql = concat(v_sql,v_lookup_filter);
-						set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+            if v_field_expression = '' then
+						  set v_field_expression = concat(v_set_lookup_field,' = ',v_process_function);
+            else
+						  set v_field_expression = concat(v_field_expression,',',v_set_lookup_field,' = ',v_process_function);
+            end if;
 
-            select v_sql;
-
-						call pr_run_sql(v_sql,@msg,@result);
 					end loop lookupexp_loop;
 
 					close lookupexp_cursor;
 				end lookupexp_block;
+
+        if v_field_expression <> '' then
+          set v_sql = concat('update ',v_lookup_table,' set ');
+          set v_sql = concat(v_sql,v_field_expression,' ');
+          set v_sql = concat(v_sql,'where true ');
+          set v_sql = concat(v_sql,v_lookup_filter);
+          set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
+
+          call pr_run_sql(v_sql,@msg,@result);
+        end if;
       elseif v_process_method = 'QCD_CUMULATIVEXP' then
         set v_sql = 'update $TABLENAME$ set ';
         set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_process_function,'$FIELD$',v_get_recon_field),' ');
         set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-        set v_sql = concat(v_sql,v_recon_date_condition);
+        set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
         set v_sql = concat(v_sql,v_preprocess_filter);
         set v_sql = concat(v_sql,'and tran_gid > 0 ');
         set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -854,6 +913,11 @@ me:BEGIN
 
         call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
         call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+        if v_applytoall_tranbrkp_flag = 'Y' then
+          call pr_run_sql1(concat('set ',v_cumulative_variable,' := 0'),@msgg1,@resultt1);
+          call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+        end if;
 
         if v_opening_flag = 'Y' then
           set v_field_expression = concat(fn_get_fieldnamecast(in_recon_code,v_set_recon_field),'-',
@@ -867,7 +931,7 @@ me:BEGIN
           set v_sql = 'update $TABLENAME$ set ';
           set v_sql = concat(v_sql,v_set_recon_field,' = ',replace(v_field_expression,'$FIELD$',v_get_recon_field),' ');
           set v_sql = concat(v_sql,'where recon_code = ',char(39),in_recon_code,char(39),' ');
-          set v_sql = concat(v_sql,v_recon_date_condition);
+          set v_sql = concat(v_sql,replace(v_recon_date_condition,'a.',''));
           set v_sql = concat(v_sql,v_preprocess_filter);
           set v_sql = concat(v_sql,'and tran_gid > 0 ');
           set v_sql = concat(v_sql,'and delete_flag = ',char(39),'N',char(39),' ');
@@ -875,6 +939,10 @@ me:BEGIN
 
           call pr_run_sql(replace(concat(v_sql,'tran_gid ',v_recorderby_type),'$TABLENAME$',v_tran_table),@msg,@result);
           call pr_run_sql(replace(concat(v_sql,'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+
+          if v_applytoall_tranbrkp_flag = 'Y' then
+            call pr_run_sql(replace(concat(replace(v_sql,'and tran_gid > 0 ','and tran_gid = 0 '),'tranbrkp_gid ',v_recorderby_type),'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          end if;
         end if;
       elseif v_process_method = 'QCD_LOOKUP' then
         set v_sql = 'update $TABLENAME$ as a ';
@@ -915,6 +983,21 @@ me:BEGIN
           call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
         end if;
 
+        -- support not posted cases
+        if v_applytoall_tranbrkp_flag = 'Y' then
+          set @base_count = 0;
+
+          set v_sql = replace(v_sql,'and a.tran_gid > 0 ','and a.tran_gid = 0 ');
+          set v_count_sql = replace(v_count_sql,'and a.tran_gid > 0 ','and a.tran_gid = 0 ');
+
+          call pr_run_sql(replace(v_count_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          set @base_count = ifnull(@base_count,0);
+
+          if @base_count > 0 then
+            call pr_run_sql(replace(v_sql,'$TABLENAME$',v_tranbrkp_table),@msg,@result);
+          end if;
+        end if;
+
         set @base_count = 0;
       elseif v_process_method = 'QCD_QUERY' then
         call pr_get_reconstaticvaluesql(v_process_query,'',in_recon_code,'',in_user_code,@v_process_query,@msg22,@result22);
@@ -922,6 +1005,17 @@ me:BEGIN
 
         call pr_run_sql1(v_process_query,@msg,@result);
       elseif v_process_method = 'QCD_AGGEXP' then
+        select in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          in_user_code,
+                                          @msg_11,
+                                          @result_11;
+
         call pr_run_preprocess_agg(in_recon_code,
                                           v_preprocess_code,
                                           in_job_gid,
@@ -932,6 +1026,8 @@ me:BEGIN
                                           in_user_code,
                                           @msg_11,
                                           @result_11);
+
+        select 'vijay';
       elseif v_process_method = 'QCD_COMPARISONEXP' then
         call pr_run_preprocess_comparison(in_recon_code,
                                           v_preprocess_code,
@@ -956,6 +1052,17 @@ me:BEGIN
                                           @result_1);
       elseif v_process_method = 'QCD_LOOKUP_EXP_AGG' then
         call pr_run_preprocess_agglookup(in_recon_code,
+                                          v_preprocess_code,
+                                          in_job_gid,
+                                          in_postprocess_flag,
+                                          in_period_from,
+                                          in_period_to,
+                                          in_automatch_flag,
+                                          in_user_code,
+                                          @msg_1,
+                                          @result_1);
+      elseif v_process_method = 'QCD_LOOKUP_COMPARISON' then
+        call pr_run_preprocess_ds_comparison(in_recon_code,
                                           v_preprocess_code,
                                           in_job_gid,
                                           in_postprocess_flag,

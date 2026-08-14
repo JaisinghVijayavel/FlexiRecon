@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 03-06-2026
+    updated Date : 27-07-2026
 
-    Version : 3
+    Version : 4
   */
 
   declare v_recon_name text default '';
@@ -53,10 +53,10 @@ me:BEGIN
   declare v_tran_acc_mode char(1) default '';
 
   declare v_source_field varchar(128) default '';
-  declare v_extraction_criteria varchar(32) default '';
+  declare v_extraction_criteria text default '';
   declare v_extraction_filter int default 0;
   declare v_comparison_field varchar(128) default '';
-  declare v_comparison_criteria varchar(32) default '';
+  declare v_comparison_criteria text default '';
   declare v_comparison_condition text default '';
   declare v_source_condition text default '';
   declare v_group_field text default '';

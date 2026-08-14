@@ -295,15 +295,13 @@ me:BEGIN
   insert into recon_tmp_t6index select 'recon_tmp_t6source','idx_tran_date','Y';
   insert into recon_tmp_t6index select 'recon_tmp_t6comparison','idx_tran_date','Y';
 
-  /*
   drop table if exists recon_tmp_t6match;
   drop table if exists recon_tmp_t6matchdtl;
   drop table if exists recon_tmp_t6matchko;
   drop table if exists recon_tmp_t6matchdiff;
   drop table if exists recon_tmp_t6matchdiffdtl;
-  */
 
-  CREATE temporary TABLE recon_tmp_t6match(
+  CREATE /*temporary*/ TABLE recon_tmp_t6match(
     tran_gid int unsigned NOT NULL,
     tranbrkp_gid int unsigned not null default 0,
     matched_count int not null default 0,
@@ -321,7 +319,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_t6matchdtl(
+  create /*temporary*/ table recon_tmp_t6matchdtl(
     matchdtl_gid int unsigned NOT NULL AUTO_INCREMENT,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,
@@ -339,7 +337,7 @@ me:BEGIN
     key idx_gid(tran_gid,tranbrkp_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_t6matchko(
+  create /*temporary*/ table recon_tmp_t6matchko(
     tran_gid int unsigned NOT NULL,
     ko_value decimal(15,2) not null default 0,
     excp_value decimal(15,2) not null default 0,
@@ -350,7 +348,7 @@ me:BEGIN
     key idx_ko_flag(ko_flag)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_t6matchdiff(
+  create /*temporary*/ table recon_tmp_t6matchdiff(
     tran_gid int unsigned NOT NULL,
     tran_mult tinyint not null default 0,
     tran_value decimal(15,2) not null default 0,
@@ -360,7 +358,7 @@ me:BEGIN
     PRIMARY KEY (tran_gid)
   ) ENGINE = MyISAM;
 
-  create temporary table recon_tmp_t6matchdiffdtl(
+  create /*temporary*/ table recon_tmp_t6matchdiffdtl(
     matchdiffdtl_gid int unsigned NOT NULL,
     parent_tran_gid int unsigned NOT NULL default 0,
     parent_tranbrkp_gid int unsigned NOT NULL default 0,

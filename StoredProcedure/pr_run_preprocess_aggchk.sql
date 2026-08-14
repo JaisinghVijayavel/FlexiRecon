@@ -557,6 +557,8 @@ me:BEGIN
         call pr_get_reconstaticvaluesql(v_field_expression,'',in_recon_code,'',in_user_code,@v_field_expression,@msg22,@result22);
         set v_field_expression = @v_field_expression;
 
+        select v_process_expression,v_field_expression;
+
         -- create index
         if v_grp_field <> '' then
           set v_sql = concat("create index idx_grp_field on recon_tmp_t2tranagg(",v_idx_grp_field,")");
@@ -574,6 +576,8 @@ me:BEGIN
             ");
 
           call pr_run_sql2(v_sql,@msg,@result);
+
+          select v_sql;
 
           set v_sql = concat("insert into recon_tmp_t2tranbrkpagg(",v_grp_field,",",v_set_recon_field,",col128)
             select ",v_grp_field,",",v_field_expression,",",v_field_expression," from ",v_tranbrkp_table,"
@@ -744,7 +748,8 @@ me:BEGIN
 
           call pr_run_sql2(v_sql,@msg,@result);
 
-          select * from recon_tmp_t2gid;
+          select v_sql;
+
 
           call pr_run_sql2(concat("set ",v_value_variable," := 0"),@msg22,@result22);
           call pr_run_sql2(concat("set ",v_col128_variable," := ''"),@msg22,@result22);
@@ -791,6 +796,10 @@ me:BEGIN
               ");
 
             call pr_run_sql2(v_sql,@msg,@result);
+
+            select v_sql;
+            select * from recon_tmp_t2gid;
+            leave me;
 
             -- update in tranbrkp table
             set v_sql = concat("update ",v_tranbrkp_table ," as a
