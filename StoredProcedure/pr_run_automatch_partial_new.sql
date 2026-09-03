@@ -20,9 +20,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 30-06-2026
+    updated Date : 02-09-2026
 
-    Version : 10
+    Version : 12
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -1214,6 +1214,13 @@ me:BEGIN
                 set v_sql = '';
                 set v_sql = concat(v_sql,'update recon_tmp_t5comparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
+
+                insert into recon_tmp_t5sql(table_type,tran_acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
+
+                /*
+                set v_sql = '';
+                set v_sql = concat(v_sql,'update recon_tmp_t5comparison set ');
+                set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
                 set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_comparison_acc_mode,char(39), ' ');
 
                 insert into recon_tmp_t5sql(table_type,tran_acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
@@ -1235,6 +1242,7 @@ me:BEGIN
                 set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_acc_mode,char(39),' ');
 
                 insert into recon_tmp_t5sql(table_type,tran_acc_mode,sql_query) values ('C',v_acc_mode,v_sql);
+                */
 
                 set v_comparison_criteria = 'EXACT';
                 set v_comparison_filter = 0;
@@ -1607,11 +1615,13 @@ me:BEGIN
           -- set v_trangid_sql = concat(v_trangid_sql,' where dataset_code = ',char(39),v_source_dataset_code,char(39));
           set v_trangid_sql = concat(v_trangid_sql,' where 1 = 1 ');
 
+          /*
           if v_recontype_code <> 'N' then
             if v_source_acc_mode <> 'B' then
               set v_trangid_sql = concat(v_trangid_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
             end if;
           end if;
+          */
 
           if v_recon_date_flag = 'Y' then
             set v_trangid_sql = concat(v_trangid_sql,' and tran_date >= ',char(39),in_period_from,char(39));
@@ -1639,11 +1649,13 @@ me:BEGIN
           -- set v_trangid_sql = concat(v_trangid_sql,' where dataset_code = ',char(39),v_source_dataset_code,char(39));
           set v_trangid_sql = concat(v_trangid_sql,' where 1 = 1 ');
 
+          /*
           if v_recontype_code <> 'N' then
             if v_source_acc_mode <> 'B' then
               set v_trangid_sql = concat(v_trangid_sql,' and tran_acc_mode = ',char(39),v_source_acc_mode,char(39));
             end if;
           end if;
+          */
 
           if v_recon_date_flag = 'Y' then
             set v_trangid_sql = concat(v_trangid_sql,' and tran_date >= ',char(39),in_period_from,char(39));
@@ -1970,7 +1982,7 @@ me:BEGIN
 										    and tranbrkp_gid = v_tranbrkp_gid;
                       else
 										    update recon_tmp_t5comparison set
-											    excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
+											    excp_value = excp_value + v_diff_value * v_tran_mult * v_base_tran_mult
 										    where tran_gid = v_tran_gid
 										    and tranbrkp_gid = v_tranbrkp_gid;
                         /*

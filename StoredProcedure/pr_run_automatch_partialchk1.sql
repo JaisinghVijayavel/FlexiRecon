@@ -1980,10 +1980,17 @@ me:BEGIN
 										  where tran_gid = v_tran_gid
 										  and tranbrkp_gid = v_tranbrkp_gid;
                     else
-										  update recon_tmp_t6comparison set
-											  excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
-										  where tran_gid = v_tran_gid
-										  and tranbrkp_gid = v_tranbrkp_gid;
+                      if v_src_acc_mode = v_cmp_acc_mode then
+										    update recon_tmp_t6comparison set
+											    excp_value = excp_value + v_diff_value
+										    where tran_gid = v_tran_gid
+										    and tranbrkp_gid = v_tranbrkp_gid;
+                      else
+										    update recon_tmp_t6comparison set
+											    excp_value = excp_value - v_diff_value * v_tran_mult * v_base_tran_mult
+										    where tran_gid = v_tran_gid
+										    and tranbrkp_gid = v_tranbrkp_gid;
+                      end if;
                     end if;
 
                     set v_diff_value = abs(v_diff_value);
@@ -2233,6 +2240,8 @@ me:BEGIN
 
             -- run match query one to many
             call pr_run_sql(v_match_sql,@msg,@result);
+
+            select v_match_sql;
 
             select max(matched_count) into v_count from recon_tmp_t6match;
             set v_count = ifnull(v_count,0);

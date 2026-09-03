@@ -19,9 +19,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 07-11-2025
+    updated Date : 02-09-2026
 
-    Version : 6
+    Version : 7
   */
 
   declare v_acc_mode varchar(32) default '';
@@ -1098,12 +1098,15 @@ me:BEGIN
                 set v_sql = concat(v_sql,'update recon_tmp_t1comparison set ');
                 set v_sql = concat(v_sql,v_field,'=',v_field_format,' ');
 
+                /*
                 if v_recontype_code <> 'N' then
                   set v_sql = concat(v_sql,'where tran_acc_mode =',char(39), v_comparison_acc_mode,char(39), ' ');
                 end if;
+                */
 
                 insert into recon_tmp_t1sql(table_type,acc_mode,sql_query) values ('C',v_comparison_acc_mode,v_sql);
 
+                /*
 								if v_group_method_flag = 'B' and v_recontype_code <> 'N' and v_recontype_code <> 'V' then
 									set v_sql = '';
 									set v_sql = concat(v_sql,'update recon_tmp_t1comparison set ');
@@ -1124,6 +1127,7 @@ me:BEGIN
 
 									insert into recon_tmp_t1sql(table_type,acc_mode,sql_query) values ('C',v_acc_mode,v_sql);
 								end if;
+                */
 
                 set v_comparison_criteria = 'EXACT';
                 set v_comparison_filter = 0;
@@ -1445,7 +1449,7 @@ me:BEGIN
 						set v_match_sql = concat(v_match_sql,'from recon_tmp_t1manymatch ');
 
 						if v_recontype_code <> 'N' then
-							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value,tran_mult ');
+							set v_match_sql = concat(v_match_sql,'group by matched_txt_json,comparison_value ');  -- ,tran_mult
 
               if (v_recontype_code <> 'I' and v_recontype_code <> 'V') or v_reversal_flag = 'Y' then
                 -- contra

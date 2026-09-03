@@ -17,9 +17,9 @@ begin
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 12-02-2026
+    Updated Date : 26-08-2026
 
-    Version : 1
+    Version : 2
   */
 
   declare v_filter_field text default '';
@@ -203,6 +203,18 @@ begin
       set v_txt = concat(' ',in_ident_value,' >= adddate(',v_filter_field,',',v_from,') and ',in_ident_value,' <= adddate(',v_filter_field,',',v_to,') ');
     elseif v_filter_field_type = 'INTEGER' or v_filter_field_type = 'NUMERIC' then
       set v_txt = concat(' ',in_ident_value,' between (',v_filter_field,'+',v_from,') and (',v_filter_field,'+',v_to,') ');
+    else
+      set v_txt = concat(' ',v_filter_field,' between (',v_from,') and (',v_to,') ');
+    end if;
+  elseif substr(in_comparison_criteria,1,14) = 'BETWEENMINUTES' then
+    set v_from = SPLIT(in_comparison_criteria,',',1);
+    set v_to = SPLIT(in_comparison_criteria,',',2);
+
+    set v_from = replace(v_from,'BETWEENMINUTES(','');
+    set v_to = replace(v_to,')','');
+
+    if v_filter_field_type = 'DATE' or v_filter_field_type = 'DATETIME' then
+      set v_txt = concat(' ',in_ident_value,' >= TIMESTAMPADD(MINUTE,',v_from,',',v_filter_field,') and ',in_ident_value,' <= TIMESTAMPADD(MINUTE,',v_to,',',v_filter_field,') ');
     else
       set v_txt = concat(' ',v_filter_field,' between (',v_from,') and (',v_to,') ');
     end if;

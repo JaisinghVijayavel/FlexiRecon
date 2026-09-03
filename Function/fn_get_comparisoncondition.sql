@@ -14,9 +14,9 @@ begin
     Created Date :
 
     Updated By : Vijayavel
-    Updated Date : 30-12-2025
+    Updated Date : 26-08-2026
 
-    Version : 1
+    Version : 2
   */
 
   declare v_txt text;
@@ -87,6 +87,45 @@ begin
       set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
 
       set v_txt = concat(' ',in_comparison_field,' between (',in_source_field,'+',v_from,') and (',in_source_field,'+',v_to,') ');
+    else
+      set v_from = replace(v_from,'$FIELD$',in_comparison_field);
+      set v_to = replace(v_to,'$FIELD$',in_comparison_field);
+
+      set in_source_field = fn_get_fieldnamecast(in_recon_code,in_source_field);
+      set v_txt = concat(' ',in_source_field,' between (',v_from,') and (',v_to,') ');
+    end if;
+  elseif substr(in_comparison_criteria,1,14) = 'BETWEENMINUTES' then
+    set v_field_type = fn_get_fieldtype(in_recon_code,in_comparison_field);
+    set v_field_org_type = fn_get_fieldorgtype(in_recon_code,in_comparison_field);
+
+    set v_from = SPLIT(in_comparison_criteria,',',1);
+    set v_to = SPLIT(in_comparison_criteria,',',2);
+
+    set v_from = replace(v_from,'BETWEENMINUTES(','');
+    set v_to = replace(v_to,')','');
+
+    if v_field_type <> v_field_org_type then
+      if v_field_org_type = 'TEXT' then
+        if v_field_type = 'NUMBER' or v_field_type = 'NUMERIC' then
+          set in_comparison_field = concat('cast(',in_comparison_field,' as decimal(15,2))');
+        elseif v_field_type = 'INTEGER' then
+          set in_comparison_field = concat('cast(',in_comparison_field,' as signed)');
+        elseif v_field_type = 'DATE' then
+          set in_comparison_field = concat('cast(',in_comparison_field,' as date)');
+        elseif v_field_type = 'DATETIME' then
+          set in_comparison_field = concat('cast(',in_comparison_field,' as datetime)');
+        end if;
+      end if;
+    end if;
+
+    if v_field_type = 'DATE' or v_field_type = 'DATETIME' then
+      if v_field_org_type = 'DATE' then
+        set v_txt = concat(' ',in_comparison_field,' >= TIMESTAMPADD(MINUTE,',v_from,',',in_source_field,') and ',in_comparison_field,' <= TIMESTAMPADD(MINUTE,',v_to,',',in_source_field,') ');
+      elseif v_field_type = 'DATE' then
+        set v_txt = concat(' cast(',in_comparison_field,' as date) >= TIMESTAMPADD(MINUTE,',v_from,',cast(',in_source_field,' as date)) and cast(',in_comparison_field,' as date) <= TIMESTAMPADD(MINUTE,',v_to,',cast(',in_source_field,' as date)) ');
+      elseif v_field_type = 'DATETIME' then
+        set v_txt = concat(' cast(',in_comparison_field,' as datetime) >= TIMESTAMPADD(MINUTE,',v_from,',cast(',in_source_field,' as datetime)) and cast(',in_comparison_field,' as datetime) <= TIMESTAMPADD(MINUTE,',v_to,',cast(',in_source_field,' as datetime)) ');
+      end if;
     else
       set v_from = replace(v_from,'$FIELD$',in_comparison_field);
       set v_to = replace(v_to,'$FIELD$',in_comparison_field);
