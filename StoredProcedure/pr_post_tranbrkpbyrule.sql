@@ -18,9 +18,9 @@ me:BEGIN
     Created Date :
 
     Updated By : Vijayavel
-    updated Date : 27-07-2026
+    updated Date : 09-09-2026
 
-    Version : 2
+    Version : 3
   */
 
   declare v_recon_name text default '';
@@ -366,10 +366,12 @@ me:BEGIN
           drop temporary table if exists recon_tmp_tsource;
           drop temporary table if exists recon_tmp_tcomparison;
 
+          /*
           drop table if exists recon_tmp_tsource;
           drop table if exists recon_tmp_tcomparison;
+          */
 
-          create /*temporary*/ table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_tsource select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tsource add primary key(tran_gid);
           create index idx_recon_code on recon_tmp_tsource(recon_code);
           create index idx_excp_value on recon_tmp_tsource(recon_code,dataset_code,excp_value);
@@ -378,7 +380,7 @@ me:BEGIN
           create index idx_dataset_code on recon_tmp_tsource(recon_code,dataset_code,tran_acc_mode);
           alter table recon_tmp_tsource ENGINE = MyISAM;
 
-          create /*temporary*/ table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
+          create temporary table recon_tmp_tcomparison select * from recon_tmp_ttranwithbrkp where 1 = 2;
           alter table recon_tmp_tcomparison add primary key(tranbrkp_gid);
           create index idx_recon_code on recon_tmp_tcomparison(recon_code);
           create index idx_excp_value on recon_tmp_tcomparison(recon_code,dataset_code,excp_value);

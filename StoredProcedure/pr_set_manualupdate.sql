@@ -8,6 +8,16 @@ CREATE PROCEDURE `pr_set_manualupdate`
   out out_result int
 )
 me:BEGIN
+  /*
+    Created By : Vijayavel
+    Created Date :
+
+    Updated By : Vijayavel
+    Updated Date : 17-09-2026
+
+    Version : 2
+  */
+
   declare v_recon_code text default '';
 
 	declare v_tran_table text default '';
@@ -32,6 +42,10 @@ me:BEGIN
   set v_concurrent_ko_flag = fn_get_configvalue('concurrent_ko_flag');
 
   if v_concurrent_ko_flag = 'Y' then
+    if v_recon_code = '' then
+      leave me;
+    end if;
+
 	  set v_tran_table = concat(v_recon_code,'_tran');
 	  set v_tranbrkp_table = concat(v_recon_code,'_tranbrkp');
   else
