@@ -24,22 +24,19 @@ me:begin
 		set out_result = 0;
 		leave me;
 	end if;
-
+	
 	set in_recon_code=(select recon_code from recon_mst_tpreprocess where preprocess_code=in_clone_preprocess_code);
-
-	if exists(select preprocess_code from recon_mst_tpreprocess
-    where preprocess_desc = in_preprocess_name
-    and recon_code = in_recon_code
-    and delete_flag = 'N') then
+    
+    if exists(select preprocess_code from recon_mst_tpreprocess where preprocess_desc = in_preprocess_name and delete_flag = 'N' and recon_code = in_recon_code and active_status = 'Y') then
 		set out_msg = 'Duplicate preprocess name !';
 		set out_result = 0;
 		leave me;
 	end if;
-
+    
 	if exists(select preprocess_code from recon_mst_tpreprocess where preprocess_code = in_clone_preprocess_code and delete_flag = 'N') then
 		set v_preprocess_code = fn_get_autocode('PP');
 		select max(preprocess_order)+1 into v_preprocess_order from recon_mst_tpreprocess where recon_code=in_recon_code and delete_flag='N';
-    -- insert in theme table
+    
 	INSERT INTO recon_mst_tpreprocess
 	(
 		preprocess_code,
@@ -49,11 +46,24 @@ me:begin
 		set_recon_field,
 		process_method,
 		process_query,
+		process_expression,
 		process_function,
+		cumulative_flag,
+		opening_flag,
+    agg_flag,
+    group_flag,
 		lookup_dataset_code,
+		lookup_multi_return_flag,
+		lookup_agg_return_function,
 		lookup_return_field,
+		lookup_group_flag,
+		source_dataset_code,
+		comparison_dataset_code,
+		recorderby_type,
+		postprocess_flag,
 		preprocess_order,
 		hold_flag,
+		recon_version,
 		active_status,
 		insert_date,
 		insert_by)
@@ -65,21 +75,37 @@ me:begin
 		set_recon_field,
 		process_method,
 		process_query,
+		process_expression,
 		process_function,
+		cumulative_flag,
+		opening_flag,
+    agg_flag,
+    group_flag,
 		lookup_dataset_code,
+		lookup_multi_return_flag,
+		lookup_agg_return_function,
 		lookup_return_field,
+		lookup_group_flag,
+		source_dataset_code,
+		comparison_dataset_code,
+		recorderby_type,
+		postprocess_flag,
 		v_preprocess_order,
 		hold_flag,
+		recon_version,
 		'D',
 		sysdate(),
 		in_user_code
 		from recon_mst_tpreprocess where preprocess_code = in_clone_preprocess_code and delete_flag = 'N';
     
-    -- insert in preprocess condition
+    
     INSERT INTO recon_mst_tpreprocesscondition
 	(
 		preprocess_code,
 		condition_seqno,
+		source_field_type,
+		source_field,
+		comparison_field,
 		recon_field,
 		extraction_criteria,
 		extraction_filter,
@@ -89,12 +115,16 @@ me:begin
 		open_parentheses_flag,
 		close_parentheses_flag,
 		join_condition,
+		recon_version,
 		active_status,
 		insert_date,
 		insert_by)
     select
 		v_preprocess_code,
 		condition_seqno,
+		source_field_type,
+        source_field,
+		comparison_field,
 		recon_field,
 		extraction_criteria,
 		extraction_filter,
@@ -104,15 +134,17 @@ me:begin
 		open_parentheses_flag,
 		close_parentheses_flag,
 		join_condition,
+		recon_version,
 		active_status,
 		sysdate(),
 		in_user_code
 		from recon_mst_tpreprocesscondition where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N';
-    -- filter
+    
     INSERT INTO recon_mst_tpreprocessfilter
 	(
 		preprocess_code,
 		filter_seqno,
+		filter_applied_on,
 		filter_field,
 		filter_criteria,
 		filter_value_flag,
@@ -120,12 +152,14 @@ me:begin
 		open_parentheses_flag,
 		close_parentheses_flag,
 		join_condition,
+		recon_version,
 		active_status,
 		insert_date,
 		insert_by) 
 	select
 		v_preprocess_code,
 		filter_seqno,
+		filter_applied_on,
 		filter_field,
 		filter_criteria,
 		filter_value_flag,
@@ -133,17 +167,20 @@ me:begin
 		open_parentheses_flag,
 		close_parentheses_flag,
 		join_condition,
-		active_status, 
+		recon_version,
+		active_status,
 		sysdate(),
 		in_user_code
 		from recon_mst_tpreprocessfilter where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N';      
         
-        INSERT INTO recon_mst_tpreprocesslookup
+    INSERT INTO recon_mst_tpreprocesslookup
 	(
 		preprocess_code,
 		lookup_seqno,
 		lookup_return_field,
 		set_recon_field,
+        reverse_update_flag,
+        recon_version,
 		active_status,
 		insert_date,
 		insert_by)
@@ -152,11 +189,107 @@ me:begin
 		lookup_seqno,
 		lookup_return_field,
 		set_recon_field,
+        reverse_update_flag,
+        recon_version,
 		active_status,
 		sysdate(),
 		in_user_code
 	from recon_mst_tpreprocesslookup where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N';      
  
+	INSERT INTO recon_mst_tpreprocessrecorder
+	(
+		preprocess_code,
+        recorder_on,
+		recorder_seqno,
+		recorder_field,
+		recon_version,
+		active_status,
+		insert_date,
+		insert_by)
+	select
+		preprocess_code,
+        recorder_on,
+		recorder_seqno,
+		recorder_field,
+		recon_version,
+		active_status,
+		sysdate(),
+		in_user_code
+	from recon_mst_tpreprocessrecorder where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N';  
+    
+    INSERT INTO recon_mst_tpreprocessgrpfield
+	(
+		preprocess_code,
+        grpfield_on,
+		grpfield_seqno,
+		grp_field,
+		recon_version,
+		active_status,
+		insert_date,
+		insert_by
+	)
+	select
+		preprocess_code,
+        grpfield_on,
+		grpfield_seqno,
+		grp_field,
+		recon_version,
+		active_status,
+		sysdate(),
+		in_user_code
+	from recon_mst_tpreprocessgrpfield where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N';  
+    
+	INSERT INTO recon_mst_tpreprocessexp
+	(
+		preprocess_code,
+        preprocessexp_on,
+        preprocessexp_sno,
+        preprocessexp_update_field,
+        preprocess_expression,
+		preprocess_function,
+        recon_version,
+        active_status,
+        insert_date,
+        insert_by
+	)
+    SELECT
+		v_preprocess_code,
+        preprocessexp_on,
+        preprocessexp_sno,
+        preprocessexp_update_field,
+        preprocess_expression,
+		preprocess_function,
+        recon_version,
+        active_status,
+        sysdate(),
+        in_user_code
+	from recon_mst_tpreprocessexp where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N'; 
+    
+    INSERT INTO recon_mst_tpreprocessdsupdate
+	(
+		preprocess_code,
+		rec_seqno,
+		source_field,
+		comparison_field,
+		reverse_update_flag,
+		value_flag,
+		recon_version,
+		active_status,
+		insert_date,
+		insert_by
+    )
+    SELECT 
+		v_preprocess_code,
+		rec_seqno,
+		source_field,
+		comparison_field,
+		reverse_update_flag,
+		value_flag,
+		recon_version,
+		active_status,
+		sysdate(),
+        in_user_code
+	FROM recon_mst_tpreprocessdsupdate where preprocess_code = in_clone_preprocess_code and active_status = 'Y' and delete_flag = 'N'; 
   end if;
 	set out_preprocess_code = v_preprocess_code;
 	set out_result = 1;
